@@ -273,7 +273,7 @@ export class FilterPanelController {
     panel.appendChild(row3);
 
     // ----------------------------------------------------
-    // Row 4: 스탯별 총 칸수/칠한 칸수/스탯 수치 요약 바 (호버 툴팁 포함)
+    // Row 4: 스탯별 총 칸수/칠한 칸수/스탯 수치 요약 바
     // ----------------------------------------------------
     const row4 = document.createElement('div');
     row4.id = 'tcbe-stat-summary-row';
@@ -317,7 +317,7 @@ export class FilterPanelController {
   }
 
   /**
-   * 필터 조건(성격, 성급, 보드 차수)에 맞추어 스탯별 총 칸 수, 칠한 칸 수, 1칸당 수치 요약 바 갱신
+   * 필터 조건(성격, 성급, 보드 차수)에 맞추어 스탯별 총 칸 수, 칠한 칸 수, 1칸당 수치 요약 바 갱신 (사도별 커스텀 툴팁 탑재)
    */
   public updateStatSummaryGrid(
     progressMap: Map<string, ApostleProgress>,
@@ -396,8 +396,29 @@ export class FilterPanelController {
       const item = document.createElement('div');
       item.className = `tcbe-summary-card ${this.state.statCategory === meta.key ? 'tcbe-summary-active' : ''} ${isDone ? 'tcbe-summary-done' : ''}`;
       
-      // 호버 툴팁: 1칸당 수치 및 총 증가 수치 안내
-      item.title = `💡 ${meta.nameKo} 보크 (1칸당 +${meta.valuePerNode})\n• 칠한 칸: ${agg.picked}칸 (+${currentValue})\n• 남은 칸: ${agg.remaining}칸\n• 전체 칸: ${agg.total}칸 (+${totalValue})`;
+      // 사도별 뱃지 스타일의 커스텀 툴팁 DOM 생성
+      const tooltip = document.createElement('div');
+      tooltip.className = 'tcbe-summary-tooltip';
+      tooltip.innerHTML = `
+        <div class="tcbe-tt-header">
+          <span><span class="tcbe-sprite-stat tcbe-sprite-stat-${meta.spriteIndex}"></span> ${meta.nameKo} 보크 현황</span>
+          <span style="color: #38bdf8;">1칸당 +${meta.valuePerNode}</span>
+        </div>
+        <div class="tcbe-sum-tt-body">
+          <div class="tcbe-sum-tt-row">
+            <span class="tcbe-sum-tt-label">칠한 칸 수:</span>
+            <span class="tcbe-sum-tt-val ${isDone ? 'tcbe-tt-stat-done' : ''}">${agg.picked} / ${agg.total}칸 (남 ${agg.remaining}칸)</span>
+          </div>
+          <div class="tcbe-sum-tt-row">
+            <span class="tcbe-sum-tt-label">현재 스탯 증가량:</span>
+            <span class="tcbe-sum-tt-val tcbe-sum-tt-val-curr">+${currentValue}</span>
+          </div>
+          <div class="tcbe-sum-tt-row">
+            <span class="tcbe-sum-tt-label">최대 스탯 증가량:</span>
+            <span class="tcbe-sum-tt-val">+${totalValue}</span>
+          </div>
+        </div>
+      `;
 
       item.innerHTML = `
         <span class="tcbe-sprite-stat tcbe-sprite-stat-${meta.spriteIndex}"></span>
@@ -405,9 +426,12 @@ export class FilterPanelController {
         <span class="tcbe-summary-val ${isDone ? 'tcbe-stat-done-text' : ''}">${agg.picked}/${agg.total}칸</span>
         <span class="tcbe-summary-badge ${isDone ? 'tcbe-badge-done-bg' : ''}">${isDone ? '완료' : `남${agg.remaining}`}</span>
       `;
+      item.appendChild(tooltip);
 
       // 클릭 시 해당 스탯 필터로 안전하게 전환 (다른 필터 상태 보존)
-      item.addEventListener('click', () => {
+      item.addEventListener('click', (e) => {
+        // 툴팁 클릭 이벤트 전파 방지
+        e.stopPropagation();
         const nextKey = this.state.statCategory === meta.key ? 'all' : meta.key;
         this.state.statCategory = nextKey;
         const panelEl = document.querySelector('#tcbe-filter-panel') as HTMLElement;
@@ -418,12 +442,6 @@ export class FilterPanelController {
       });
 
       itemsContainer.appendChild(item);
-
-      // 상단 스탯 버튼의 툴팁도 동기화
-      const btn = document.getElementById(`tcbe-btn-stat-${meta.key}`);
-      if (btn) {
-        btn.title = `💡 ${meta.nameKo} 보크 (1칸당 +${meta.valuePerNode})\n• 칠한 칸: ${agg.picked}/${agg.total}칸 (+${currentValue} / +${totalValue})\n• 남은 칸: ${agg.remaining}칸`;
-      }
     });
 
     summaryContainer.appendChild(itemsContainer);
