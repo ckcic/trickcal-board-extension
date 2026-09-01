@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "트릭컬 노트 보크 진행도 확장 프로그램",
+  "description": "트릭컬 노트(note.trickcal.com/board)에서 사도별 보크/황크 진행 상황 및 미완료 필터를 제공합니다.",
+  "version": "1.0.0",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "64": "icons/icon64.png",
+    "128": "icons/icon128.png",
+    "256": "icons/icon256.png"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "트릭컬 노트 보크 진행도"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://note.trickcal.com/*"
+      ],
+      "js": [
+        "interceptor.js"
+      ],
+      "world": "MAIN",
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "*://note.trickcal.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "webp/*"
+      ],
+      "matches": [
+        "*://note.trickcal.com/*"
+      ]
+    }
+  ]
+}

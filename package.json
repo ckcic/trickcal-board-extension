@@ -1,0 +1,17 @@
+{
+  "name": "trickcal-board-extension",
+  "version": "1.0.0",
+  "description": "트릭컬 노트(note.trickcal.com/board) 보크 진행도 확인 및 스탯별/성격별/성급별 필터 확장 프로그램",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "test": "node --test tests/*.test.mjs",
+    "package": "node scripts/build.mjs && node scripts/package.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.3"
+  }
+}
