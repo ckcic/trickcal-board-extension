@@ -42,37 +42,49 @@ import { FilterPanelController } from './ui/filterPanel.ts';
   }
 
   /**
-   * 현재 화면이 '사도별' 탭인지 확인
-   * ('스탯별' 화면이나 다른 URL인 경우 false 반환)
+   * 現在の画面が「使徒別」タブであるか判定
+   * （ステータス別画面や別URLの場合は false を返却）
    */
   function isApostleTabActive(): boolean {
-    // 1. URL이 /board가 아닌 경우 즉시 비활성화
+    // 1. URLが /board 以外の場合は即座に無効化
     if (!isBoardPage()) {
       return false;
     }
 
-    // 2. '스탯별' 화면에만 존재하는 특징적인 요소 감지
-    const pageText = document.body ? document.body.innerText : '';
-    const hasStatHeaders =
-      pageText.includes('전체 물리 공격력') ||
-      pageText.includes('전체 마법 공격력') ||
-      pageText.includes('전체 물리 방어력') ||
-      pageText.includes('전체 마법 방어력');
+    // 2. 拡張機能DOMを除外したサイト本来の切り替えボタンを検出
+    const allButtons = Array.from(document.querySelectorAll('button, a, div[role="button"], span'))
+      .filter((el) => !el.closest('#tcbe-filter-panel') && !el.closest('.tcbe-badge-container'));
 
+    // 「使徒別」切り替えボタンが存在する場合（＝現在はステータス別画面）
+    const hasSwitchToApostleBtn = allButtons.some((el) => {
+      const txt = el.textContent?.trim();
+      return txt === '사도별';
+    });
+    if (hasSwitchToApostleBtn) {
+      return false;
+    }
+
+    // 3. ステータス別画面特有の全体ステータスヘッダーの存在確認
+    const hasStatHeaders = allButtons.some((el) => {
+      const txt = el.textContent?.trim() || '';
+      return (
+        txt.startsWith('전체 HP') ||
+        txt.startsWith('전체 물리') ||
+        txt.startsWith('전체 마법') ||
+        txt.startsWith('전체 치명') ||
+        txt.startsWith('전체 치피') ||
+        txt.startsWith('전체 치저')
+      );
+    });
     if (hasStatHeaders) {
       return false;
     }
 
-    // 3. 전환 버튼 텍스트 확인 ('스탯별' 버튼이 보이면 현재 '사도별' 화면)
-    const switchButtons = Array.from(document.querySelectorAll('button, div, a, span'));
-    const isApostleView = switchButtons.some(
-      (el) => el.textContent?.trim() === '스탯별'
-    );
-    const isStatView = switchButtons.some(
-      (el) => el.textContent?.trim() === '사도별'
-    );
+    // 4. 使徒名検索欄の存在確認（統合済みの場合も許可）
+    const searchInput = document.querySelector('input[placeholder*="사도"]');
+    const isSearchIntegrated = filterController ? filterController.hasIntegratedSearch() : false;
 
-    if (isStatView && !isApostleView) {
+    if (!searchInput && !isSearchIntegrated) {
       return false;
     }
 
@@ -143,7 +155,7 @@ import { FilterPanelController } from './ui/filterPanel.ts';
   }
 
   /**
-   * 현재 보드 진행도 맵과 필터 상태를 바탕으로 UI를 갱신
+   * 現在のボード進捗とフィルタ状態をもとにUIを更新
    */
   function refreshUI() {
     if (!latestProgressMap || latestProgressMap.size === 0) {
@@ -157,17 +169,18 @@ import { FilterPanelController } from './ui/filterPanel.ts';
       const isBoard = isBoardPage();
       const isApostleTab = isBoard && isApostleTabActive();
 
-      // /board URL이 아니거나 사도별 탭이 아닌 경우 모두 숨기고 종료
+      // /board URLでない、または使徒別タブでない場合は完全にアンマウント・非表示にして終了
       if (!isApostleTab) {
         if (filterController) {
-          filterController.setVisible(false);
+          filterController.unmount();
         }
         setBadgesVisible(false);
         return;
       }
 
-      // /board 및 사도별 탭인 경우 표시 활성화
+      // 使徒別タブである場合はマウントおよび表示を活性化
       if (filterController) {
+        filterController.mount();
         filterController.setVisible(true);
       }
       setBadgesVisible(true);
@@ -182,18 +195,13 @@ import { FilterPanelController } from './ui/filterPanel.ts';
             grade: 'all' as const,
           };
 
-      // 1. 필터 패널 마운트
-      if (filterController) {
-        filterController.mount();
-      }
-
-      // 2. 사도 카드에 뱃지 삽입 및 업데이트
+      // 1. 사도 카드에 뱃지 삽입 및 업데이트
       enhanceApostleCards(latestProgressMap, filterState);
 
-      // 3. 필터 및 정렬 적용
+      // 2. 필터 및 정렬 적용
       const { total, visible } = applyFilterToCards(filterState, latestProgressMap);
 
-      // 4. 통계 정보 및 스탯별 총 칸수/수치 요약 갱신
+      // 3. 통계 정보 및 스탯별 총 칸수/수치 요약 갱신
       if (filterController) {
         const { incompleteCount, masterTotal, statName, persName } = countIncompleteApostles(
           latestProgressMap,
@@ -207,13 +215,13 @@ import { FilterPanelController } from './ui/filterPanel.ts';
     }
   }
 
-  function scheduleRefresh() {
+  function scheduleRefresh(delay = 150) {
     if (debounceTimer) {
       clearTimeout(debounceTimer);
     }
     debounceTimer = setTimeout(() => {
       refreshUI();
-    }, 150);
+    }, delay);
   }
 
   function handleFilterChange(newState: FilterState) {
@@ -239,7 +247,7 @@ import { FilterPanelController } from './ui/filterPanel.ts';
   listenForBoardData((data: ExtractedApiData) => {
     try {
       latestProgressMap = calculateAllApostlesProgress(data);
-      scheduleRefresh();
+      scheduleRefresh(50);
     } catch (err) {
       console.error('[TCBE] Error calculating board progress:', err);
     }
@@ -271,6 +279,14 @@ import { FilterPanelController } from './ui/filterPanel.ts';
     subtree: true,
   });
 
-  window.addEventListener('popstate', scheduleRefresh);
-  window.addEventListener('hashchange', scheduleRefresh);
+  // タブ切り替えボタンなどのクリック時に迅速に再判定
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (target && !target.closest('#tcbe-filter-panel')) {
+      scheduleRefresh(50);
+    }
+  });
+
+  window.addEventListener('popstate', () => scheduleRefresh(50));
+  window.addEventListener('hashchange', () => scheduleRefresh(50));
 })();

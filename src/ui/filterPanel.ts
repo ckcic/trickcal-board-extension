@@ -21,6 +21,11 @@ export interface FilterChangeCallback {
 
 export class FilterPanelController {
   private container: HTMLElement | null = null;
+  private searchSlot: HTMLElement | null = null;
+  private originalSearchElement: HTMLElement | null = null;
+  private originalSearchParent: HTMLElement | null = null;
+  private originalSearchNextSibling: Node | null = null;
+
   private state: FilterState = {
     status: 'all',
     boardLevel: 'all',
@@ -36,6 +41,13 @@ export class FilterPanelController {
 
   public getState(): FilterState {
     return { ...this.state };
+  }
+
+  /**
+   * 検索バーが統合されているか確認
+   */
+  public hasIntegratedSearch(): boolean {
+    return this.originalSearchElement !== null && document.body.contains(this.originalSearchElement);
   }
 
   public setVisible(visible: boolean) {
@@ -170,6 +182,13 @@ export class FilterPanelController {
     statsSpan.className = 'tcbe-stats-info';
     statsSpan.textContent = '데이터 불러오는 중...';
     row1.appendChild(statsSpan);
+
+    // 5. 사도 이름 검색창 통합 전용 슬롯 (우측 끝에 배치)
+    const searchSlot = document.createElement('div');
+    searchSlot.id = 'tcbe-search-slot';
+    searchSlot.className = 'tcbe-search-slot';
+    row1.appendChild(searchSlot);
+    this.searchSlot = searchSlot;
 
     panel.appendChild(row1);
 
@@ -447,31 +466,85 @@ export class FilterPanelController {
     summaryContainer.appendChild(itemsContainer);
   }
 
+  /**
+   * 使徒検索バーをパネル内に統合し、使徒カードリストの上部にパネルをマウント
+   */
   public mount(): void {
-    if (document.getElementById('tcbe-filter-panel')) {
+    const existingPanel = document.getElementById('tcbe-filter-panel');
+
+    // サイト本来の使徒名検索入力欄を検索
+    const searchInput = document.querySelector<HTMLInputElement>('input[placeholder*="사도"]');
+
+    // 使徒別画面でない（検索欄が存在せず、かつ以前移動した要素もない）場合はマウントしない
+    if (!searchInput && !this.originalSearchElement) {
       return;
     }
 
     const panel = this.render();
 
-    const searchInput = document.querySelector('input[placeholder*="사도"], input[type="text"], input[type="search"]');
-    const searchContainer = searchInput?.closest('div')?.parentElement || searchInput?.closest('div');
+    // 検索入力欄またはそのラッパーコンテナをパネル内の検索スロットへ移動
+    if (searchInput && this.searchSlot) {
+      const searchContainer =
+        (searchInput.closest('div.relative, div[class*="relative"]') as HTMLElement) ||
+        searchInput.parentElement ||
+        searchInput;
 
-    if (searchContainer && searchContainer.parentElement) {
-      searchContainer.parentElement.insertBefore(panel, searchContainer);
+      if (searchContainer && !this.searchSlot.contains(searchContainer)) {
+        this.originalSearchElement = searchContainer;
+        this.originalSearchParent = searchContainer.parentElement;
+        this.originalSearchNextSibling = searchContainer.nextSibling;
+        this.searchSlot.appendChild(searchContainer);
+      }
+    }
+
+    if (existingPanel && document.body.contains(existingPanel)) {
       return;
     }
 
-    const mainArea =
-      document.querySelector('main') ||
-      document.querySelector('#root > div') ||
-      document.querySelector('#app') ||
-      document.body;
-
-    if (mainArea.firstChild) {
-      mainArea.insertBefore(panel, mainArea.firstChild);
-    } else {
-      mainArea.appendChild(panel);
+    // 検索コンテナの元の親要素（または使徒グリッドコンテナの直前）にパネルを挿入
+    if (this.originalSearchParent && this.originalSearchParent.parentElement) {
+      this.originalSearchParent.parentElement.insertBefore(panel, this.originalSearchParent);
+      return;
     }
+
+    // 代替の挿入先探索（使徒カード一覧の上部）
+    const cardGrid = document.querySelector('div.grid, div[class*="grid"], [data-slot="card"]')?.closest('div.grid, div[class*="grid"]');
+    if (cardGrid && cardGrid.parentElement) {
+      cardGrid.parentElement.insertBefore(panel, cardGrid);
+      return;
+    }
+
+    const mainArea = document.querySelector('main') || document.querySelector('#root > div') || document.querySelector('#app');
+    if (mainArea && mainArea.firstChild) {
+      mainArea.insertBefore(panel, mainArea.firstChild);
+    }
+  }
+
+  /**
+   * パネルをDOMから取り外し、使徒検索バーを元のDOM位置へ復元
+   */
+  public unmount(): void {
+    // 1. 移動していた検索バーを元のDOMツリー位置に戻す
+    if (this.originalSearchElement && this.originalSearchParent) {
+      try {
+        if (this.originalSearchNextSibling && this.originalSearchParent.contains(this.originalSearchNextSibling)) {
+          this.originalSearchParent.insertBefore(this.originalSearchElement, this.originalSearchNextSibling);
+        } else {
+          this.originalSearchParent.appendChild(this.originalSearchElement);
+        }
+      } catch (err) {
+        console.warn('[TCBE] Error restoring search element:', err);
+      }
+      this.originalSearchElement = null;
+      this.originalSearchParent = null;
+      this.originalSearchNextSibling = null;
+    }
+
+    // 2. パネル要素をDOMから安全に削除
+    const panelEl = document.getElementById('tcbe-filter-panel') || this.container;
+    if (panelEl && panelEl.parentElement) {
+      panelEl.parentElement.removeChild(panelEl);
+    }
+    this.container = null;
   }
 }

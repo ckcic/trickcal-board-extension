@@ -682,7 +682,8 @@ export function applyFilterToCards(
 }
 
 /**
- * 확장 프로그램 뱃지 및 하이라이트의 표시/숨김(사도별 탭 이외 탭에서의 숨김)을 일괄 제어
+ * 拡張機能バッジ・ハイライト・カード非表示状態の一括表示/非表示制御
+ * （ステータス別タブなど使徒別以外の画面遷移時に完全復元）
  */
 export function setBadgesVisible(visible: boolean) {
   const badges = document.querySelectorAll('.tcbe-badge-container');
@@ -695,12 +696,19 @@ export function setBadgesVisible(visible: boolean) {
   });
 
   if (!visible) {
+    // 1. タイルハイライトの解除
     const highlights = document.querySelectorAll('.tcbe-tile-highlight-rem, .tcbe-tile-highlight-done');
     highlights.forEach((h) => {
       h.classList.remove('tcbe-tile-highlight-rem', 'tcbe-tile-highlight-done');
     });
 
-    // 보드 표시 복원
+    // 2. フィルタによる非表示クラス（tcbe-card-hidden）を全解除
+    const hiddenCards = document.querySelectorAll('.tcbe-card-hidden');
+    hiddenCards.forEach((c) => {
+      c.classList.remove('tcbe-card-hidden');
+    });
+
+    // 3. ボード次数の表示状態をすべて展開（all）に復元
     const allCards = document.querySelectorAll<HTMLElement>(`[${ATTR_APOSTLE_NAME}]`);
     allCards.forEach((c) => {
       applyBoardLevelVisibility(c, 'all');
