@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "트릭컬 노트 보크 진행도 확장 프로그램",
   "description": "트릭컬 노트(note.trickcal.com/board)에서 사도별 보크/황크 진행 상황 및 미완료 필터를 제공합니다.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
