@@ -1,6 +1,6 @@
 {
   "name": "trickcal-board-extension",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "트릭컬 노트(note.trickcal.com/board) 보크 진행도 확인 및 스탯별/성격별/성급별 필터 확장 프로그램",
   "type": "module",
   "private": true,

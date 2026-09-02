@@ -6,6 +6,20 @@
 :root {
   --tcbe-stat-sprite: url('chrome-extension://__MSG_@@extension_id__/webp/Stat.webp');
   --tcbe-personality-sprite: url('chrome-extension://__MSG_@@extension_id__/webp/Common_UnitPersonality.webp');
+  --tcbe-gate-icon: url('chrome-extension://__MSG_@@extension_id__/webp/Gate.webp');
+}
+
+/* --- 관문 아이콘 --- */
+.tcbe-icon-gate {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-image: var(--tcbe-gate-icon);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  vertical-align: middle;
+  flex-shrink: 0;
 }
 
 /* 탭 전환 시（사도별 탭이 아닐 때） 확장 프로그램 요소 숨김 */
@@ -13,12 +27,12 @@
   display: none !important;
 }
 
-/* --- 호버된 사도 카드를 최상위 레이어로 올려 툴팁이 다른 카드에 가려지는 문제 방지 --- */
-[data-slot="card"]:hover,
+/* --- 호버된 사도 카드를 위 레이어로 올려 툴팁이 다른 카드에 가려지는 문제 방지 (모달 다이얼로그는 엄격 제외) --- */
+[data-slot="card"][data-tcbe-enhanced]:hover,
 [data-slot="card"]:has(.tcbe-badge-container:hover),
-div.bg-dialog-background:hover,
-div.bg-dialog-background:has(.tcbe-badge-container:hover) {
-  z-index: 99999 !important;
+div.bg-dialog-background[data-tcbe-enhanced]:not([role="dialog"]):not([data-slot="dialog-content"]):not([data-slot="dialog-overlay"]):hover,
+div.bg-dialog-background[data-tcbe-enhanced]:has(.tcbe-badge-container:hover) {
+  z-index: 40 !important;
   position: relative !important;
 }
 
@@ -62,105 +76,123 @@ div.bg-dialog-background:has(.tcbe-badge-container:hover) {
 .tcbe-sprite-pers-4 { background-position: -72px 0; }        /* 우울 */
 .tcbe-sprite-pers-5 { background-position: -90px 0; }        /* 공명 */
 
-/* --- 뱃지 컨테이너 --- */
+/* --- 뱃지 컨테이너 (사도 카드 위의 보크 현황 뱃지 - 트릭컬 공식 스타일) --- */
 .tcbe-badge-container {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  margin-top: 2px;
-  padding: 2px 7px;
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(138, 92, 246, 0.4);
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #f1f5f9;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(4px);
+  min-height: 28px;
+  height: 28px;
+  margin: 4px 0 6px 0;
+  padding: 0 8px;
+  background: #f1f5e8;
+  border: 1.5px solid #d5e0ca;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #1e293b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   user-select: none;
   cursor: pointer;
   position: relative;
   width: fit-content;
   max-width: 100%;
+  box-sizing: border-box;
+  font-family: inherit, "Pretendard", "SUIT", sans-serif;
+  transition: all 0.15s ease;
 }
 
 .tcbe-badge-container:hover {
-  border-color: rgba(168, 85, 247, 0.85);
-  box-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
+  border-color: #86efac;
+  background: #f8faf2;
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.3);
 }
 
 .tcbe-badge-bokr-tag {
-  color: #c084fc;
-  font-weight: 700;
+  color: #276749;
+  font-weight: 800;
   margin-right: 1px;
 }
 
 .tcbe-badge-counts {
-  color: #f8fafc;
+  color: #1e293b;
+  font-weight: 800;
 }
 
 .tcbe-badge-remaining {
-  color: #fb923c;
-  font-size: 10.5px;
-  font-weight: 700;
+  background: #f97316;
+  color: #ffffff;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .tcbe-badge-complete {
-  background: rgba(15, 33, 27, 0.95);
-  border-color: rgba(52, 211, 153, 0.6);
+  background: #dcfce7;
+  border-color: #86efac;
 }
 
 .tcbe-badge-complete .tcbe-badge-bokr-tag {
-  color: #34d399;
+  color: #15803d;
 }
 
 .tcbe-badge-complete-icon {
-  color: #34d399;
-  font-weight: bold;
+  background: #16a34a;
+  color: #ffffff;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
-/* 선택된 스탯 미니 뱃지 표시 */
+/* 선택된 스탯 미니 뱃지 표시 (사도 카드 내 스탯별 현황) */
 .tcbe-stat-highlight-tag {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 1px 5px;
-  background: rgba(56, 189, 248, 0.2);
-  border: 1px solid rgba(56, 189, 248, 0.5);
-  border-radius: 4px;
+  height: 22px;
+  padding: 0 7px;
+  background: #e0f2fe;
+  border: 1.5px solid #7dd3fc;
+  border-radius: 6px;
   font-size: 10.5px;
-  font-weight: 700;
-  color: #7dd3fc;
-  margin-left: 2px;
+  font-weight: 800;
+  color: #0369a1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  margin-left: 4px;
+  box-sizing: border-box;
 }
 
 .tcbe-stat-highlight-tag.tcbe-stat-done {
-  background: rgba(52, 211, 153, 0.2);
-  border-color: rgba(52, 211, 153, 0.5);
-  color: #6ee7b7;
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #15803d;
 }
 
-/* --- 툴팁 (호버 시 각 차수 및 스탯별 상세 표시) --- */
+/* --- 사도 카드 호버 툴팁 (트릭컬 공식 화이트/크림 다이얼로그 스타일) --- */
 .tcbe-tooltip {
   display: none;
   position: absolute;
   bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(9, 13, 22, 0.98);
-  border: 1px solid #475569;
-  border-radius: 10px;
+  left: -6px;
+  background: #ffffff;
+  border: 2px solid #86efac;
+  border-radius: 12px;
   padding: 12px 16px;
-  font-size: 11.5px;
+  font-size: 12px;
   width: max-content;
-  min-width: 360px;
-  max-width: 440px;
+  min-width: 350px;
+  max-width: min(440px, calc(100vw - 32px));
   z-index: 9999999 !important;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.92);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
   pointer-events: none !important;
-  color: #f1f5f9;
+  color: #1e293b;
   line-height: 1.5;
   box-sizing: border-box;
+  font-family: inherit, "Pretendard", "SUIT", sans-serif;
 }
 
 .tcbe-badge-container:hover .tcbe-tooltip {
@@ -171,98 +203,216 @@ div.bg-dialog-background:has(.tcbe-badge-container:hover) {
   content: '';
   position: absolute;
   top: 100%;
-  left: 50%;
+  left: var(--chevron-left, 28px);
+  right: var(--chevron-right, auto);
   margin-left: -6px;
   border-width: 6px;
   border-style: solid;
-  border-color: rgba(9, 13, 22, 0.98) transparent transparent transparent;
+  border-color: #86efac transparent transparent transparent;
 }
 
 .tcbe-tt-header {
-  font-weight: 700;
-  color: #c084fc;
-  border-bottom: 1px solid #334155;
-  padding-bottom: 5px;
-  margin-bottom: 7px;
+  font-weight: 800;
+  color: #15803d;
+  border-bottom: 2px solid #f1f5e8;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 12px;
+  font-size: 12.5px;
 }
 
 .tcbe-tt-board-row {
-  margin-bottom: 7px;
-  padding-bottom: 5px;
-  border-bottom: 1px dashed rgba(71, 85, 105, 0.6);
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed #e2e8d5;
+}
+
+.tcbe-tt-board-row:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .tcbe-tt-board-title {
-  font-weight: 700;
-  color: #93c5fd;
-  margin-bottom: 4px;
-  font-size: 11.5px;
+  font-weight: 800;
+  color: #276749;
+  margin-bottom: 5px;
+  font-size: 12px;
 }
 
 .tcbe-tt-stats-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 4px 10px;
-  font-size: 11px;
+  gap: 5px 12px;
+  font-size: 11.5px;
   margin-top: 2px;
 }
 
 .tcbe-tt-stat-item {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   white-space: nowrap;
 }
 
 .tcbe-tt-stat-name {
-  color: #94a3b8;
+  color: #475569;
   display: inline-flex;
   align-items: center;
   gap: 2px;
+  font-weight: 600;
 }
 
 .tcbe-tt-stat-val {
-  font-weight: 700;
-  color: #f1f5f9;
+  font-weight: 800;
+  color: #0f172a;
 }
 
 .tcbe-tt-stat-done {
-  color: #34d399;
+  color: #16a34a;
 }
 
 .tcbe-tt-stat-rem {
-  color: #fb923c;
+  color: #ea580c;
 }
 
-/* --- 필터 컨트롤 패널 --- */
-.tcbe-panel-container {
+/* --- 트릭컬 공식 스타일 아코디언 필터 패널 --- */
+.tcbe-panel-container,
+.tcbe-accordion-container {
+  display: flex;
+  flex-direction: column;
+  margin: 10px 0 18px 0;
+  background: #f4f6ea;
+  border: 3px solid #e2e8d5;
+  border-radius: 18px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  color: #2d3748;
+  font-size: 11.5px;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+  flex: 1 1 100%;
+  overflow: hidden;
+  clear: both;
+}
+
+/* 닫혔을 때 바깥 테두리 깔끔하게 처리 */
+.tcbe-panel-container:has(.tcbe-accordion-header[data-state="closed"]),
+.tcbe-accordion-container:has(.tcbe-accordion-header[data-state="closed"]) {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* --- 아코디언 헤더 바 (트릭컬 공식 초록 그라디언트) --- */
+.tcbe-accordion-header {
+  width: 100% !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 8px 16px;
+  background: linear-gradient(to right, #52a832, #6ec03c);
+  border: 3px solid #f4f6ea;
+  border-radius: 16px;
+  color: #f8fafc;
+  font-weight: 600;
+  font-size: 17px;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  outline: none;
+  user-select: none;
+  box-sizing: border-box;
+  font-family: inherit, "Pretendard", "SUIT", sans-serif;
+}
+
+/* 열렸을 때 헤더 하단 라운드 */
+.tcbe-accordion-header[data-state="open"] {
+  border-bottom-left-radius: 0px;
+  border-bottom-right-radius: 0px;
+}
+
+/* 닫혔을 때 헤더 전체 라운드 유지 */
+.tcbe-accordion-header[data-state="closed"] {
+  border-radius: 16px;
+}
+
+.tcbe-accordion-header:hover {
+  filter: brightness(1.04);
+}
+
+.tcbe-accordion-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* --- 신규 버전 업데이트 알림 뱃지 --- */
+.tcbe-update-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  color: #ffffff !important;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 9px;
+  border-radius: 9999px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  text-decoration: none;
+  cursor: pointer;
+  letter-spacing: -0.2px;
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+
+.tcbe-update-badge:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+
+.tcbe-accordion-chevron {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%) rotate(0deg);
+  transition: transform 0.2s ease;
+  stroke: #f8fafc;
+  pointer-events: none;
+}
+
+/* 열렸을 때 화살표 180도 회전 (위쪽 화살표 ^) */
+.tcbe-accordion-header[data-state="open"] .tcbe-accordion-chevron {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+/* 닫혔을 때 화살표 기본 상태 (아래쪽 화살표 v) */
+.tcbe-accordion-header[data-state="closed"] .tcbe-accordion-chevron {
+  transform: translateY(-50%) rotate(0deg);
+}
+
+/* --- 아코디언 본문 영역 --- */
+.tcbe-accordion-content {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin: 8px auto 12px auto;
-  padding: 12px 16px;
-  background: rgba(15, 23, 42, 0.95);
-  border: 1px solid rgba(138, 92, 246, 0.35);
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(10px);
-  color: #f8fafc;
-  font-size: 11.5px;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  flex: 1 1 100%;
+  padding: 10px 14px;
+  background: #f4f6ea;
+}
+
+.tcbe-accordion-content.tcbe-closed {
+  display: none !important;
 }
 
 .tcbe-panel-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .tcbe-panel-group {
@@ -274,20 +424,22 @@ div.bg-dialog-background:has(.tcbe-badge-container:hover) {
 
 .tcbe-panel-label {
   font-weight: 700;
-  color: #a78bfa;
-  margin-right: 3px;
+  color: #334155;
   font-size: 11.5px;
   display: inline-flex;
   align-items: center;
   gap: 2px;
+  background: #e2e8d5;
+  padding: 2px 7px;
+  border-radius: 6px;
 }
 
 .tcbe-btn {
-  background: #1e293b;
-  border: 1px solid #334155;
-  color: #cbd5e1;
+  background: #ffffff;
+  border: 1.5px solid #d0dcc0;
+  color: #4a5568;
   padding: 3px 8px;
-  border-radius: 5px;
+  border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
@@ -296,71 +448,79 @@ div.bg-dialog-background:has(.tcbe-badge-container:hover) {
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .tcbe-btn:hover {
-  background: #334155;
-  color: #ffffff;
-  border-color: #64748b;
+  background: #f7faf2;
+  border-color: #a3c48d;
+  color: #1a202c;
 }
 
+/* 활성 버튼: 트릭컬 시그니처 옐로우 */
 .tcbe-btn.tcbe-active {
-  background: #7c3aed;
-  border-color: #a855f7;
-  color: #ffffff;
-  box-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
+  background: #fcd34d !important;
+  border-color: #f59e0b !important;
+  color: #78350f !important;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.3) !important;
 }
 
 .tcbe-btn-stat.tcbe-active {
-  background: #0284c7;
-  border-color: #38bdf8;
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+  background: #bae6fd !important;
+  border-color: #0284c7 !important;
+  color: #0369a1 !important;
 }
 
 .tcbe-btn-pers.tcbe-active {
-  background: #059669;
-  border-color: #34d399;
-  box-shadow: 0 0 8px rgba(52, 211, 153, 0.4);
+  background: #a7f3d0 !important;
+  border-color: #059669 !important;
+  color: #065f46 !important;
 }
 
 .tcbe-stats-info {
-  margin-left: auto;
-  font-size: 11.5px;
-  color: #a78bfa;
+  font-size: 11px;
+  color: #2e6930;
   font-weight: 700;
-  background: rgba(30, 41, 59, 0.7);
+  background: #e2e8d5;
   padding: 3px 8px;
-  border-radius: 5px;
-  border: 1px solid rgba(138, 92, 246, 0.2);
+  border-radius: 6px;
+  border: 1px solid #c8d8b8;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
-/* --- 검색창 통합 슬롯 --- */
+/* --- 검색창 통합 슬롯 (Row 2 우측에 깔끔하게 안착) --- */
 .tcbe-search-slot {
   display: inline-flex;
   align-items: center;
-  min-width: 220px;
-  max-width: 320px;
+  margin-left: auto;
+  min-width: 180px;
+  max-width: 240px;
+  flex-shrink: 0;
 }
 
 .tcbe-search-slot input {
-  font-size: 12px !important;
+  font-size: 11.5px !important;
+  height: 28px !important;
+  border-radius: 8px !important;
 }
 
 /* --- Row 4: 스탯별 총 칸수/수치 요약 바 --- */
 .tcbe-stat-summary-row {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
   margin-top: 2px;
   padding-top: 8px;
-  border-top: 1px dashed rgba(148, 163, 184, 0.2);
+  border-top: 1.5px dashed #cbd5b8;
 }
 
 .tcbe-stat-summary-title {
-  font-weight: 700;
-  color: #38bdf8;
-  font-size: 11px;
+  font-weight: 800;
+  color: #276749;
+  font-size: 11.5px;
+  font-family: inherit, "Pretendard", "SUIT", sans-serif;
 }
 
 .tcbe-stat-summary-items {
@@ -373,84 +533,89 @@ div.bg-dialog-background:has(.tcbe-badge-container:hover) {
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background: rgba(30, 41, 59, 0.85);
-  border: 1px solid #334155;
+  gap: 5px;
+  background: #ffffff;
+  border: 1.5px solid #d0dcc0;
   border-radius: 6px;
-  padding: 2px 7px;
-  font-size: 11px;
+  padding: 3px 8px;
+  font-size: 11.5px;
   cursor: pointer;
   transition: all 0.15s ease;
   user-select: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  font-family: inherit, "Pretendard", "SUIT", sans-serif;
 }
 
 .tcbe-summary-card:hover {
-  background: #334155;
-  border-color: #38bdf8;
-  box-shadow: 0 0 6px rgba(56, 189, 248, 0.3);
+  background: #f7faf2;
+  border-color: #4caf50;
+  box-shadow: 0 0 6px rgba(76, 175, 80, 0.3);
   z-index: 100;
 }
 
 .tcbe-summary-active {
-  background: rgba(2, 132, 199, 0.35) !important;
-  border-color: #38bdf8 !important;
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.45);
+  background: #e0f2fe !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 0 6px rgba(2, 132, 199, 0.4) !important;
 }
 
 .tcbe-summary-done {
-  border-color: rgba(52, 211, 153, 0.4);
+  border-color: #86efac;
+  background: #f0fdf4;
 }
 
 .tcbe-summary-name {
   font-weight: 700;
-  color: #e2e8f0;
+  color: #0f172a;
 }
 
 .tcbe-summary-val {
-  color: #94a3b8;
-  font-weight: 600;
-  font-size: 10.5px;
+  color: #475569;
+  font-weight: 700;
+  font-size: 11px;
 }
 
 .tcbe-stat-done-text {
-  color: #34d399 !important;
+  color: #15803d !important;
 }
 
 .tcbe-summary-badge {
-  background: rgba(249, 115, 22, 0.2);
-  color: #fb923c;
+  background: #ffedd5;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
   border-radius: 4px;
-  padding: 0 4px;
+  padding: 0.5px 5px;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .tcbe-badge-done-bg {
-  background: rgba(52, 211, 153, 0.2) !important;
-  color: #34d399 !important;
+  background: #dcfce7 !important;
+  color: #15803d !important;
+  border-color: #86efac !important;
 }
 
-/* --- 스탯 요약 카드 전용 커스텀 호버 툴팁 (사도별 툴팁 스타일) --- */
+/* --- 스탯 요약 카드 전용 커스텀 호버 툴팁 (트릭컬 공식 화이트 다이얼로그 스타일) --- */
 .tcbe-summary-tooltip {
   display: none;
   position: absolute;
   bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(9, 13, 22, 0.98);
-  border: 1px solid #475569;
-  border-radius: 8px;
+  left: 0;
+  background: #ffffff;
+  border: 2px solid #86efac;
+  border-radius: 12px;
   padding: 10px 14px;
-  font-size: 11.5px;
+  font-size: 12px;
   width: max-content;
   min-width: 240px;
   max-width: 320px;
   z-index: 9999999 !important;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.92);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
   pointer-events: none !important;
-  color: #f1f5f9;
+  color: #1e293b;
   line-height: 1.5;
   box-sizing: border-box;
+  font-family: inherit, "Pretendard", "SUIT", sans-serif;
 }
 
 .tcbe-summary-card:hover .tcbe-summary-tooltip {
@@ -461,39 +626,42 @@ div.bg-dialog-background:has(.tcbe-badge-container:hover) {
   content: '';
   position: absolute;
   top: 100%;
-  left: 50%;
+  left: var(--sum-chevron-left, 24px);
+  right: var(--sum-chevron-right, auto);
   margin-left: -6px;
   border-width: 6px;
   border-style: solid;
-  border-color: rgba(9, 13, 22, 0.98) transparent transparent transparent;
+  border-color: #86efac transparent transparent transparent;
 }
 
 .tcbe-sum-tt-body {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-top: 4px;
+  gap: 5px;
+  margin-top: 5px;
 }
 
 .tcbe-sum-tt-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  font-size: 11px;
+  gap: 10px;
+  font-size: 11.5px;
 }
 
 .tcbe-sum-tt-label {
-  color: #94a3b8;
+  color: #475569;
+  font-weight: 600;
 }
 
 .tcbe-sum-tt-val {
-  color: #f1f5f9;
-  font-weight: 700;
+  color: #0f172a;
+  font-weight: 800;
 }
 
 .tcbe-sum-tt-val-curr {
-  color: #38bdf8;
+  color: #0284c7;
+  font-weight: 800;
 }
 
 /* 필터링되어 숨겨진 사도 카드 */
@@ -515,4 +683,38 @@ div.bg-dialog-background:has(.tcbe-badge-container:hover) {
 .tcbe-tile-highlight-done {
   outline: 3.5px solid #dc2626 !important;
   box-shadow: 0 0 10px rgba(220, 38, 38, 1), inset 0 0 6px rgba(220, 38, 38, 0.6) !important;
+}
+
+/* --- 화면이 좁을 때 가로 스크롤 방지 및 반응형 레이아웃 --- */
+@media (max-width: 900px) {
+  .tcbe-panel-row {
+    gap: 6px;
+  }
+
+  .tcbe-stats-info {
+    margin-left: 0;
+    width: 100%;
+    text-align: center;
+    box-sizing: border-box;
+  }
+
+  .tcbe-search-slot {
+    margin-left: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .tcbe-search-slot input {
+    width: 100%;
+  }
+
+  .tcbe-stat-summary-items {
+    gap: 4px;
+  }
+
+  .tcbe-summary-card {
+    padding: 2px 6px;
+    font-size: 11px;
+  }
 }

@@ -167,16 +167,25 @@ export interface ApostleProgress {
   };
 }
 
-/** 확장 프로그램 필터 상태 */
-export type BokrFilterStatus = 'all' | 'incomplete' | 'complete';
-export type BoardFilterLevel = 'all' | '1' | '2' | '3';
-export type StatFilterTarget = 'all' | StatCategory;
-export type PersonalityFilterTarget = 'all' | PersonalityType;
+/** 사도 카드 정렬 옵션 (asc/desc 양방향 토글 지원) */
+export type SortOption =
+  | 'name_asc'          // 이름순 오름차순 (가나다순)
+  | 'name_desc'         // 이름순 내림차순 (하파타순)
+  | 'unlocked_desc'     // 보드 해금 많은 순 (3관 -> 1관)
+  | 'unlocked_asc'      // 보드 해금 적은 순 (1관 -> 3관)
+  | 'grade_desc'        // 초기 성급 높은 순 (3성 -> 1성)
+  | 'grade_asc'         // 초기 성급 낮은 순 (1성 -> 3성)
+  | 'personality_asc'   // 성격 순 (순수 -> 냉정 -> 광기 -> 활발 -> 우울 -> 공명)
+  | 'personality_desc'; // 성격 역순 (공명 -> 우울 -> 활발 -> 광기 -> 냉정 -> 순수)
+
+export type UnlockedTierFilter = 'all' | 1 | 2 | 3; // 사도별 해금된 보드 관문 (1차, 2차, 3차)
 
 export interface FilterState {
   status: BokrFilterStatus;
   boardLevel: BoardFilterLevel;
   statCategory: StatFilterTarget;
   personality: PersonalityFilterTarget;
-  grade: GradeFilterTarget; // 태생 성급 필터 ('all' | 1 | 2 | 3)
+  grade: GradeFilterTarget;          // 초기 성급 필터 ('all' | 1 | 2 | 3)
+  unlockedTier: UnlockedTierFilter;  // 해금 관문 필터 ('all' | 1 | 2 | 3)
+  sortBy: SortOption;                // 정렬 옵션
 }

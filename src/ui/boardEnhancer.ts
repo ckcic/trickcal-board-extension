@@ -256,6 +256,23 @@ export function createBadgeElement(
   summaryRow.appendChild(sumGrid);
   tooltip.appendChild(summaryRow);
 
+  // 스마트 툴팁 위치 조절 (좌측 열에서는 오른쪽으로, 우측 열에서는 왼쪽으로 펼쳐져 화면 잘림 100% 방지)
+  container.addEventListener('mouseenter', () => {
+    const rect = container.getBoundingClientRect();
+    const screenWidth = window.innerWidth;
+    if (rect.left + rect.width / 2 > screenWidth / 2) {
+      tooltip.style.left = 'auto';
+      tooltip.style.right = '-6px';
+      tooltip.style.setProperty('--chevron-left', 'auto');
+      tooltip.style.setProperty('--chevron-right', '28px');
+    } else {
+      tooltip.style.left = '-6px';
+      tooltip.style.right = 'auto';
+      tooltip.style.setProperty('--chevron-left', '28px');
+      tooltip.style.setProperty('--chevron-right', 'auto');
+    }
+  });
+
   container.appendChild(tooltip);
 
   return container;
@@ -391,6 +408,11 @@ export function updateBoardTileHighlights(
  * 사도 이름 요소를 기준으로 최상위 사도 카드 컨테이너를 탐색
  */
 function findCardContainer(nameElement: Element): HTMLElement | null {
+  // 모달 다이얼로그 내부 요소는 사도 카드 대상에서 제외
+  if (nameElement.closest('[role="dialog"], [data-slot="dialog-content"], [data-slot="dialog-overlay"]')) {
+    return null;
+  }
+
   // 1. data-slot="card" 속성을 가진 컨테이너가 있으면 최우선 반환
   const slotCard = nameElement.closest('[data-slot="card"]');
   if (slotCard) {
@@ -399,7 +421,7 @@ function findCardContainer(nameElement: Element): HTMLElement | null {
 
   // 2. 사도 카드 특유의 클래스 조합 확인 (bg-dialog-background, text-card-foreground 등)
   const dialogCard = nameElement.closest('.bg-dialog-background, .text-card-foreground');
-  if (dialogCard) {
+  if (dialogCard && !dialogCard.closest('[role="dialog"], [data-slot="dialog-content"]')) {
     return dialogCard as HTMLElement;
   }
 
@@ -412,6 +434,7 @@ function findCardContainer(nameElement: Element): HTMLElement | null {
 
     if (
       parent.tagName === 'DIV' &&
+      !parent.closest('[role="dialog"], [data-slot="dialog-content"]') &&
       (parent.getAttribute('data-slot') === 'card' ||
        parent.classList.contains('rounded-xxl') ||
        parent.className.includes('card') ||
@@ -421,7 +444,7 @@ function findCardContainer(nameElement: Element): HTMLElement | null {
     }
     curr = parent;
   }
-  return (nameElement.closest('div') as HTMLElement) || (nameElement.parentElement as HTMLElement);
+  return null;
 }
 
 /**
@@ -444,14 +467,17 @@ export function enhanceApostleCards(
     }
   });
 
-  // 1. 최상위 사도 카드 요소들 직접 탐색
+  // 1. 최상위 사도 카드 요소들 직접 탐색 (모달 다이얼로그 요소는 엄격 제외)
   const cardElements = document.querySelectorAll<HTMLElement>(
-    '[data-slot="card"], div.bg-dialog-background'
+    '[data-slot="card"]:not([role="dialog"]):not([data-slot="dialog-content"]), div.bg-dialog-background:not([role="dialog"]):not([data-slot="dialog-content"]):not([data-slot="dialog-overlay"])'
   );
 
   const processedCards = new Set<HTMLElement>();
 
   cardElements.forEach((card) => {
+    if (card.closest('[role="dialog"], [data-slot="dialog-content"], [data-slot="dialog-overlay"]')) {
+      return;
+    }
     // 사도 이미지(img[alt]) 또는 텍스트에서 사도 이름 찾기
     const imgEl = card.querySelector<HTMLImageElement>('img[alt]');
     const imgAlt = imgEl?.getAttribute('alt')?.trim();
@@ -588,7 +614,19 @@ export function applyFilterToCards(
   let total = 0;
   let visible = 0;
 
+  // 사도 가나다순(한국어 이름 순) 인덱스 맵 생성 (기본 정렬 및 2차 정렬 키)
+  const sortedNames = Array.from(apostleProgressMap.values())
+    .map((p) => p.name)
+    .sort((a, b) => a.localeCompare(b, 'ko'));
+  const nameOrderMap = new Map<string, number>();
+  sortedNames.forEach((name, index) => {
+    nameOrderMap.set(name, index);
+  });
+
   cards.forEach((card) => {
+    if (card.closest('[role="dialog"], [data-slot="dialog-content"], [data-slot="dialog-overlay"]')) {
+      return;
+    }
     const apostleName = card.getAttribute(ATTR_APOSTLE_NAME);
     if (!apostleName) return;
 
@@ -605,21 +643,28 @@ export function applyFilterToCards(
 
     let isMatch = true;
 
-    // 1. 태생 성급 필터 (1성, 2성, 3성)
+    // 1. 초기 성급 필터 (1성, 2성, 3성)
     if (filter.grade !== 'all') {
       if (progress.gradeDefault !== filter.grade) {
         isMatch = false;
       }
     }
 
-    // 2. 성격 필터
+    // 2. 해금 관문 필터 (1차, 2차, 3차)
+    if (isMatch && filter.unlockedTier !== 'all') {
+      if (progress.unlockedBoardCount !== filter.unlockedTier) {
+        isMatch = false;
+      }
+    }
+
+    // 3. 성격 필터
     if (isMatch && filter.personality !== 'all') {
       if (progress.personality !== filter.personality) {
         isMatch = false;
       }
     }
 
-    // 3. 보드 차수(1차/2차/3차/전체)에 따른 판정 대상 보크 데이터 추출
+    // 4. 보드 차수(1차/2차/3차/전체)에 따른 판정 대상 보크 데이터 추출
     let targetPicked = progress.bokr.picked;
     let targetTotal = progress.bokr.allTotal;
     let targetRemaining = progress.bokr.remainingAll;
@@ -640,7 +685,7 @@ export function applyFilterToCards(
       }
     }
 
-    // 4. 스탯 지정 필터가 활성화된 경우
+    // 5. 스탯 지정 필터가 활성화된 경우
     if (isMatch && filter.statCategory !== 'all') {
       if (!targetStatSummary || targetStatSummary.total === 0) {
         // 선택된 보드(또는 전체)에 해당 스탯 보크가 아예 없는 사도는 숨김
@@ -656,7 +701,7 @@ export function applyFilterToCards(
         }
       }
     } else if (isMatch) {
-      // 5. 전체 스탯 기준 보크 완료/미완료 판정
+      // 6. 전체 스탯 기준 보크 완료/미완료 판정
       if (filter.status === 'incomplete') {
         if (isTargetComplete || targetRemaining === 0) {
           // 해당 범위의 모든 보크를 전부 칠했으면 미완료 필터에서 숨김!
@@ -673,8 +718,37 @@ export function applyFilterToCards(
     if (isMatch) {
       card.classList.remove('tcbe-card-hidden');
       visible++;
+
+      const nameIndex = nameOrderMap.get(progress.name) ?? 0;
+      const totalNames = sortedNames.length;
+
+      // 7. 사도 카드 정렬(Sort) 적용 (모든 정렬은 asc/desc 지원 및 동일 순위 2차 가나다순)
+      if (filter.sortBy === 'name_asc') {
+        card.style.order = String(nameIndex);
+      } else if (filter.sortBy === 'name_desc') {
+        card.style.order = String(totalNames - nameIndex);
+      } else if (filter.sortBy === 'unlocked_desc') {
+        // 3관 -> 1관 (동일 관문 내 가나다순)
+        card.style.order = String((3 - progress.unlockedBoardCount) * 10000 + nameIndex);
+      } else if (filter.sortBy === 'unlocked_asc') {
+        // 1관 -> 3관 (동일 관문 내 가나다순)
+        card.style.order = String(progress.unlockedBoardCount * 10000 + nameIndex);
+      } else if (filter.sortBy === 'grade_desc') {
+        // 3성 -> 1성 (동일 성급 내 가나다순)
+        card.style.order = String((3 - progress.gradeDefault) * 10000 + nameIndex);
+      } else if (filter.sortBy === 'grade_asc') {
+        // 1성 -> 3성 (동일 성급 내 가나다순)
+        card.style.order = String(progress.gradeDefault * 10000 + nameIndex);
+      } else if (filter.sortBy === 'personality_asc') {
+        // 성격 순 (순수 -> 냉정 -> 광기 -> 활발 -> 우울 -> 공명, 동일 성격 내 가나다순)
+        card.style.order = String(progress.personality * 10000 + nameIndex);
+      } else if (filter.sortBy === 'personality_desc') {
+        // 성격 역순 (공명 -> 우울 -> 활발 -> 광기 -> 냉정 -> 순수, 동일 성격 내 가나다순)
+        card.style.order = String((5 - progress.personality) * 10000 + nameIndex);
+      }
     } else {
       card.classList.add('tcbe-card-hidden');
+      card.style.order = '';
     }
   });
 
@@ -708,10 +782,11 @@ export function setBadgesVisible(visible: boolean) {
       c.classList.remove('tcbe-card-hidden');
     });
 
-    // 3. ボード次数の表示状態をすべて展開（all）に復元
+    // 3. ボード次数の表示状態をすべて展開（all）に復元 & 並び順リセット
     const allCards = document.querySelectorAll<HTMLElement>(`[${ATTR_APOSTLE_NAME}]`);
     allCards.forEach((c) => {
       applyBoardLevelVisibility(c, 'all');
+      c.style.order = '';
     });
   }
 }
