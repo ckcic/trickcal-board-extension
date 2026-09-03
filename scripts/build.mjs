@@ -1,6 +1,6 @@
 /**
  * @file build.mjs
- * @description esbuildを用いたChrome拡張機能のビルドおよびアセットコピー処理スクリプト
+ * @description esbuild를 이용한 Chrome 확장 프로그램 빌드 및 정적 에셋 복사 스크립트
  */
 
 import * as esbuild from 'esbuild';
@@ -13,11 +13,11 @@ const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 const distDir = path.resolve(rootDir, 'dist');
 
-// 引数の確認 (--watch)
+// 인자 확인 (--watch)
 const isWatch = process.argv.includes('--watch');
 
 /**
- * distディレクトリの初期化
+ * dist 디렉터리 초기화
  */
 function ensureDistDir() {
   if (!fs.existsSync(distDir)) {
@@ -26,7 +26,7 @@ function ensureDistDir() {
 }
 
 /**
- * 静的ファイルのコピー処理
+ * 정적 파일 복사 처리
  */
 function copyStaticFiles() {
   // 1. manifest.json
@@ -45,7 +45,7 @@ function copyStaticFiles() {
     console.log('[TCBE Build] Copied styles.css to dist');
   }
 
-  // 3. icons ディレクトリ
+  // 3. icons 디렉터리
   const iconsSrcDir = path.join(rootDir, 'icons');
   const iconsDestDir = path.join(distDir, 'icons');
   if (fs.existsSync(iconsSrcDir)) {
@@ -59,7 +59,7 @@ function copyStaticFiles() {
     console.log(`[TCBE Build] Copied ${iconFiles.length} icon files to dist/icons`);
   }
 
-  // 4. webp ディレクトリ（スプライト画像）
+  // 4. webp 디렉터리 (스프라이트 이미지)
   const webpSrcDir = path.join(rootDir, 'webp');
   const webpDestDir = path.join(distDir, 'webp');
   if (fs.existsSync(webpSrcDir)) {
@@ -75,7 +75,7 @@ function copyStaticFiles() {
 }
 
 /**
- * ビルド結果に個人データ(data.json)が含まれていないかセキュリティ検証
+ * 빌드 결과물에 개인/유저 데이터(data.json)가 포함되지 않았는지 보안 검증
  */
 function verifySecurityIntegrity() {
   const forbiddenFiles = ['data.json'];
@@ -102,13 +102,13 @@ async function build() {
   };
 
   const contexts = await Promise.all([
-    // 1. MAIN world インターセプター
+    // 1. MAIN world 인터셉터
     esbuild.context({
       ...commonOptions,
       entryPoints: [path.join(rootDir, 'src', 'bridge', 'interceptor.ts')],
       outfile: path.join(distDir, 'interceptor.js'),
     }),
-    // 2. ISOLATED world コンテンツスクリプト
+    // 2. ISOLATED world 콘텐츠 스크립트
     esbuild.context({
       ...commonOptions,
       entryPoints: [path.join(rootDir, 'src', 'content.ts')],

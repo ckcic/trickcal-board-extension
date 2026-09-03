@@ -48,9 +48,13 @@ describe('스탯 카테고리 매핑 테스트', () => {
     assert.equal(getStatCategoryFromStatType(87), 'atk_mag');
     assert.equal(getStatCategoryFromStatType(90), 'def_phys');
     assert.equal(getStatCategoryFromStatType(91), 'def_mag');
+    assert.equal(getStatCategoryFromStatType(7), 'crit');
     assert.equal(getStatCategoryFromStatType(96), 'crit');
-    assert.equal(getStatCategoryFromStatType(98), 'crit_res'); // 치저
+    assert.equal(getStatCategoryFromStatType(8), 'crit_dmg'); // 일반칸 치피
     assert.equal(getStatCategoryFromStatType(100), 'crit_dmg'); // 치피
+    assert.equal(getStatCategoryFromStatType(9), 'crit_res'); // 일반칸 치저
+    assert.equal(getStatCategoryFromStatType(98), 'crit_res'); // 치저
+    assert.equal(getStatCategoryFromStatType(10), 'crit_dmg_res');
     assert.equal(getStatCategoryFromStatType(102), 'crit_dmg_res');
   });
 });

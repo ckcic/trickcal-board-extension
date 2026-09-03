@@ -1,6 +1,6 @@
 /**
  * @file sanitizedData.mjs
- * @description テスト用のサニタイズされたモックデータ
+ * @description 테스트용 가명화(Sanitized) 목 데이터
  */
 
 export const mockHeroInfo = {

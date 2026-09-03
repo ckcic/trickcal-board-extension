@@ -108,6 +108,50 @@ export interface StatCountSummary {
   remaining: number;
 }
 
+/** 일반칸(nodeType: 3)의 스탯 수치 상세 */
+export interface NormalStatDetail {
+  picked: number;    // 획득한 스탯 수치
+  remaining: number; // 미획득 잔여 스탯 수치
+  total: number;     // 총 스탯 수치 (picked + remaining)
+  smallPicked: number; // 기본(소형) 일반칸 획득 개수
+  smallTotal: number;  // 기본(소형) 일반칸 총 개수
+  largePicked: number; // 강화(대형) 일반칸 획득 개수
+  largeTotal: number;  // 강화(대형) 일반칸 총 개수
+  smallUnitValue: number; // 기본 일반칸 1칸당 스탯 상승량 (예: +306)
+  largeUnitValue: number; // 강화 일반칸 1칸당 스탯 상승량 (예: +995)
+}
+
+/** 크레파스 및 골드 소모량 집계 */
+export interface ResourceCostSummary {
+  basicCrayon: number;   // 하급 크레파스 (610001)
+  averageCrayon: number; // 중급 크레파스 (610002)
+  epicCrayon: number;    // 상급 크레파스 (610003)
+  ultraCrayon: number;   // 최상급 크레파스 (610004)
+  gold: number;          // 골드
+}
+
+/** 일반칸 종류별(기본/강화) 카운트 요약 */
+export interface NormalTypeCountSummary {
+  total: number;
+  picked: number;
+  remaining: number;
+}
+
+/** 일반칸 진행도 요약 */
+export interface NormalBoardProgress {
+  totalNodes: number;     // 일반칸 총 개수
+  pickedNodes: number;    // 획득한 일반칸 개수
+  remainingNodes: number; // 미획득 일반칸 개수
+  small: NormalTypeCountSummary; // 기본 일반칸(소형, 하급 크레파스 전용)
+  large: NormalTypeCountSummary; // 강화 일반칸(대형, 중급 크레파스 요구)
+  stats: Record<StatCategory, NormalStatDetail>; // 스탯 카테고리별 수치 집계
+  cost: {
+    total: ResourceCostSummary;     // 전체 필요 재화
+    picked: ResourceCostSummary;    // 기소모 재화
+    remaining: ResourceCostSummary; // 잔여 필요 재화
+  };
+}
+
 /** 개별 보드 노드 진행 상태 */
 export interface BoardNodeProgress {
   nodeId: number;
@@ -115,6 +159,7 @@ export interface BoardNodeProgress {
   nodeType: number;
   isBokr: boolean;
   isHwang: boolean;
+  isLargeNormal?: boolean; // 강화 일반칸(대형) 여부
   isPicked: boolean;
   stats: StatCategory[];
 }
@@ -130,6 +175,11 @@ export interface BoardProgress {
     picked: number;
     remaining: number;
     byStat: Record<StatCategory, StatCountSummary>;
+    cost: {
+      total: ResourceCostSummary;
+      picked: ResourceCostSummary;
+      remaining: ResourceCostSummary;
+    };
   };
   hwang: {
     total: number;
@@ -137,6 +187,7 @@ export interface BoardProgress {
     remaining: number;
     byStat: Record<StatCategory, StatCountSummary>;
   };
+  normal: NormalBoardProgress;
 }
 
 /** 사도 전체 진행도 집계 */
@@ -155,6 +206,11 @@ export interface ApostleProgress {
     remainingAll: number; // 전체 1,2,3차 보크 중 남은 개수
     isCompleted: boolean; // 1,2,3차 모든 보크 획득 시 true
     byStat: Record<StatCategory, StatCountSummary>;
+    cost: {
+      total: ResourceCostSummary;
+      picked: ResourceCostSummary;
+      remaining: ResourceCostSummary;
+    };
   };
   hwang: {
     allTotal: number;
@@ -165,6 +221,7 @@ export interface ApostleProgress {
     isCompleted: boolean;
     byStat: Record<StatCategory, StatCountSummary>;
   };
+  normal: NormalBoardProgress;
 }
 
 /** 사도 카드 정렬 옵션 (asc/desc 양방향 토글 지원) */

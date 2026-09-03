@@ -46,7 +46,7 @@ export class FilterPanelController {
   }
 
   /**
-   * 検索バーが統合されているか確認
+   * 검색창이 통합되어 있는지 확인
    */
   public hasIntegratedSearch(): boolean {
     return this.originalSearchElement !== null && document.body.contains(this.originalSearchElement);
@@ -95,7 +95,7 @@ export class FilterPanelController {
 
     // 최신 버전 업데이트 감지 비동기 실행 (신규 버전 존재 시에만 뱃지 노출)
     try {
-      const currentVer = chrome.runtime?.getManifest?.()?.version || '1.0.3';
+      const currentVer = chrome.runtime?.getManifest?.()?.version || '1.0.4';
       checkForUpdate(currentVer).then((updateInfo) => {
         if (updateInfo?.hasUpdate) {
           const slot = header.querySelector('#tcbe-update-badge-slot');
@@ -681,22 +681,22 @@ export class FilterPanelController {
   }
 
   /**
-   * 使徒検索バーをパネル内に統合し、使徒カードリストの上部にパネルをマウント
+   * 사도 검색창을 패널 내에 통합하고, 사도 카드 목록 상단에 패널을 마운트
    */
   public mount(): void {
     const existingPanel = document.getElementById('tcbe-filter-panel');
 
-    // サイト本来の使徒名検索入力欄を検索
+    // 사이트 본래의 사도명 검색 입력창 검색
     const searchInput = document.querySelector<HTMLInputElement>('input[placeholder*="사도"]');
 
-    // 使徒別画面でない（検索欄が存在せず、かつ以前移動した要素もない）場合はマウントしない
+    // 사도별 화면이 아닌 경우(검색창이 존재하지 않고, 이전에 이동한 요소도 없는 경우) 마운트하지 않음
     if (!searchInput && !this.originalSearchElement) {
       return;
     }
 
     const panel = this.render();
 
-    // 検索入力欄またはそのラッパーコンテナをパネル内の検索スロットへ移動
+    // 검색 입력창 또는 그 래퍼 컨테이너를 패널 내의 검색 슬롯으로 이동
     if (searchInput && this.searchSlot) {
       const searchContainer =
         (searchInput.closest('div.relative, div[class*="relative"]') as HTMLElement) ||
@@ -715,13 +715,13 @@ export class FilterPanelController {
       return;
     }
 
-    // 検索コンテナの元の親要素（または使徒グリッドコンテナの直前）にパネルを挿入
+    // 검색 컨테이너의 원래 부모 요소(또는 사도 그리드 컨테이너 직전)에 패널 삽입
     if (this.originalSearchParent && this.originalSearchParent.parentElement) {
       this.originalSearchParent.parentElement.insertBefore(panel, this.originalSearchParent);
       return;
     }
 
-    // 代替の挿入先探索（使徒カード一覧の上部）
+    // 대체 삽입 위치 탐색 (사도 카드 목록 상단)
     const cardGrid = document.querySelector('div.grid, div[class*="grid"], [data-slot="card"]')?.closest('div.grid, div[class*="grid"]');
     if (cardGrid && cardGrid.parentElement) {
       cardGrid.parentElement.insertBefore(panel, cardGrid);
@@ -735,10 +735,10 @@ export class FilterPanelController {
   }
 
   /**
-   * パネルをDOMから取り外し、使徒検索バーを元のDOM位置へ復元
+   * 패널을 DOM에서 제거하고, 사도 검색창을 원래 DOM 위치로 복원
    */
   public unmount(): void {
-    // 1. 移動していた検索バーを元のDOMツリー位置に戻す
+    // 1. 이동했던 검색창을 원래 DOM 트리 위치로 복원
     if (this.originalSearchElement && this.originalSearchParent) {
       try {
         if (this.originalSearchNextSibling && this.originalSearchParent.contains(this.originalSearchNextSibling)) {
@@ -754,7 +754,7 @@ export class FilterPanelController {
       this.originalSearchNextSibling = null;
     }
 
-    // 2. パネル要素をDOMから安全に削除
+    // 2. 패널 요소를 DOM에서 안전하게 제거
     const panelEl = document.getElementById('tcbe-filter-panel') || this.container;
     if (panelEl && panelEl.parentElement) {
       panelEl.parentElement.removeChild(panelEl);

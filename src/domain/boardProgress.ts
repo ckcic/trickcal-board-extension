@@ -9,13 +9,22 @@ import type {
   BoardProgress,
   ExtractedApiData,
   MasterBoardNode,
+  NormalBoardProgress,
+  NormalStatDetail,
   PersonalityMeta,
   PersonalityType,
+  ResourceCostSummary,
   StatCategory,
   StatCountSummary,
   StatMeta,
   UserApostle,
 } from './types.ts';
+
+/** 하급 크레파스 아이템 ID */
+export const BASIC_CRAYON_ITEM_ID = 610001;
+
+/** 중급 크레파스 아이템 ID */
+export const MID_CRAYON_ITEM_ID = 610002;
 
 /** 상급 크레파스 (보라 크레파스 / 보크) 아이템 ID */
 export const BOKR_ITEM_ID = 610003;
@@ -90,13 +99,13 @@ export function getStatCategoryFromStatType(statType: number): StatCategory | nu
     case 97:
       return 'crit';
     case 8:
-    case 98:
-    case 99:
-      return 'crit_res'; // 치명타 저항 (치저)
-    case 9:
     case 100:
     case 101:
       return 'crit_dmg'; // 치명타 피해량 (치피)
+    case 9:
+    case 98:
+    case 99:
+      return 'crit_res'; // 치명타 저항 (치저)
     case 10:
     case 102:
     case 103:
@@ -135,6 +144,63 @@ export function createEmptyStatCountMap(): Record<StatCategory, StatCountSummary
     crit_res: { total: 0, picked: 0, remaining: 0 },
     crit_dmg_res: { total: 0, picked: 0, remaining: 0 },
   };
+}
+
+/**
+ * 빈 일반칸 스탯 수치 집계 맵 생성
+ */
+export function createEmptyNormalStatMap(): Record<StatCategory, NormalStatDetail> {
+  return {
+    hp: { picked: 0, remaining: 0, total: 0, smallPicked: 0, smallTotal: 0, largePicked: 0, largeTotal: 0, smallUnitValue: 0, largeUnitValue: 0 },
+    atk_phys: { picked: 0, remaining: 0, total: 0, smallPicked: 0, smallTotal: 0, largePicked: 0, largeTotal: 0, smallUnitValue: 0, largeUnitValue: 0 },
+    atk_mag: { picked: 0, remaining: 0, total: 0, smallPicked: 0, smallTotal: 0, largePicked: 0, largeTotal: 0, smallUnitValue: 0, largeUnitValue: 0 },
+    def_phys: { picked: 0, remaining: 0, total: 0, smallPicked: 0, smallTotal: 0, largePicked: 0, largeTotal: 0, smallUnitValue: 0, largeUnitValue: 0 },
+    def_mag: { picked: 0, remaining: 0, total: 0, smallPicked: 0, smallTotal: 0, largePicked: 0, largeTotal: 0, smallUnitValue: 0, largeUnitValue: 0 },
+    crit: { picked: 0, remaining: 0, total: 0, smallPicked: 0, smallTotal: 0, largePicked: 0, largeTotal: 0, smallUnitValue: 0, largeUnitValue: 0 },
+    crit_dmg: { picked: 0, remaining: 0, total: 0, smallPicked: 0, smallTotal: 0, largePicked: 0, largeTotal: 0, smallUnitValue: 0, largeUnitValue: 0 },
+    crit_res: { picked: 0, remaining: 0, total: 0, smallPicked: 0, smallTotal: 0, largePicked: 0, largeTotal: 0, smallUnitValue: 0, largeUnitValue: 0 },
+    crit_dmg_res: { picked: 0, remaining: 0, total: 0, smallPicked: 0, smallTotal: 0, largePicked: 0, largeTotal: 0, smallUnitValue: 0, largeUnitValue: 0 },
+  };
+}
+
+/**
+ * 빈 재화(크레파스 4종 및 골드) 소모량 요약 객체 생성
+ */
+export function createEmptyCostSummary(): ResourceCostSummary {
+  return {
+    basicCrayon: 0,
+    averageCrayon: 0,
+    epicCrayon: 0,
+    ultraCrayon: 0,
+    gold: 0,
+  };
+}
+
+/**
+ * 노드의 필요 재화(크레파스 및 골드)를 대상 누적 객체에 합산
+ */
+export function addNodeCost(target: ResourceCostSummary, node: MasterBoardNode): void {
+  if (node.requireGold && typeof node.requireGold === 'number') {
+    target.gold += node.requireGold;
+  }
+  if (node.requireItems && Array.isArray(node.requireItems)) {
+    for (const it of node.requireItems) {
+      if (it.item === BASIC_CRAYON_ITEM_ID) target.basicCrayon += (it.value || 0);
+      else if (it.item === MID_CRAYON_ITEM_ID) target.averageCrayon += (it.value || 0);
+      else if (it.item === BOKR_ITEM_ID) target.epicCrayon += (it.value || 0);
+      else if (it.item === HWANG_ITEM_ID) target.ultraCrayon += (it.value || 0);
+    }
+  }
+}
+
+/**
+ * 노드가 '강화 일반칸(대형, 중급 크레파스 610002 소모)'인지 판별
+ */
+export function isLargeNormalNode(node: MasterBoardNode): boolean {
+  if (node.requireItems && Array.isArray(node.requireItems)) {
+    return node.requireItems.some((item) => item.item === MID_CRAYON_ITEM_ID);
+  }
+  return false;
 }
 
 /**
@@ -207,6 +273,26 @@ export function calculateApostleProgress(
   const apostleBokrByStat = createEmptyStatCountMap();
   const apostleHwangByStat = createEmptyStatCountMap();
 
+  // 일반칸(nodeType: 3)의 사도 전체 집계
+  const apostleNormalStats = createEmptyNormalStatMap();
+  let apostleNormalTotalNodes = 0;
+  let apostleNormalPickedNodes = 0;
+  let apostleNormalRemainingNodes = 0;
+  const apostleNormalSmall = { total: 0, picked: 0, remaining: 0 };
+  const apostleNormalLarge = { total: 0, picked: 0, remaining: 0 };
+
+  // 재화(크레파스 4종 및 골드) 사도 전체 소모량 집계
+  const apostleNormalCost = {
+    total: createEmptyCostSummary(),
+    picked: createEmptyCostSummary(),
+    remaining: createEmptyCostSummary(),
+  };
+  const apostleBokrCost = {
+    total: createEmptyCostSummary(),
+    picked: createEmptyCostSummary(),
+    remaining: createEmptyCostSummary(),
+  };
+
   const boards: BoardProgress[] = [];
 
   boardKeys.forEach((bKey, stepIndex) => {
@@ -221,6 +307,26 @@ export function calculateApostleProgress(
     let bTotalHwang = 0;
     let bPickedHwang = 0;
 
+    // 해당 보드의 일반칸 집계
+    const boardNormalStats = createEmptyNormalStatMap();
+    let bTotalNormal = 0;
+    let bPickedNormal = 0;
+    let bRemainingNormal = 0;
+    const bNormalSmall = { total: 0, picked: 0, remaining: 0 };
+    const bNormalLarge = { total: 0, picked: 0, remaining: 0 };
+
+    // 해당 보드의 재화 소모량 집계
+    const bNormalCost = {
+      total: createEmptyCostSummary(),
+      picked: createEmptyCostSummary(),
+      remaining: createEmptyCostSummary(),
+    };
+    const bBokrCost = {
+      total: createEmptyCostSummary(),
+      picked: createEmptyCostSummary(),
+      remaining: createEmptyCostSummary(),
+    };
+
     const boardBokrByStat = createEmptyStatCountMap();
     const boardHwangByStat = createEmptyStatCountMap();
     const boardNodes: BoardNodeProgress[] = [];
@@ -230,6 +336,7 @@ export function calculateApostleProgress(
       const nodeStatCategories = getNodeStatCategories(node);
       const isBokr = isBokrNode(node);
       const isHwang = isHwangNode(node);
+      const isLargeNormal = node.nodeType === 3 && isLargeNormalNode(node);
 
       boardNodes.push({
         nodeId: node.id,
@@ -237,6 +344,7 @@ export function calculateApostleProgress(
         nodeType: node.nodeType,
         isBokr,
         isHwang,
+        isLargeNormal,
         isPicked,
         stats: nodeStatCategories,
       });
@@ -250,6 +358,17 @@ export function calculateApostleProgress(
             bPickedBokr++;
             bokrPicked++;
           }
+        }
+
+        // 상급칸 재화 소모량 누적
+        addNodeCost(bBokrCost.total, node);
+        addNodeCost(apostleBokrCost.total, node);
+        if (isPicked) {
+          addNodeCost(bBokrCost.picked, node);
+          addNodeCost(apostleBokrCost.picked, node);
+        } else {
+          addNodeCost(bBokrCost.remaining, node);
+          addNodeCost(apostleBokrCost.remaining, node);
         }
 
         for (const cat of nodeStatCategories) {
@@ -279,6 +398,89 @@ export function calculateApostleProgress(
             apostleHwangByStat[cat].picked++;
           }
         }
+      } else if (node.nodeType === 3) {
+        // 일반칸(nodeType: 3)의 칸 수 및 스탯 수치 집계 (기본/강화 구분)
+        bTotalNormal++;
+        apostleNormalTotalNodes++;
+
+        if (isLargeNormal) {
+          bNormalLarge.total++;
+          apostleNormalLarge.total++;
+          if (isPicked) {
+            bNormalLarge.picked++;
+            apostleNormalLarge.picked++;
+          } else {
+            bNormalLarge.remaining++;
+            apostleNormalLarge.remaining++;
+          }
+        } else {
+          bNormalSmall.total++;
+          apostleNormalSmall.total++;
+          if (isPicked) {
+            bNormalSmall.picked++;
+            apostleNormalSmall.picked++;
+          } else {
+            bNormalSmall.remaining++;
+            apostleNormalSmall.remaining++;
+          }
+        }
+
+        if (isPicked) {
+          bPickedNormal++;
+          apostleNormalPickedNodes++;
+        } else {
+          bRemainingNormal++;
+          apostleNormalRemainingNodes++;
+        }
+
+        // 일반칸 재화 소모량 누적
+        addNodeCost(bNormalCost.total, node);
+        addNodeCost(apostleNormalCost.total, node);
+        if (isPicked) {
+          addNodeCost(bNormalCost.picked, node);
+          addNodeCost(apostleNormalCost.picked, node);
+        } else {
+          addNodeCost(bNormalCost.remaining, node);
+          addNodeCost(apostleNormalCost.remaining, node);
+        }
+
+        if (node.stats && Array.isArray(node.stats)) {
+          for (const s of node.stats) {
+            const cat = getStatCategoryFromStatType(s.statType);
+            if (cat) {
+              const val = Number(s.statValue) || 0;
+              boardNormalStats[cat].total += val;
+              apostleNormalStats[cat].total += val;
+
+              if (isLargeNormal) {
+                boardNormalStats[cat].largeTotal++;
+                apostleNormalStats[cat].largeTotal++;
+                boardNormalStats[cat].largeUnitValue = val;
+                apostleNormalStats[cat].largeUnitValue = val;
+              } else {
+                boardNormalStats[cat].smallTotal++;
+                apostleNormalStats[cat].smallTotal++;
+                boardNormalStats[cat].smallUnitValue = val;
+                apostleNormalStats[cat].smallUnitValue = val;
+              }
+
+              if (isPicked) {
+                boardNormalStats[cat].picked += val;
+                apostleNormalStats[cat].picked += val;
+                if (isLargeNormal) {
+                  boardNormalStats[cat].largePicked++;
+                  apostleNormalStats[cat].largePicked++;
+                } else {
+                  boardNormalStats[cat].smallPicked++;
+                  apostleNormalStats[cat].smallPicked++;
+                }
+              } else {
+                boardNormalStats[cat].remaining += val;
+                apostleNormalStats[cat].remaining += val;
+              }
+            }
+          }
+        }
       }
     });
 
@@ -297,12 +499,22 @@ export function calculateApostleProgress(
         picked: bPickedBokr,
         remaining: Math.max(0, bTotalBokr - bPickedBokr),
         byStat: boardBokrByStat,
+        cost: bBokrCost,
       },
       hwang: {
         total: bTotalHwang,
         picked: bPickedHwang,
         remaining: Math.max(0, bTotalHwang - bPickedHwang),
         byStat: boardHwangByStat,
+      },
+      normal: {
+        totalNodes: bTotalNormal,
+        pickedNodes: bPickedNormal,
+        remainingNodes: bRemainingNormal,
+        small: bNormalSmall,
+        large: bNormalLarge,
+        stats: boardNormalStats,
+        cost: bNormalCost,
       },
     });
   });
@@ -336,6 +548,7 @@ export function calculateApostleProgress(
       remainingAll: bokrRemainingAll,
       isCompleted: isBokrAllCompleted,
       byStat: apostleBokrByStat,
+      cost: apostleBokrCost,
     },
     hwang: {
       allTotal: hwangAllTotal,
@@ -345,6 +558,15 @@ export function calculateApostleProgress(
       remainingAll: hwangRemainingAll,
       isCompleted: isHwangAllCompleted,
       byStat: apostleHwangByStat,
+    },
+    normal: {
+      totalNodes: apostleNormalTotalNodes,
+      pickedNodes: apostleNormalPickedNodes,
+      remainingNodes: apostleNormalRemainingNodes,
+      small: apostleNormalSmall,
+      large: apostleNormalLarge,
+      stats: apostleNormalStats,
+      cost: apostleNormalCost,
     },
   };
 }

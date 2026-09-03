@@ -20,14 +20,25 @@ import { FilterPanelController } from './ui/filterPanel.ts';
   let isEnhancing = false;
 
   /**
-   * 확장 프로그램의 스프라이트 이미지 URL을 CSS 커스텀 속성에 주입
+   * 확장 프로그램의 스프라이트 및 크레파스 이미지 URL을 CSS 커스텀 속성에 주입
    */
   function injectSpriteStyles() {
     try {
       const statUrl = chrome.runtime.getURL('webp/Stat.webp');
       const persUrl = chrome.runtime.getURL('webp/Common_UnitPersonality.webp');
+      const basicPastelUrl = chrome.runtime.getURL('webp/basic_pastel.webp');
+      const avgPastelUrl = chrome.runtime.getURL('webp/average_pastel.webp');
+      const epicPastelUrl = chrome.runtime.getURL('webp/epic_pastel.webp');
+      const ultraPastelUrl = chrome.runtime.getURL('webp/ultra_pastel.webp');
+      const goldUrl = chrome.runtime.getURL('webp/gold.webp');
+
       document.documentElement.style.setProperty('--tcbe-stat-sprite', `url("${statUrl}")`);
       document.documentElement.style.setProperty('--tcbe-personality-sprite', `url("${persUrl}")`);
+      document.documentElement.style.setProperty('--tcbe-pastel-basic', `url("${basicPastelUrl}")`);
+      document.documentElement.style.setProperty('--tcbe-pastel-average', `url("${avgPastelUrl}")`);
+      document.documentElement.style.setProperty('--tcbe-pastel-epic', `url("${epicPastelUrl}")`);
+      document.documentElement.style.setProperty('--tcbe-pastel-ultra', `url("${ultraPastelUrl}")`);
+      document.documentElement.style.setProperty('--tcbe-gold-icon', `url("${goldUrl}")`);
     } catch {
       // 개발 환경 등에서 chrome.runtime을 사용할 수 없을 때의 폴백
     }
@@ -42,20 +53,20 @@ import { FilterPanelController } from './ui/filterPanel.ts';
   }
 
   /**
-   * 現在の画面が「使徒別」タブであるか判定
-   * （ステータス別画面や別URLの場合は false を返却）
+   * 현재 화면이 '사도별' 탭인지 판별
+   * (스탯별 화면이나 다른 URL인 경우 false 반환)
    */
   function isApostleTabActive(): boolean {
-    // 1. URLが /board 以外の場合は即座に無効化
+    // 1. URL이 /board 이외인 경우 즉시 비활성화
     if (!isBoardPage()) {
       return false;
     }
 
-    // 2. 拡張機能DOMを除外したサイト本来の切り替えボタンを検出
+    // 2. 확장 프로그램 DOM을 제외한 사이트 본래의 전환 버튼 탐색
     const allButtons = Array.from(document.querySelectorAll('button, a, div[role="button"], span'))
-      .filter((el) => !el.closest('#tcbe-filter-panel') && !el.closest('.tcbe-badge-container'));
+      .filter((el) => !el.closest('#tcbe-filter-panel') && !el.closest('.tcbe-badge-container') && !el.closest('.tcbe-badge-row'));
 
-    // 「使徒別」切り替えボタンが存在する場合（＝現在はステータス別画面）
+    // '사도별' 전환 버튼이 존재하는 경우 (= 현재 스탯별 화면에 위치함)
     const hasSwitchToApostleBtn = allButtons.some((el) => {
       const txt = el.textContent?.trim();
       return txt === '사도별';
@@ -64,7 +75,7 @@ import { FilterPanelController } from './ui/filterPanel.ts';
       return false;
     }
 
-    // 3. ステータス別画面特有の全体ステータスヘッダーの存在確認
+    // 3. 스탯별 화면 특유의 전체 스탯 헤더 존재 확인
     const hasStatHeaders = allButtons.some((el) => {
       const txt = el.textContent?.trim() || '';
       return (
@@ -80,7 +91,7 @@ import { FilterPanelController } from './ui/filterPanel.ts';
       return false;
     }
 
-    // 4. 使徒名検索欄の存在確認（統合済みの場合も許可）
+    // 4. 사도명 검색창 존재 확인 (통합된 상태인 경우도 허용)
     const searchInput = document.querySelector('input[placeholder*="사도"]');
     const isSearchIntegrated = filterController ? filterController.hasIntegratedSearch() : false;
 
@@ -155,7 +166,7 @@ import { FilterPanelController } from './ui/filterPanel.ts';
   }
 
   /**
-   * 現在のボード進捗とフィルタ状態をもとにUIを更新
+   * 현재 보드 진행도와 필터 상태를 바탕으로 UI 갱신
    */
   function refreshUI() {
     if (!latestProgressMap || latestProgressMap.size === 0) {
@@ -169,7 +180,7 @@ import { FilterPanelController } from './ui/filterPanel.ts';
       const isBoard = isBoardPage();
       const isApostleTab = isBoard && isApostleTabActive();
 
-      // /board URLでない、または使徒別タブでない場合は完全にアンマウント・非表示にして終了
+      // /board URL이 아니거나 사도별 탭이 아닌 경우 완전히 언마운트/숨김 처리 후 종료
       if (!isApostleTab) {
         if (filterController) {
           filterController.unmount();
@@ -178,7 +189,7 @@ import { FilterPanelController } from './ui/filterPanel.ts';
         return;
       }
 
-      // 使徒別タブである場合はマウントおよび表示を活性化
+      // 사도별 탭인 경우 마운트 및 표시 활성화
       if (filterController) {
         filterController.mount();
         filterController.setVisible(true);
@@ -279,7 +290,7 @@ import { FilterPanelController } from './ui/filterPanel.ts';
     subtree: true,
   });
 
-  // タブ切り替えボタンなどのクリック時に迅速に再判定
+  // 탭 전환 버튼 등 클릭 시 신속하게 재판별
   document.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
     if (target && !target.closest('#tcbe-filter-panel')) {
