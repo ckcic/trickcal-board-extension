@@ -62,12 +62,12 @@ import { FilterPanelController } from './ui/filterPanel.ts';
       return false;
     }
 
-    // 2. 확장 프로그램 DOM을 제외한 사이트 본래의 전환 버튼 탐색
-    const allButtons = Array.from(document.querySelectorAll('button, a, div[role="button"], span'))
+    // 2. 확장 프로그램 DOM을 제외한 사이트 본래의 전환 버튼 탐색 (불필요한 span 전체 탐색 제거)
+    const navButtons = Array.from(document.querySelectorAll<HTMLElement>('button, a, div[role="button"]'))
       .filter((el) => !el.closest('#tcbe-filter-panel') && !el.closest('.tcbe-badge-container') && !el.closest('.tcbe-badge-row'));
 
     // '사도별' 전환 버튼이 존재하는 경우 (= 현재 스탯별 화면에 위치함)
-    const hasSwitchToApostleBtn = allButtons.some((el) => {
+    const hasSwitchToApostleBtn = navButtons.some((el) => {
       const txt = el.textContent?.trim();
       return txt === '사도별';
     });
@@ -76,7 +76,7 @@ import { FilterPanelController } from './ui/filterPanel.ts';
     }
 
     // 3. 스탯별 화면 특유의 전체 스탯 헤더 존재 확인
-    const hasStatHeaders = allButtons.some((el) => {
+    const hasStatHeaders = navButtons.some((el) => {
       const txt = el.textContent?.trim() || '';
       return (
         txt.startsWith('전체 HP') ||
@@ -258,26 +258,41 @@ import { FilterPanelController } from './ui/filterPanel.ts';
   listenForBoardData((data: ExtractedApiData) => {
     try {
       latestProgressMap = calculateAllApostlesProgress(data);
+      // 새로운 데이터를 수신했으므로 스탯 집계 캐시 초기화
+      filterController?.clearCache();
       scheduleRefresh(50);
     } catch (err) {
       console.error('[TCBE] Error calculating board progress:', err);
     }
   });
 
+  /**
+   * 대상 노드가 확장 프로그램(TCBE)에 의해 생성/관리되는 요소인지 판별
+   */
+  function isTcbeElement(node: Node | null): boolean {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
+    const el = node as HTMLElement;
+    if (el.id && el.id.startsWith('tcbe-')) return true;
+    if (el.className && typeof el.className === 'string' && el.className.includes('tcbe-')) return true;
+    if (el.closest && el.closest('[class*="tcbe-"], #tcbe-filter-panel, [data-tcbe-enhanced]')) return true;
+    return false;
+  }
+
   const observer = new MutationObserver((mutations) => {
+    // 확장 프로그램 자체의 DOM 변경(호버, 툴팁, 팝업, 필터 버튼 등)을 완전히 제외
     const hasExternalChanges = mutations.some((m) => {
       const target = m.target as HTMLElement;
-      if (!target || !target.classList) return true;
-      if (
-        target.classList.contains('tcbe-badge-container') ||
-        target.classList.contains('tcbe-tooltip') ||
-        target.classList.contains('tcbe-panel-container') ||
-        target.closest('#tcbe-filter-panel') ||
-        target.closest('.tcbe-badge-container')
-      ) {
-        return false;
+      if (isTcbeElement(target)) return false;
+
+      // 추가/제거된 노드가 모두 확장 프로그램 내부 요소인 경우 무시
+      for (let i = 0; i < m.addedNodes.length; i++) {
+        if (!isTcbeElement(m.addedNodes[i])) return true;
       }
-      return true;
+      for (let i = 0; i < m.removedNodes.length; i++) {
+        if (!isTcbeElement(m.removedNodes[i])) return true;
+      }
+
+      return !isTcbeElement(target);
     });
 
     if (hasExternalChanges && latestProgressMap) {

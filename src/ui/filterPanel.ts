@@ -38,8 +38,18 @@ export class FilterPanelController {
   };
   private onFilterChange: FilterChangeCallback;
 
+  /** 스탯 집계 캐시: 필터 조건 키 => 집계 데이터 */
+  private statAggregatesCache = new Map<string, Record<StatCategory, { picked: number; total: number; remaining: number }>>();
+
   constructor(onFilterChange: FilterChangeCallback) {
     this.onFilterChange = onFilterChange;
+  }
+
+  /**
+   * 데이터 갱신 시 집계 캐시 초기화
+   */
+  public clearCache(): void {
+    this.statAggregatesCache.clear();
   }
 
   public getState(): FilterState {
@@ -527,7 +537,7 @@ export class FilterPanelController {
   }
 
   /**
-   * 필터 조건(성격, 성급, 보드 차수, 해금 관문)에 맞추어 스탯별 총 칸 수, 칠한 칸 수, 1칸당 수치 요약 바 갱신
+   * 필터 조건(성격, 성급, 보드 차수, 해금 관문)에 맞추어 스탯별 총 칸 수, 칠한 칸 수, 1칸당 수치 요약 바 갱신 (메모이제이션 적용)
    */
   public updateStatSummaryGrid(
     progressMap: Map<string, ApostleProgress>,
@@ -536,58 +546,65 @@ export class FilterPanelController {
     const summaryContainer = document.getElementById('tcbe-stat-summary-row');
     if (!summaryContainer) return;
 
-    const uniqueApostles = new Set<ApostleProgress>();
-    progressMap.forEach((prog) => uniqueApostles.add(prog));
+    // 캐시 키 생성 (해금관문_성급_성격_보드차수)
+    const cacheKey = `${filter.unlockedTier}_${filter.grade}_${filter.personality}_${filter.boardLevel}`;
+    let statAggregates = this.statAggregatesCache.get(cacheKey);
 
-    // 스탯별 칸 수 집계
-    const statAggregates: Record<StatCategory, { picked: number; total: number; remaining: number }> = {
-      hp: { picked: 0, total: 0, remaining: 0 },
-      atk_phys: { picked: 0, total: 0, remaining: 0 },
-      atk_mag: { picked: 0, total: 0, remaining: 0 },
-      def_phys: { picked: 0, total: 0, remaining: 0 },
-      def_mag: { picked: 0, total: 0, remaining: 0 },
-      crit: { picked: 0, total: 0, remaining: 0 },
-      crit_dmg: { picked: 0, total: 0, remaining: 0 },
-      crit_res: { picked: 0, total: 0, remaining: 0 },
-      crit_dmg_res: { picked: 0, total: 0, remaining: 0 },
-    };
+    if (!statAggregates) {
+      statAggregates = {
+        hp: { picked: 0, total: 0, remaining: 0 },
+        atk_phys: { picked: 0, total: 0, remaining: 0 },
+        atk_mag: { picked: 0, total: 0, remaining: 0 },
+        def_phys: { picked: 0, total: 0, remaining: 0 },
+        def_mag: { picked: 0, total: 0, remaining: 0 },
+        crit: { picked: 0, total: 0, remaining: 0 },
+        crit_dmg: { picked: 0, total: 0, remaining: 0 },
+        crit_res: { picked: 0, total: 0, remaining: 0 },
+        crit_dmg_res: { picked: 0, total: 0, remaining: 0 },
+      };
 
-    uniqueApostles.forEach((prog) => {
-      // 해금 관문 필터
-      if (filter.unlockedTier !== 'all' && prog.unlockedBoardCount !== filter.unlockedTier) {
-        return;
-      }
-      // 초기 성급 필터
-      if (filter.grade !== 'all' && prog.gradeDefault !== filter.grade) {
-        return;
-      }
-      // 성격 필터
-      if (filter.personality !== 'all' && prog.personality !== filter.personality) {
-        return;
-      }
+      const uniqueApostles = new Set<ApostleProgress>();
+      progressMap.forEach((prog) => uniqueApostles.add(prog));
 
-      STAT_META_LIST.forEach((meta) => {
-        if (filter.boardLevel === 'all') {
-          const s = prog.bokr.byStat[meta.key];
-          if (s) {
-            statAggregates[meta.key].picked += s.picked;
-            statAggregates[meta.key].total += s.total;
-            statAggregates[meta.key].remaining += s.remaining;
-          }
-        } else {
-          const lvl = Number(filter.boardLevel);
-          const bProg = prog.boards.find((b) => b.boardStepLevel === lvl);
-          if (bProg) {
-            const s = bProg.bokr.byStat[meta.key];
+      uniqueApostles.forEach((prog) => {
+        // 해금 관문 필터
+        if (filter.unlockedTier !== 'all' && prog.unlockedBoardCount !== filter.unlockedTier) {
+          return;
+        }
+        // 초기 성급 필터
+        if (filter.grade !== 'all' && prog.gradeDefault !== filter.grade) {
+          return;
+        }
+        // 성격 필터
+        if (filter.personality !== 'all' && prog.personality !== filter.personality) {
+          return;
+        }
+
+        STAT_META_LIST.forEach((meta) => {
+          if (filter.boardLevel === 'all') {
+            const s = prog.bokr.byStat[meta.key];
             if (s) {
-              statAggregates[meta.key].picked += s.picked;
-              statAggregates[meta.key].total += s.total;
-              statAggregates[meta.key].remaining += s.remaining;
+              statAggregates![meta.key].picked += s.picked;
+              statAggregates![meta.key].total += s.total;
+              statAggregates![meta.key].remaining += s.remaining;
+            }
+          } else {
+            const lvl = Number(filter.boardLevel);
+            const bProg = prog.boards.find((b) => b.boardStepLevel === lvl);
+            if (bProg) {
+              const s = bProg.bokr.byStat[meta.key];
+              if (s) {
+                statAggregates![meta.key].picked += s.picked;
+                statAggregates![meta.key].total += s.total;
+                statAggregates![meta.key].remaining += s.remaining;
+              }
             }
           }
-        }
+        });
       });
-    });
+
+      this.statAggregatesCache.set(cacheKey, statAggregates);
+    }
 
     // DOM 갱신
     summaryContainer.innerHTML = '';

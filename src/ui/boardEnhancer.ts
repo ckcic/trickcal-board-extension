@@ -199,115 +199,124 @@ export function createBadgeElement(
     }
   }
 
-  // 5. 툴팁 (차수별 및 스탯별 상세 현황)
-  const tooltip = document.createElement('div');
-  tooltip.className = 'tcbe-tooltip';
+  // 5. 툴팁 지연 생성 (초기 대량 DOM 생성 및 Forced Reflow 방지)
+  let tooltip: HTMLElement | null = null;
 
-  const persMeta = PERSONALITY_META_LIST.find((p) => p.id === progress.personality);
-  const persIconHtml = persMeta ? `<span class="tcbe-sprite-pers tcbe-sprite-pers-${persMeta.spriteIndex}"></span> ` : '';
+  function ensureTooltip(): HTMLElement {
+    if (tooltip) return tooltip;
 
-  const header = document.createElement('div');
-  header.className = 'tcbe-tt-header';
-  header.innerHTML = `<span>${persIconHtml}${progress.name} (태생 ${progress.gradeDefault}성) <span class="tcbe-pastel-icon tcbe-pastel-epic"></span> 상급칸 현황</span><span>총 ${progress.bokr.picked}/${progress.bokr.allTotal}개</span>`;
-  tooltip.appendChild(header);
+    const tt = document.createElement('div');
+    tt.className = 'tcbe-tooltip';
 
-  progress.boards.forEach((b) => {
-    const row = document.createElement('div');
-    row.className = 'tcbe-tt-board-row';
+    const persMeta = PERSONALITY_META_LIST.find((p) => p.id === progress.personality);
+    const persIconHtml = persMeta ? `<span class="tcbe-sprite-pers tcbe-sprite-pers-${persMeta.spriteIndex}"></span> ` : '';
 
-    const title = document.createElement('div');
-    title.className = 'tcbe-tt-board-title';
-    title.textContent = b.unlocked
-      ? `${b.boardStepLevel}차 보드: ${b.bokr.picked}/${b.bokr.total} (남 ${b.bokr.remaining})`
-      : `${b.boardStepLevel}차 보드: 미개방 (상급칸 ${b.bokr.total}개)`;
-    row.appendChild(title);
+    const header = document.createElement('div');
+    header.className = 'tcbe-tt-header';
+    header.innerHTML = `<span>${persIconHtml}${progress.name} (태생 ${progress.gradeDefault}성) <span class="tcbe-pastel-icon tcbe-pastel-epic"></span> 상급칸 현황</span><span>총 ${progress.bokr.picked}/${progress.bokr.allTotal}개</span>`;
+    tt.appendChild(header);
 
-    if (b.bokr.total > 0) {
-      const grid = document.createElement('div');
-      grid.className = 'tcbe-tt-stats-grid';
+    progress.boards.forEach((b) => {
+      const row = document.createElement('div');
+      row.className = 'tcbe-tt-board-row';
 
-      for (const meta of STAT_META_LIST) {
-        const s = b.bokr.byStat[meta.key];
-        if (s && s.total > 0) {
-          const item = document.createElement('div');
-          item.className = 'tcbe-tt-stat-item';
-          const isDone = b.unlocked && s.remaining === 0;
-          item.innerHTML = `<span class="tcbe-tt-stat-name"><span class="tcbe-sprite-stat tcbe-sprite-stat-${meta.spriteIndex}"></span>${meta.nameKo}:</span> <span class="tcbe-tt-stat-val ${
-            isDone ? 'tcbe-tt-stat-done' : 'tcbe-tt-stat-rem'
-          }">${s.picked}/${s.total}</span>`;
-          grid.appendChild(item);
+      const title = document.createElement('div');
+      title.className = 'tcbe-tt-board-title';
+      title.textContent = b.unlocked
+        ? `${b.boardStepLevel}차 보드: ${b.bokr.picked}/${b.bokr.total} (남 ${b.bokr.remaining})`
+        : `${b.boardStepLevel}차 보드: 미개방 (상급칸 ${b.bokr.total}개)`;
+      row.appendChild(title);
+
+      if (b.bokr.total > 0) {
+        const grid = document.createElement('div');
+        grid.className = 'tcbe-tt-stats-grid';
+
+        for (const meta of STAT_META_LIST) {
+          const s = b.bokr.byStat[meta.key];
+          if (s && s.total > 0) {
+            const item = document.createElement('div');
+            item.className = 'tcbe-tt-stat-item';
+            const isDone = b.unlocked && s.remaining === 0;
+            item.innerHTML = `<span class="tcbe-tt-stat-name"><span class="tcbe-sprite-stat tcbe-sprite-stat-${meta.spriteIndex}"></span>${meta.nameKo}:</span> <span class="tcbe-tt-stat-val ${
+              isDone ? 'tcbe-tt-stat-done' : 'tcbe-tt-stat-rem'
+            }">${s.picked}/${s.total}</span>`;
+            grid.appendChild(item);
+          }
         }
+        row.appendChild(grid);
       }
-      row.appendChild(grid);
+
+      tt.appendChild(row);
+    });
+
+    const summaryRow = document.createElement('div');
+    summaryRow.className = 'tcbe-tt-board-row';
+    summaryRow.style.borderBottom = 'none';
+
+    const summaryTitle = document.createElement('div');
+    summaryTitle.className = 'tcbe-tt-board-title';
+    summaryTitle.style.color = '#f59e0b';
+    summaryTitle.textContent = '1~3차 전체 스탯별 요약:';
+    summaryRow.appendChild(summaryTitle);
+
+    const sumGrid = document.createElement('div');
+    sumGrid.className = 'tcbe-tt-stats-grid';
+
+    for (const meta of STAT_META_LIST) {
+      const s = progress.bokr.byStat[meta.key];
+      if (s && s.total > 0) {
+        const item = document.createElement('div');
+        item.className = 'tcbe-tt-stat-item';
+        const isDone = s.remaining === 0;
+        item.innerHTML = `<span class="tcbe-tt-stat-name"><span class="tcbe-sprite-stat tcbe-sprite-stat-${meta.spriteIndex}"></span>${meta.nameKo}:</span> <span class="tcbe-tt-stat-val ${
+          isDone ? 'tcbe-tt-stat-done' : 'tcbe-tt-stat-rem'
+        }">${s.picked}/${s.total}${isDone ? '✓' : `(남${s.remaining})`}</span>`;
+        sumGrid.appendChild(item);
+      }
     }
+    summaryRow.appendChild(sumGrid);
+    tt.appendChild(summaryRow);
 
-    tooltip.appendChild(row);
-  });
-
-  const summaryRow = document.createElement('div');
-  summaryRow.className = 'tcbe-tt-board-row';
-  summaryRow.style.borderBottom = 'none';
-
-  const summaryTitle = document.createElement('div');
-  summaryTitle.className = 'tcbe-tt-board-title';
-  summaryTitle.style.color = '#f59e0b';
-  summaryTitle.textContent = '1~3차 전체 스탯별 요약:';
-  summaryRow.appendChild(summaryTitle);
-
-  const sumGrid = document.createElement('div');
-  sumGrid.className = 'tcbe-tt-stats-grid';
-
-  for (const meta of STAT_META_LIST) {
-    const s = progress.bokr.byStat[meta.key];
-    if (s && s.total > 0) {
-      const item = document.createElement('div');
-      item.className = 'tcbe-tt-stat-item';
-      const isDone = s.remaining === 0;
-      item.innerHTML = `<span class="tcbe-tt-stat-name"><span class="tcbe-sprite-stat tcbe-sprite-stat-${meta.spriteIndex}"></span>${meta.nameKo}:</span> <span class="tcbe-tt-stat-val ${
-        isDone ? 'tcbe-tt-stat-done' : 'tcbe-tt-stat-rem'
-      }">${s.picked}/${s.total}${isDone ? '✓' : `(남${s.remaining})`}</span>`;
-      sumGrid.appendChild(item);
-    }
+    container.appendChild(tt);
+    tooltip = tt;
+    return tt;
   }
-  summaryRow.appendChild(sumGrid);
-  tooltip.appendChild(summaryRow);
 
-  // 스마트 툴팁 위치 조절 (좌우 및 상하 화면 잘림 100% 방지)
+  // 스마트 툴팁 위치 조절 (호버 시에만 툴팁을 생성하고 위치 계산)
   container.addEventListener('mouseenter', () => {
+    const tt = ensureTooltip();
     const rect = container.getBoundingClientRect();
     const screenWidth = window.innerWidth;
     const screenHeight = window.innerHeight;
 
     // 1. 좌우 위치 조절
     if (rect.left + rect.width / 2 > screenWidth / 2) {
-      tooltip.style.left = 'auto';
-      tooltip.style.right = '-6px';
-      tooltip.style.setProperty('--chevron-left', 'auto');
-      tooltip.style.setProperty('--chevron-right', '28px');
+      tt.style.left = 'auto';
+      tt.style.right = '-6px';
+      tt.style.setProperty('--chevron-left', 'auto');
+      tt.style.setProperty('--chevron-right', '28px');
     } else {
-      tooltip.style.left = '-6px';
-      tooltip.style.right = 'auto';
-      tooltip.style.setProperty('--chevron-left', '28px');
-      tooltip.style.setProperty('--chevron-right', 'auto');
+      tt.style.left = '-6px';
+      tt.style.right = 'auto';
+      tt.style.setProperty('--chevron-left', '28px');
+      tt.style.setProperty('--chevron-right', 'auto');
     }
 
     // 2. 상하 위치 조절 (위쪽 공간 부족 시 아래쪽으로 자동 전개)
-    const tooltipHeight = tooltip.offsetHeight || 260;
+    const tooltipHeight = tt.offsetHeight || 260;
     const availableTop = rect.top;
     const availableBottom = screenHeight - rect.bottom;
 
     if (availableTop < tooltipHeight && availableBottom > availableTop) {
-      tooltip.style.bottom = 'auto';
-      tooltip.style.top = 'calc(100% + 8px)';
-      tooltip.classList.add('tcbe-popup-bottom');
+      tt.style.bottom = 'auto';
+      tt.style.top = 'calc(100% + 8px)';
+      tt.classList.add('tcbe-popup-bottom');
     } else {
-      tooltip.style.top = 'auto';
-      tooltip.style.bottom = 'calc(100% + 8px)';
-      tooltip.classList.remove('tcbe-popup-bottom');
+      tt.style.top = 'auto';
+      tt.style.bottom = 'calc(100% + 8px)';
+      tt.classList.remove('tcbe-popup-bottom');
     }
   });
-
-  container.appendChild(tooltip);
 
   return container;
 }
@@ -339,293 +348,310 @@ export function createNormalStatElement(progress: ApostleProgress): HTMLElement 
   `;
   container.appendChild(btn);
 
-  // 2. 팝업 요소
-  const popup = document.createElement('div');
-  popup.className = 'tcbe-normal-popup';
+  // 2. 팝업 요소 지연 생성 (호버 또는 클릭 전까지 수천 개의 DOM 노드 생성 방지)
+  let popup: HTMLElement | null = null;
 
-  // 헤더 영역
-  const persMeta = PERSONALITY_META_LIST.find((p) => p.id === progress.personality);
-  const persIconHtml = persMeta ? `<span class="tcbe-sprite-pers tcbe-sprite-pers-${persMeta.spriteIndex}"></span> ` : '';
+  function ensurePopup(): HTMLElement {
+    if (popup) return popup;
 
-  const header = document.createElement('div');
-  header.className = 'tcbe-np-header';
-  header.innerHTML = `
-    <div class="tcbe-np-title">
-      ${persIconHtml}<strong>${progress.name}</strong> 일반칸 스탯 현황
-    </div>
-    <div class="tcbe-np-header-right">
-      <span class="tcbe-np-total-badge">총 ${normal.pickedNodes}/${normal.totalNodes} (${pct}%)</span>
-      <span class="tcbe-np-breakdown-badge"><span class="tcbe-pastel-icon-mini tcbe-pastel-basic"></span>기본 ${normal.small.picked}/${normal.small.total} · <span class="tcbe-pastel-icon-mini tcbe-pastel-average"></span>강화 ${normal.large.picked}/${normal.large.total}</span>
-      <button type="button" class="tcbe-np-close-btn" title="닫기" aria-label="닫기">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-    </div>
-  `;
-  popup.appendChild(header);
+    popup = document.createElement('div');
+    popup.className = 'tcbe-normal-popup';
 
-  // 1, 2, 3차 보드별 진행도
-  const boardsSection = document.createElement('div');
-  boardsSection.className = 'tcbe-np-boards-section';
+    // 헤더 영역
+    const persMeta = PERSONALITY_META_LIST.find((p) => p.id === progress.personality);
+    const persIconHtml = persMeta ? `<span class="tcbe-sprite-pers tcbe-sprite-pers-${persMeta.spriteIndex}"></span> ` : '';
 
-  const boardsHeader = document.createElement('div');
-  boardsHeader.className = 'tcbe-np-section-header';
-  boardsHeader.innerHTML = `
-    <span class="tcbe-np-section-title">차수별 진행도:</span>
-    <span class="tcbe-np-section-hint">💡 카드 클릭: 차수별 보기 · 일반칸 버튼 클릭: 창 고정</span>
-  `;
-  boardsSection.appendChild(boardsHeader);
-
-  // 차수별 필터 탭 바
-  const tabsContainer = document.createElement('div');
-  tabsContainer.className = 'tcbe-np-tabs-container';
-  tabsContainer.innerHTML = `
-    <button type="button" class="tcbe-np-tab-btn tcbe-active" data-tier="all">전체 (1~3차)</button>
-    <button type="button" class="tcbe-np-tab-btn" data-tier="0">1차 보드</button>
-    <button type="button" class="tcbe-np-tab-btn" data-tier="1">2차 보드</button>
-    <button type="button" class="tcbe-np-tab-btn" data-tier="2">3차 보드</button>
-  `;
-  boardsSection.appendChild(tabsContainer);
-
-  const boardsGrid = document.createElement('div');
-  boardsGrid.className = 'tcbe-np-boards-grid';
-
-  const cardElements: HTMLElement[] = [];
-
-  progress.boards.forEach((b, bIdx) => {
-    const bNormal = b.normal;
-    const bPct = bNormal.totalNodes > 0 ? ((bNormal.pickedNodes / bNormal.totalNodes) * 100).toFixed(0) : '0';
-    const bDone = b.unlocked && bNormal.totalNodes > 0 && bNormal.pickedNodes === bNormal.totalNodes;
-
-    const bCard = document.createElement('div');
-    bCard.className = `tcbe-np-board-card ${bDone ? 'tcbe-np-board-done' : ''} ${!b.unlocked ? 'tcbe-np-board-locked' : ''}`;
-    bCard.setAttribute('data-tier', String(bIdx));
-    bCard.title = `${b.boardStepLevel}차 보드 스탯 상세 보기`;
-
-    let statusHtml = '';
-    let subStatusHtml = '';
-
-    if (!b.unlocked) {
-      statusHtml = `<span class="tcbe-np-board-status tcbe-locked">미개방 (${bNormal.totalNodes}칸)</span>`;
-      subStatusHtml = `<div class="tcbe-np-board-sub-status tcbe-locked"><span class="tcbe-pastel-icon-mini tcbe-pastel-basic"></span>기본 ${bNormal.small.total} · <span class="tcbe-pastel-icon-mini tcbe-pastel-average"></span>강화 ${bNormal.large.total}</div>`;
-    } else if (bDone) {
-      statusHtml = `<span class="tcbe-np-board-status tcbe-done">${bNormal.pickedNodes}/${bNormal.totalNodes} ✓</span>`;
-      subStatusHtml = `<div class="tcbe-np-board-sub-status tcbe-done"><span class="tcbe-pastel-icon-mini tcbe-pastel-basic"></span>기본 ${bNormal.small.picked}/${bNormal.small.total} · <span class="tcbe-pastel-icon-mini tcbe-pastel-average"></span>강화 ${bNormal.large.picked}/${bNormal.large.total}</div>`;
-    } else {
-      statusHtml = `<span class="tcbe-np-board-status">${bNormal.pickedNodes}/${bNormal.totalNodes} (남 ${bNormal.remainingNodes})</span>`;
-      subStatusHtml = `<div class="tcbe-np-board-sub-status"><span class="tcbe-pastel-icon-mini tcbe-pastel-basic"></span>기본 ${bNormal.small.picked}/${bNormal.small.total} · <span class="tcbe-pastel-icon-mini tcbe-pastel-average"></span>강화 ${bNormal.large.picked}/${bNormal.large.total}</div>`;
-    }
-
-    // 해당 차수에 속한 스탯 종류와 칸 수 미니 요약 칩들
-    const statsChipsHtml = STAT_META_LIST.map((meta) => {
-      const s = bNormal.stats[meta.key];
-      const sTotal = s ? s.smallTotal + s.largeTotal : 0;
-      if (sTotal === 0) return '';
-      const sPicked = s ? s.smallPicked + s.largePicked : 0;
-      const sDone = b.unlocked && sPicked === sTotal;
-      return `<span class="tcbe-np-card-stat-chip ${sDone ? 'tcbe-chip-done' : ''}" title="${meta.nameKo}: ${sPicked}/${sTotal}칸">
-        <span class="tcbe-sprite-stat tcbe-sprite-stat-${meta.spriteIndex}"></span>
-        <span>${sPicked}/${sTotal}</span>
-      </span>`;
-    }).join('');
-
-    bCard.innerHTML = `
-      <div class="tcbe-np-board-top-row">
-        <div class="tcbe-np-board-label">${b.boardStepLevel}차 보드</div>
-        ${statusHtml}
+    const header = document.createElement('div');
+    header.className = 'tcbe-np-header';
+    header.innerHTML = `
+      <div class="tcbe-np-title">
+        ${persIconHtml}<strong>${progress.name}</strong> 일반칸 스탯 현황
       </div>
-      ${subStatusHtml}
-      <div class="tcbe-np-board-bar-bg">
-        <div class="tcbe-np-board-bar-fill" style="width: ${b.unlocked ? bPct : '0'}%"></div>
+      <div class="tcbe-np-header-right">
+        <span class="tcbe-np-total-badge">총 ${normal.pickedNodes}/${normal.totalNodes} (${pct}%)</span>
+        <span class="tcbe-np-breakdown-badge"><span class="tcbe-pastel-icon-mini tcbe-pastel-basic"></span>기본 ${normal.small.picked}/${normal.small.total} · <span class="tcbe-pastel-icon-mini tcbe-pastel-average"></span>강화 ${normal.large.picked}/${normal.large.total}</span>
+        <button type="button" class="tcbe-np-close-btn" title="닫기" aria-label="닫기">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
-      <div class="tcbe-np-board-stats-list">${statsChipsHtml}</div>
     `;
+    popup.appendChild(header);
 
-    bCard.addEventListener('click', () => {
-      switchTier(bIdx);
+    // 1, 2, 3차 보드별 진행도
+    const boardsSection = document.createElement('div');
+    boardsSection.className = 'tcbe-np-boards-section';
+
+    const boardsHeader = document.createElement('div');
+    boardsHeader.className = 'tcbe-np-section-header';
+    boardsHeader.innerHTML = `
+      <span class="tcbe-np-section-title">차수별 진행도:</span>
+      <span class="tcbe-np-section-hint">💡 카드 클릭: 차수별 보기 · 일반칸 버튼 클릭: 창 고정</span>
+    `;
+    boardsSection.appendChild(boardsHeader);
+
+    // 차수별 필터 탭 바
+    const tabsContainer = document.createElement('div');
+    tabsContainer.className = 'tcbe-np-tabs-container';
+    tabsContainer.innerHTML = `
+      <button type="button" class="tcbe-np-tab-btn tcbe-active" data-tier="all">전체 (1~3차)</button>
+      <button type="button" class="tcbe-np-tab-btn" data-tier="0">1차 보드</button>
+      <button type="button" class="tcbe-np-tab-btn" data-tier="1">2차 보드</button>
+      <button type="button" class="tcbe-np-tab-btn" data-tier="2">3차 보드</button>
+    `;
+    boardsSection.appendChild(tabsContainer);
+
+    const boardsGrid = document.createElement('div');
+    boardsGrid.className = 'tcbe-np-boards-grid';
+
+    const cardElements: HTMLElement[] = [];
+
+    progress.boards.forEach((b, bIdx) => {
+      const bNormal = b.normal;
+      const bPct = bNormal.totalNodes > 0 ? ((bNormal.pickedNodes / bNormal.totalNodes) * 100).toFixed(0) : '0';
+      const bDone = b.unlocked && bNormal.totalNodes > 0 && bNormal.pickedNodes === bNormal.totalNodes;
+
+      const bCard = document.createElement('div');
+      bCard.className = `tcbe-np-board-card ${bDone ? 'tcbe-np-board-done' : ''} ${!b.unlocked ? 'tcbe-np-board-locked' : ''}`;
+      bCard.setAttribute('data-tier', String(bIdx));
+      bCard.title = `${b.boardStepLevel}차 보드 스탯 상세 보기`;
+
+      let statusHtml = '';
+      let subStatusHtml = '';
+
+      if (!b.unlocked) {
+        statusHtml = `<span class="tcbe-np-board-status tcbe-locked">미개방 (${bNormal.totalNodes}칸)</span>`;
+        subStatusHtml = `<div class="tcbe-np-board-sub-status tcbe-locked"><span class="tcbe-pastel-icon-mini tcbe-pastel-basic"></span>기본 ${bNormal.small.total} · <span class="tcbe-pastel-icon-mini tcbe-pastel-average"></span>강화 ${bNormal.large.total}</div>`;
+      } else if (bDone) {
+        statusHtml = `<span class="tcbe-np-board-status tcbe-done">${bNormal.pickedNodes}/${bNormal.totalNodes} ✓</span>`;
+        subStatusHtml = `<div class="tcbe-np-board-sub-status tcbe-done"><span class="tcbe-pastel-icon-mini tcbe-pastel-basic"></span>기본 ${bNormal.small.picked}/${bNormal.small.total} · <span class="tcbe-pastel-icon-mini tcbe-pastel-average"></span>강화 ${bNormal.large.picked}/${bNormal.large.total}</div>`;
+      } else {
+        statusHtml = `<span class="tcbe-np-board-status">${bNormal.pickedNodes}/${bNormal.totalNodes} (남 ${bNormal.remainingNodes})</span>`;
+        subStatusHtml = `<div class="tcbe-np-board-sub-status"><span class="tcbe-pastel-icon-mini tcbe-pastel-basic"></span>기본 ${bNormal.small.picked}/${bNormal.small.total} · <span class="tcbe-pastel-icon-mini tcbe-pastel-average"></span>강화 ${bNormal.large.picked}/${bNormal.large.total}</div>`;
+      }
+
+      // 해당 차수에 속한 스탯 종류와 칸 수 미니 요약 칩들
+      const statsChipsHtml = STAT_META_LIST.map((meta) => {
+        const s = bNormal.stats[meta.key];
+        const sTotal = s ? s.smallTotal + s.largeTotal : 0;
+        if (sTotal === 0) return '';
+        const sPicked = s ? s.smallPicked + s.largePicked : 0;
+        const sDone = b.unlocked && sPicked === sTotal;
+        return `<span class="tcbe-np-card-stat-chip ${sDone ? 'tcbe-chip-done' : ''}" title="${meta.nameKo}: ${sPicked}/${sTotal}칸">
+          <span class="tcbe-sprite-stat tcbe-sprite-stat-${meta.spriteIndex}"></span>
+          <span>${sPicked}/${sTotal}</span>
+        </span>`;
+      }).join('');
+
+      bCard.innerHTML = `
+        <div class="tcbe-np-board-top-row">
+          <div class="tcbe-np-board-label">${b.boardStepLevel}차 보드</div>
+          ${statusHtml}
+        </div>
+        ${subStatusHtml}
+        <div class="tcbe-np-board-bar-bg">
+          <div class="tcbe-np-board-bar-fill" style="width: ${b.unlocked ? bPct : '0'}%"></div>
+        </div>
+        <div class="tcbe-np-board-stats-list">${statsChipsHtml}</div>
+      `;
+
+      bCard.addEventListener('click', () => {
+        switchTier(bIdx);
+      });
+
+      boardsGrid.appendChild(bCard);
+      cardElements.push(bCard);
     });
+    boardsSection.appendChild(boardsGrid);
+    popup.appendChild(boardsSection);
 
-    boardsGrid.appendChild(bCard);
-    cardElements.push(bCard);
-  });
-  boardsSection.appendChild(boardsGrid);
-  popup.appendChild(boardsSection);
+    // 스탯별 상세 테이블 섹션
+    const tableSection = document.createElement('div');
+    tableSection.className = 'tcbe-np-table-section';
 
-  // 스탯별 상세 테이블 섹션
-  const tableSection = document.createElement('div');
-  tableSection.className = 'tcbe-np-table-section';
+    const tableTitle = document.createElement('div');
+    tableTitle.className = 'tcbe-np-section-title';
+    tableSection.appendChild(tableTitle);
 
-  const tableTitle = document.createElement('div');
-  tableTitle.className = 'tcbe-np-section-title';
-  tableSection.appendChild(tableTitle);
+    const table = document.createElement('table');
+    table.className = 'tcbe-np-table';
+    tableSection.appendChild(table);
+    popup.appendChild(tableSection);
 
-  const table = document.createElement('table');
-  table.className = 'tcbe-np-table';
-  tableSection.appendChild(table);
-  popup.appendChild(tableSection);
+    // 현재 선택된 탭 상태 ('all' 또는 보드 인덱스 0, 1, 2)
+    let currentTier: 'all' | number = 'all';
 
-  // 현재 선택된 탭 상태 ('all' 또는 보드 인덱스 0, 1, 2)
-  let currentTier: 'all' | number = 'all';
+    function renderTable() {
+      const isAll = currentTier === 'all';
 
-  function renderTable() {
-    const isAll = currentTier === 'all';
+      // 1. 타이틀 업데이트
+      if (isAll) {
+        tableTitle.innerHTML = `스탯별 상세 <span>(전체 1~3차 통합)</span>:`;
+      } else {
+        const bObj = progress.boards[currentTier];
+        const isUnlocked = bObj ? bObj.unlocked : false;
+        tableTitle.innerHTML = `${currentTier + 1}차 보드 스탯별 상세 ${isUnlocked ? '' : '<span style="color:#ef4444; font-size:11px;">(미개방 보드)</span>'}:`;
+      }
 
-    // 1. 타이틀 업데이트
-    if (isAll) {
-      tableTitle.innerHTML = `스탯별 상세 <span>(전체 1~3차 통합)</span>:`;
-    } else {
-      const bObj = progress.boards[currentTier];
-      const isUnlocked = bObj ? bObj.unlocked : false;
-      tableTitle.innerHTML = `${currentTier + 1}차 보드 스탯별 상세 ${isUnlocked ? '' : '<span style="color:#ef4444; font-size:11px;">(미개방 보드)</span>'}:`;
-    }
+      // 2. 헤더 구성
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th style="text-align: left;">스탯</th>
+            <th style="text-align: right;">획득 스탯</th>
+            <th style="text-align: right;">미획득 잔여</th>
+            <th style="text-align: right;">총 스탯</th>
+            <th style="text-align: center;">1칸당 상승량</th>
+            <th style="text-align: center;">칸 수 (기본 / 강화)</th>
+            <th style="text-align: center; width: 64px;">달성률</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      `;
 
-    // 2. 헤더 구성
-    table.innerHTML = `
-      <thead>
-        <tr>
-          <th style="text-align: left;">스탯</th>
-          <th style="text-align: right;">획득 스탯</th>
-          <th style="text-align: right;">미획득 잔여</th>
-          <th style="text-align: right;">총 스탯</th>
-          <th style="text-align: center;">1칸당 상승량</th>
-          <th style="text-align: center;">칸 수 (기본 / 강화)</th>
-          <th style="text-align: center; width: 64px;">달성률</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    `;
+      const tbody = table.querySelector('tbody')!;
+      const activeStats = isAll ? normal.stats : progress.boards[currentTier]?.normal.stats;
+      let hasStat = false;
 
-    const tbody = table.querySelector('tbody')!;
-    const activeStats = isAll ? normal.stats : progress.boards[currentTier]?.normal.stats;
-    let hasStat = false;
+      for (const meta of STAT_META_LIST) {
+        const s = activeStats ? activeStats[meta.key] : null;
+        if (s && s.total > 0) {
+          hasStat = true;
+          const statPct = ((s.picked / s.total) * 100).toFixed(0);
+          const isStatDone = s.remaining === 0;
 
-    for (const meta of STAT_META_LIST) {
-      const s = activeStats ? activeStats[meta.key] : null;
-      if (s && s.total > 0) {
-        hasStat = true;
-        const statPct = ((s.picked / s.total) * 100).toFixed(0);
-        const isStatDone = s.remaining === 0;
+          const isSmallDone = s.smallTotal > 0 && s.smallPicked === s.smallTotal;
+          const isLargeDone = s.largeTotal > 0 && s.largePicked === s.largeTotal;
 
-        const isSmallDone = s.smallTotal > 0 && s.smallPicked === s.smallTotal;
-        const isLargeDone = s.largeTotal > 0 && s.largePicked === s.largeTotal;
-
-        const tr = document.createElement('tr');
-        tr.className = isStatDone ? 'tcbe-np-tr-done' : '';
-        tr.innerHTML = `
-          <td class="tcbe-np-td-stat">
-            <span class="tcbe-sprite-stat tcbe-sprite-stat-${meta.spriteIndex}"></span>
-            <span>${meta.nameKo}</span>
-          </td>
-          <td class="tcbe-np-td-val tcbe-np-val-picked">+${s.picked.toLocaleString()}</td>
-          <td class="tcbe-np-td-val tcbe-np-val-rem">${isStatDone ? '<span class="tcbe-np-done-tag">완료</span>' : `+${s.remaining.toLocaleString()}`}</td>
-          <td class="tcbe-np-td-val tcbe-np-val-total">+${s.total.toLocaleString()}</td>
-          <td class="tcbe-np-td-unit-val">
-            <span class="tcbe-np-unit-chip tcbe-np-pill-small">
-              <span class="tcbe-pastel-icon-mini tcbe-pastel-basic"></span>+${s.smallUnitValue.toLocaleString()}
-            </span>
-            <span class="tcbe-np-unit-chip tcbe-np-pill-large">
-              <span class="tcbe-pastel-icon-mini tcbe-pastel-average"></span>+${s.largeUnitValue.toLocaleString()}
-            </span>
-          </td>
-          <td class="tcbe-np-td-breakdown">
-            <span class="tcbe-np-pill-small ${isSmallDone ? 'tcbe-pill-done' : ''}">
-              <span class="tcbe-pastel-icon-mini tcbe-pastel-basic"></span>기본 ${s.smallPicked}/${s.smallTotal}
-            </span>
-            <span class="tcbe-np-pill-large ${isLargeDone ? 'tcbe-pill-done' : ''}">
-              <span class="tcbe-pastel-icon-mini tcbe-pastel-average"></span>강화 ${s.largePicked}/${s.largeTotal}
-            </span>
-          </td>
-          <td class="tcbe-np-td-pct">
-            <div class="tcbe-np-mini-pct-wrap">
-              <span class="tcbe-np-mini-pct-text">${statPct}%</span>
-              <div class="tcbe-np-mini-bar-bg">
-                <div class="tcbe-np-mini-bar-fill" style="width: ${statPct}%"></div>
+          const tr = document.createElement('tr');
+          tr.className = isStatDone ? 'tcbe-np-tr-done' : '';
+          tr.innerHTML = `
+            <td class="tcbe-np-td-stat">
+              <span class="tcbe-sprite-stat tcbe-sprite-stat-${meta.spriteIndex}"></span>
+              <span>${meta.nameKo}</span>
+            </td>
+            <td class="tcbe-np-td-val tcbe-np-val-picked">+${s.picked.toLocaleString()}</td>
+            <td class="tcbe-np-td-val tcbe-np-val-rem">${isStatDone ? '<span class="tcbe-np-done-tag">완료</span>' : `+${s.remaining.toLocaleString()}`}</td>
+            <td class="tcbe-np-td-val tcbe-np-val-total">+${s.total.toLocaleString()}</td>
+            <td class="tcbe-np-td-unit-val">
+              <span class="tcbe-np-unit-chip tcbe-np-pill-small">
+                <span class="tcbe-pastel-icon-mini tcbe-pastel-basic"></span>+${s.smallUnitValue.toLocaleString()}
+              </span>
+              <span class="tcbe-np-unit-chip tcbe-np-pill-large">
+                <span class="tcbe-pastel-icon-mini tcbe-pastel-average"></span>+${s.largeUnitValue.toLocaleString()}
+              </span>
+            </td>
+            <td class="tcbe-np-td-breakdown">
+              <span class="tcbe-np-pill-small ${isSmallDone ? 'tcbe-pill-done' : ''}">
+                <span class="tcbe-pastel-icon-mini tcbe-pastel-basic"></span>기본 ${s.smallPicked}/${s.smallTotal}
+              </span>
+              <span class="tcbe-np-pill-large ${isLargeDone ? 'tcbe-pill-done' : ''}">
+                <span class="tcbe-pastel-icon-mini tcbe-pastel-average"></span>강화 ${s.largePicked}/${s.largeTotal}
+              </span>
+            </td>
+            <td class="tcbe-np-td-pct">
+              <div class="tcbe-np-mini-pct-wrap">
+                <span class="tcbe-np-mini-pct-text">${statPct}%</span>
+                <div class="tcbe-np-mini-bar-bg">
+                  <div class="tcbe-np-mini-bar-fill" style="width: ${statPct}%"></div>
+                </div>
               </div>
-            </div>
-          </td>
-        `;
+            </td>
+          `;
+          tbody.appendChild(tr);
+        }
+      }
+
+      if (!hasStat) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="7" style="text-align:center; padding: 14px; color:#94a3b8;">해당 차수에는 일반칸 스탯 데이터가 없습니다.</td>`;
         tbody.appendChild(tr);
       }
     }
 
-    if (!hasStat) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td colspan="7" style="text-align:center; padding: 14px; color:#94a3b8;">해당 차수에는 일반칸 스탯 데이터가 없습니다.</td>`;
-      tbody.appendChild(tr);
+    function switchTier(tier: 'all' | number) {
+      currentTier = tier;
+
+      tabsContainer.querySelectorAll<HTMLButtonElement>('.tcbe-np-tab-btn').forEach((btn) => {
+        const bTier = btn.getAttribute('data-tier');
+        if (bTier === String(tier)) {
+          btn.classList.add('tcbe-active');
+        } else {
+          btn.classList.remove('tcbe-active');
+        }
+      });
+
+      cardElements.forEach((card, idx) => {
+        if (tier === idx) {
+          card.classList.add('tcbe-card-selected');
+        } else {
+          card.classList.remove('tcbe-card-selected');
+        }
+      });
+
+      renderTable();
     }
-  }
 
-  function switchTier(tier: 'all' | number) {
-    currentTier = tier;
-
-    // 탭 버튼 활성화 스타일 업데이트
     tabsContainer.querySelectorAll<HTMLButtonElement>('.tcbe-np-tab-btn').forEach((btn) => {
-      const bTier = btn.getAttribute('data-tier');
-      if (bTier === String(tier)) {
-        btn.classList.add('tcbe-active');
-      } else {
-        btn.classList.remove('tcbe-active');
-      }
-    });
-
-    // 보드 카드 선택 강조 스타일 업데이트
-    cardElements.forEach((card, idx) => {
-      if (tier === idx) {
-        card.classList.add('tcbe-card-selected');
-      } else {
-        card.classList.remove('tcbe-card-selected');
-      }
+      btn.addEventListener('click', () => {
+        const t = btn.getAttribute('data-tier');
+        switchTier(t === 'all' ? 'all' : Number(t));
+      });
     });
 
     renderTable();
+
+    // 닫기 버튼 이벤트
+    const closeBtn = popup.querySelector('.tcbe-np-close-btn');
+    closeBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      container.classList.remove('tcbe-pinned');
+    });
+
+    popup.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    container.appendChild(popup);
+    return popup;
   }
 
-  // 탭 클릭 이벤트 바인딩
-  tabsContainer.querySelectorAll<HTMLButtonElement>('.tcbe-np-tab-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const t = btn.getAttribute('data-tier');
-      switchTier(t === 'all' ? 'all' : Number(t));
-    });
-  });
-
-  // 초기 테이블 렌더링
-  renderTable();
-  container.appendChild(popup);
-
-  // 스마트 위치 조정 (좌우 및 상하 화면 가장자리 잘림 100% 방지)
+  // 스마트 위치 조정 (호버 시에만 팝업을 생성하고 위치 계산)
   const updatePopupPosition = () => {
+    const p = ensurePopup();
     const rect = container.getBoundingClientRect();
     const screenWidth = window.innerWidth;
     const screenHeight = window.innerHeight;
 
     // 1. 좌우 위치 조절
     if (rect.left + rect.width / 2 > screenWidth / 2) {
-      popup.style.left = 'auto';
-      popup.style.right = '-6px';
-      popup.style.setProperty('--np-chevron-left', 'auto');
-      popup.style.setProperty('--np-chevron-right', '28px');
+      p.style.left = 'auto';
+      p.style.right = '-6px';
+      p.style.setProperty('--np-chevron-left', 'auto');
+      p.style.setProperty('--np-chevron-right', '28px');
     } else {
-      popup.style.left = '-6px';
-      popup.style.right = 'auto';
-      popup.style.setProperty('--np-chevron-left', '28px');
-      popup.style.setProperty('--np-chevron-right', 'auto');
+      p.style.left = '-6px';
+      p.style.right = 'auto';
+      p.style.setProperty('--np-chevron-left', '28px');
+      p.style.setProperty('--np-chevron-right', 'auto');
     }
 
     // 2. 상하 위치 조절 (상단 헤더 잘림 방지: 위쪽 공간 부족 시 아래쪽으로 자동 전개)
-    const popupHeight = popup.offsetHeight || 520;
+    const popupHeight = p.offsetHeight || 520;
     const availableTop = rect.top;
     const availableBottom = screenHeight - rect.bottom;
 
     if (availableTop < popupHeight && availableBottom > availableTop) {
-      popup.style.bottom = 'auto';
-      popup.style.top = 'calc(100% + 8px)';
-      popup.classList.add('tcbe-popup-bottom');
+      p.style.bottom = 'auto';
+      p.style.top = 'calc(100% + 8px)';
+      p.classList.add('tcbe-popup-bottom');
     } else {
-      popup.style.top = 'auto';
-      popup.style.bottom = 'calc(100% + 8px)';
-      popup.classList.remove('tcbe-popup-bottom');
+      p.style.top = 'auto';
+      p.style.bottom = 'calc(100% + 8px)';
+      p.classList.remove('tcbe-popup-bottom');
     }
   };
 
@@ -637,6 +663,7 @@ export function createNormalStatElement(progress: ApostleProgress): HTMLElement 
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     e.preventDefault();
+    ensurePopup();
     const isPinned = container.classList.toggle('tcbe-pinned');
     if (isPinned) {
       updatePopupPosition();
@@ -647,18 +674,6 @@ export function createNormalStatElement(progress: ApostleProgress): HTMLElement 
         }
       });
     }
-  });
-
-  // 닫기 버튼
-  const closeBtn = popup.querySelector('.tcbe-np-close-btn');
-  closeBtn?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    e.preventDefault();
-    container.classList.remove('tcbe-pinned');
-  });
-
-  popup.addEventListener('click', (e) => {
-    e.stopPropagation();
   });
 
   return container;
@@ -693,9 +708,15 @@ if (typeof document !== 'undefined') {
 }
 
 /**
- * 보드 기준 필터에 따라 사도 카드 내부의 1, 2, 3차 보드 열 및 묶음 row 표시/숨김
+ * 보드 기준 필터에 따라 사도 카드 내부의 1, 2, 3차 보드 열 및 묶음 row 표시/숨김 (캐시 적용)
  */
 export function applyBoardLevelVisibility(card: HTMLElement, boardLevel: FilterState['boardLevel']) {
+  // 캐시 확인: 이미 동일한 표시 상태가 적용되어 있다면 DOM 순회/갱신 생략
+  if (card.getAttribute('data-tcbe-visible-level') === boardLevel) {
+    return;
+  }
+  card.setAttribute('data-tcbe-visible-level', boardLevel);
+
   let b1Col: HTMLElement | null = null;
   let b2Col: HTMLElement | null = null;
   let b3Col: HTMLElement | null = null;
@@ -749,7 +770,7 @@ export function applyBoardLevelVisibility(card: HTMLElement, boardLevel: FilterS
 }
 
 /**
- * 사도 카드 내부의 보드 타일에 스탯 필터 하이라이트 테두리 적용/해제
+ * 사도 카드 내부의 보드 타일에 스탯 필터 하이라이트 테두리 적용/해제 (캐시 기반 고속화)
  * (보크 타일만 대상, 황크/일반 노드/게이트 완전 제외)
  */
 export function updateBoardTileHighlights(
@@ -757,7 +778,16 @@ export function updateBoardTileHighlights(
   _progress: ApostleProgress,
   activeFilter?: FilterState
 ) {
-  // 1. 기존에 적용된 하이라이트 클래스 및 속성 초기화
+  const targetStat = activeFilter?.statCategory || 'all';
+  const currentStat = card.getAttribute('data-tcbe-highlight-stat') || 'all';
+
+  // 캐시 확인: 이미 동일한 하이라이트 상태가 적용되어 있다면 수천 개 타일 DOM 순회 생략
+  if (currentStat === targetStat) {
+    return;
+  }
+  card.setAttribute('data-tcbe-highlight-stat', targetStat);
+
+  // 1. 기존에 적용된 하이라이트 요소 초기화
   const existingHighlighted = card.querySelectorAll<HTMLElement>(
     '.tcbe-tile-highlight-rem, .tcbe-tile-highlight-done, [data-tcbe-tile-highlight]'
   );
@@ -766,11 +796,10 @@ export function updateBoardTileHighlights(
     el.removeAttribute('data-tcbe-tile-highlight');
   });
 
-  if (!activeFilter || activeFilter.statCategory === 'all') {
+  if (targetStat === 'all') {
     return;
   }
 
-  const targetStat = activeFilter.statCategory;
   const statPositions = STAT_TO_POSITIONS[targetStat];
   if (!statPositions) return;
 
@@ -892,22 +921,27 @@ export function enhanceApostleCards(
     if (card.closest('[role="dialog"], [data-slot="dialog-content"], [data-slot="dialog-overlay"]')) {
       return;
     }
-    // 사도 이미지(img[alt]) 또는 텍스트에서 사도 이름 찾기
-    const imgEl = card.querySelector<HTMLImageElement>('img[alt]');
-    const imgAlt = imgEl?.getAttribute('alt')?.trim();
-
+    // 캐시 확인: 이미 식별된 카드는 속성에서 직접 조회하여 불필요한 텍스트 DOM 순회 생략
     let progress: ApostleProgress | undefined;
-    let nameElement: HTMLElement | null = null;
-
-    if (imgAlt) {
-      progress = findProgressByName(nameToProgress, imgAlt);
+    const cachedName = card.getAttribute(ATTR_APOSTLE_NAME);
+    if (cachedName && nameToProgress.has(cachedName)) {
+      progress = nameToProgress.get(cachedName);
     }
 
-    const textElements = Array.from(
-      card.querySelectorAll<HTMLElement>('div, span, h2, h3, h4, p, strong, b')
-    );
-
     if (!progress) {
+      // 사도 이미지(img[alt])에서 사도 이름 찾기
+      const imgEl = card.querySelector<HTMLImageElement>('img[alt]');
+      const imgAlt = imgEl?.getAttribute('alt')?.trim();
+      if (imgAlt) {
+        progress = findProgressByName(nameToProgress, imgAlt);
+      }
+    }
+
+    let nameElement: HTMLElement | null = null;
+    if (!progress) {
+      const textElements = Array.from(
+        card.querySelectorAll<HTMLElement>('div, span, h2, h3, h4, p, strong, b')
+      );
       for (const el of textElements) {
         if (el.children.length > 2) continue;
         const text = el.textContent?.trim();
@@ -923,28 +957,33 @@ export function enhanceApostleCards(
 
     if (!progress) return;
 
-    if (!nameElement) {
-      const targetNameNorm = progress.name.replace(/\s+/g, '');
-      for (const el of textElements) {
-        if (el.children.length > 2) continue;
-        const text = el.textContent?.trim();
-        if (!text) continue;
-        const found = findProgressByName(nameToProgress, text);
-        if (found && found.apostleId === progress.apostleId) {
-          nameElement = el;
-          break;
-        }
-      }
+    if (!cachedName) {
+      card.setAttribute(ATTR_APOSTLE_NAME, progress.name);
+      card.setAttribute(ATTR_APOSTLE_ID, String(progress.apostleId));
     }
-
-    card.setAttribute(ATTR_APOSTLE_NAME, progress.name);
-    card.setAttribute(ATTR_APOSTLE_ID, String(progress.apostleId));
 
     const filterKey = `${activeFilter?.statCategory || 'all'}_${activeFilter?.boardLevel || 'all'}_${activeFilter?.status || 'all'}_${activeFilter?.grade || 'all'}`;
     const existingRow = card.querySelector('.tcbe-badge-row');
     const existingOldBadge = card.querySelector('.tcbe-badge-container');
 
+    // 이미 올바른 필터 조건으로 렌더링된 배지 행이 있다면 DOM 재생성 및 교체 생략
     if (!existingRow || existingRow.getAttribute('data-tcbe-rendered-filter') !== filterKey) {
+      if (!nameElement && !existingRow && !existingOldBadge) {
+        const textElements = Array.from(
+          card.querySelectorAll<HTMLElement>('div, span, h2, h3, h4, p, strong, b')
+        );
+        for (const el of textElements) {
+          if (el.children.length > 2) continue;
+          const text = el.textContent?.trim();
+          if (!text) continue;
+          const found = findProgressByName(nameToProgress, text);
+          if (found && found.apostleId === progress.apostleId) {
+            nameElement = el;
+            break;
+          }
+        }
+      }
+
       const newRow = createApostleEnhanceRow(progress, activeFilter);
       newRow.setAttribute('data-tcbe-rendered-filter', filterKey);
 
@@ -1136,39 +1175,51 @@ export function applyFilterToCards(
     }
 
     if (isMatch) {
-      card.classList.remove('tcbe-card-hidden');
+      if (card.classList.contains('tcbe-card-hidden')) {
+        card.classList.remove('tcbe-card-hidden');
+      }
       visible++;
 
       const nameIndex = nameOrderMap.get(progress.name) ?? 0;
       const totalNames = sortedNames.length;
+      let targetOrder = '';
 
-      // 7. 사도 카드 정렬(Sort) 적용 (모든 정렬은 asc/desc 지원 및 동일 순위 2차 가나다순)
+      // 7. 사도 카드 정렬(Sort) 적용 (오름차순/내림차순 지원 및 동일 순위 가나다순)
       if (filter.sortBy === 'name_asc') {
-        card.style.order = String(nameIndex);
+        targetOrder = String(nameIndex);
       } else if (filter.sortBy === 'name_desc') {
-        card.style.order = String(totalNames - nameIndex);
+        targetOrder = String(totalNames - nameIndex);
       } else if (filter.sortBy === 'unlocked_desc') {
         // 3관 -> 1관 (동일 관문 내 가나다순)
-        card.style.order = String((3 - progress.unlockedBoardCount) * 10000 + nameIndex);
+        targetOrder = String((3 - progress.unlockedBoardCount) * 10000 + nameIndex);
       } else if (filter.sortBy === 'unlocked_asc') {
         // 1관 -> 3관 (동일 관문 내 가나다순)
-        card.style.order = String(progress.unlockedBoardCount * 10000 + nameIndex);
+        targetOrder = String(progress.unlockedBoardCount * 10000 + nameIndex);
       } else if (filter.sortBy === 'grade_desc') {
         // 3성 -> 1성 (동일 성급 내 가나다순)
-        card.style.order = String((3 - progress.gradeDefault) * 10000 + nameIndex);
+        targetOrder = String((3 - progress.gradeDefault) * 10000 + nameIndex);
       } else if (filter.sortBy === 'grade_asc') {
         // 1성 -> 3성 (동일 성급 내 가나다순)
-        card.style.order = String(progress.gradeDefault * 10000 + nameIndex);
+        targetOrder = String(progress.gradeDefault * 10000 + nameIndex);
       } else if (filter.sortBy === 'personality_asc') {
         // 성격 순 (순수 -> 냉정 -> 광기 -> 활발 -> 우울 -> 공명, 동일 성격 내 가나다순)
-        card.style.order = String(progress.personality * 10000 + nameIndex);
+        targetOrder = String(progress.personality * 10000 + nameIndex);
       } else if (filter.sortBy === 'personality_desc') {
         // 성격 역순 (공명 -> 우울 -> 활발 -> 광기 -> 냉정 -> 순수, 동일 성격 내 가나다순)
-        card.style.order = String((5 - progress.personality) * 10000 + nameIndex);
+        targetOrder = String((5 - progress.personality) * 10000 + nameIndex);
+      }
+
+      // 불필요한 Reflow/재렌더링 방지를 위해 order에 실제 변경이 있을 때만 업데이트
+      if (card.style.order !== targetOrder) {
+        card.style.order = targetOrder;
       }
     } else {
-      card.classList.add('tcbe-card-hidden');
-      card.style.order = '';
+      if (!card.classList.contains('tcbe-card-hidden')) {
+        card.classList.add('tcbe-card-hidden');
+      }
+      if (card.style.order !== '') {
+        card.style.order = '';
+      }
     }
   });
 
@@ -1194,6 +1245,7 @@ export function setBadgesVisible(visible: boolean) {
     const highlights = document.querySelectorAll('.tcbe-tile-highlight-rem, .tcbe-tile-highlight-done');
     highlights.forEach((h) => {
       h.classList.remove('tcbe-tile-highlight-rem', 'tcbe-tile-highlight-done');
+      h.removeAttribute('data-tcbe-tile-highlight');
     });
 
     // 2. 필터에 의한 숨김 클래스(tcbe-card-hidden) 전체 해제
@@ -1202,11 +1254,15 @@ export function setBadgesVisible(visible: boolean) {
       c.classList.remove('tcbe-card-hidden');
     });
 
-    // 3. 보드 차수 표시 상태를 전체(all)로 복원 & 정렬 순서 리셋
+    // 3. 보드 차수 및 하이라이트 캐시 속성을 리셋하고 원래 표시로 복원
     const allCards = document.querySelectorAll<HTMLElement>(`[${ATTR_APOSTLE_NAME}]`);
     allCards.forEach((c) => {
+      c.removeAttribute('data-tcbe-visible-level');
+      c.removeAttribute('data-tcbe-highlight-stat');
       applyBoardLevelVisibility(c, 'all');
-      c.style.order = '';
+      if (c.style.order !== '') {
+        c.style.order = '';
+      }
     });
   }
 }
