@@ -4,6 +4,7 @@
  */
 
 import { PERSONALITY_META_LIST, STAT_META_LIST } from '../domain/boardProgress.ts';
+import { checkForUpdate } from '../domain/updateChecker.ts';
 import type {
   ApostleProgress,
   BoardFilterLevel,
@@ -98,7 +99,7 @@ export class FilterPanelController {
       const currentVer = chrome.runtime?.getManifest?.()?.version || '1.0.4';
       checkForUpdate(currentVer).then((updateInfo) => {
         if (updateInfo?.hasUpdate) {
-          const slot = header.querySelector('#tcbe-update-badge-slot');
+          const slot = document.getElementById('tcbe-update-badge-slot') || header.querySelector('#tcbe-update-badge-slot');
           if (slot) {
             slot.innerHTML = `
               <a href="${updateInfo.releaseUrl}" target="_blank" class="tcbe-update-badge" title="새로운 버전(v${updateInfo.latestVersion})이 출시되었습니다! 클릭하여 다운로드 페이지로 이동">

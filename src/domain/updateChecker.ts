@@ -13,7 +13,7 @@ export interface UpdateInfo {
 
 const GITHUB_REPO = 'ckcic/trickcal-board-extension';
 const CACHE_KEY = 'tcbe_update_check_cache';
-const CACHE_TTL_MS = 1000 * 60 * 60 * 2; // 2시간 캐시
+const CACHE_TTL_MS = 1000 * 60 * 10; // 10분 캐시로 단축하여 신속한 업데이트 감지
 
 /**
  * Semver 버전 비교 함수
@@ -48,6 +48,7 @@ export async function checkForUpdate(currentVersion: string): Promise<UpdateInfo
         const parsed = JSON.parse(cached);
         if (Date.now() - parsed.timestamp < CACHE_TTL_MS) {
           const hasUpdate = compareSemver(parsed.latestVersion, currentVersion) > 0;
+          console.log(`[TCBE] 캐시된 업데이트 정보 사용: 현재 v${currentVersion} / 최신 v${parsed.latestVersion} (업데이트: ${hasUpdate})`);
           return {
             hasUpdate,
             currentVersion,
@@ -69,6 +70,7 @@ export async function checkForUpdate(currentVersion: string): Promise<UpdateInfo
     });
 
     if (!res.ok) {
+      console.warn('[TCBE] GitHub Releases API 응답 실패:', res.status, res.statusText);
       return null;
     }
 
@@ -91,6 +93,7 @@ export async function checkForUpdate(currentVersion: string): Promise<UpdateInfo
     );
 
     const hasUpdate = compareSemver(tag, currentVersion) > 0;
+    console.log(`[TCBE] GitHub 최신 릴리스 확인 완료: 현재 v${currentVersion} / 최신 v${tag} (신규 업데이트 존재: ${hasUpdate})`);
 
     return {
       hasUpdate,
