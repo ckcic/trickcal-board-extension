@@ -5,7 +5,11 @@ scratch/
 *.log
 *.zip
 .DS_Store
+
+# AI 도구별 인식 파일 (HARNESS.md에서 자동 생성)
 GEMINI.md
 AGENTS.md
+CLAUDE.md
 .agents/
+
 references/
