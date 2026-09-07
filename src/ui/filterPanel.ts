@@ -107,7 +107,7 @@ export class FilterPanelController {
 
     // 최신 버전 업데이트 감지 비동기 실행 (신규 버전 존재 시에만 뱃지 노출)
     try {
-      const currentVer = chrome.runtime?.getManifest?.()?.version || '1.0.4';
+      const currentVer = chrome.runtime?.getManifest?.()?.version || '1.0.5';
       checkForUpdate(currentVer).then((updateInfo) => {
         if (updateInfo?.hasUpdate) {
           const slot = document.getElementById('tcbe-update-badge-slot') || header.querySelector('#tcbe-update-badge-slot');
