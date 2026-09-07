@@ -1,9 +1,12 @@
+import { parseTrickcalApiPayload } from '../domain/dataParser.ts';
+import type { ExtractedApiData } from '../domain/types.ts';
 /**
  * @file interceptor.ts
  * @description MAIN world(페이지 컨텍스트)에서 동작하며, fetch 및 XHR을 후킹하여 최신 보드 데이터를 가로챔
  */
 
 // MAIN world 전역 객체에 인터셉터 플래그를 안전하게 설정하기 위한 타입 확장
+
 declare global {
   interface Window {
     __TCBE_INTERCEPTOR_INSTALLED__?: boolean;
@@ -19,43 +22,22 @@ declare global {
 
   const MESSAGE_TYPE = 'TCBE_BOARD_DATA_INTERCEPTED';
 
-  /**
-   * 페이로드가 트릭컬 보드 관련 데이터를 포함하고 있는지 판별
-   */
-  function containsTrickcalData(obj: unknown): boolean {
-    if (!obj || typeof obj !== 'object') return false;
+  let latestData: ExtractedApiData | null = null;
 
-    // unknown → Record 안전 캐스팅 (구조 불확실한 외부 API 응답)
-    const record = obj as Record<string, unknown>;
-    const payloadVal = record.payload;
-    const root = (payloadVal && typeof payloadVal === 'object' ? payloadVal : record) as Record<string, unknown>;
-
-    // 깊은 탐색을 위한 안전한 접근 헬퍼
-    const dig = (base: unknown, ...keys: string[]): unknown => {
-      let current: unknown = base;
-      for (const key of keys) {
-        if (!current || typeof current !== 'object') return undefined;
-        current = (current as Record<string, unknown>)[key];
-      }
-      return current;
-    };
-
-    const hasApostles = Boolean(
-      Array.isArray(dig(root, 'user', 'data', 'apostle', 'apostles')) ||
-      Array.isArray(dig(root, 'apostle', 'apostles')) ||
-      Array.isArray(dig(root, 'apostles'))
-    );
-
-    const hasBoard = Boolean(dig(root, 'data', 'data', 'board') || dig(root, 'board'));
-    const hasHeroInfo = Boolean(dig(root, 'data', 'data', 'heroInfo') || dig(root, 'heroInfo'));
-
-    return hasApostles && hasBoard && hasHeroInfo;
-  }
+  // 콘텐츠 스크립트가 늦게 준비되어도 메모리의 마지막 보드 데이터를 전달한다.
+  window.addEventListener('message', (event: MessageEvent) => {
+    if (event.source === window && event.origin === window.location.origin &&
+        event.data?.type === 'TCBE_BOARD_DATA_REQUEST' &&
+        event.data?.source === 'tcbe-content-bridge' && latestData) {
+      dispatchCapturedData(latestData);
+    }
+  });
 
   /**
    * 가로챈 데이터를 isolated world의 콘텐츠 스크립트로 전달
    */
-  function dispatchCapturedData(data: unknown) {
+  function dispatchCapturedData(data: ExtractedApiData) {
+    latestData = data;
     try {
       window.postMessage(
         {
@@ -63,7 +45,7 @@ declare global {
           source: 'tcbe-main-interceptor',
           payload: data,
         },
-        '*'
+        window.location.origin
       );
     } catch (err) {
       console.error('[TCBE] postMessage failed:', err);
@@ -80,8 +62,9 @@ declare global {
       cloned
         .json()
         .then((json: unknown) => {
-          if (containsTrickcalData(json)) {
-            dispatchCapturedData(json);
+          const parsed = parseTrickcalApiPayload(json);
+          if (parsed) {
+            dispatchCapturedData(parsed);
           }
         })
         .catch(() => {
@@ -94,40 +77,34 @@ declare global {
   };
 
   // --- 2. XMLHttpRequest 가로채기 ---
-  const originalOpen = XMLHttpRequest.prototype.open;
   const originalSend = XMLHttpRequest.prototype.send;
-
-  XMLHttpRequest.prototype.open = function (
-    this: XMLHttpRequest,
-    method: string,
-    url: string | URL,
-    async?: boolean,
-    username?: string | null,
-    password?: string | null
-  ) {
-    return originalOpen.call(this, method, url, async ?? true, username ?? null, password ?? null);
-  };
+  const observedRequests = new WeakSet<XMLHttpRequest>();
 
   XMLHttpRequest.prototype.send = function (this: XMLHttpRequest, body?: Document | XMLHttpRequestBodyInit | null) {
-    this.addEventListener('load', function () {
-      try {
-        if (this.responseType === '' || this.responseType === 'text' || this.responseType === 'json') {
-          let responseData: unknown = this.response;
-          if (typeof responseData === 'string') {
-            try {
-              responseData = JSON.parse(responseData);
-            } catch {
-              return;
+    // XHR 인스턴스 재사용 시 리스너가 누적되지 않도록 한 번만 등록한다.
+    if (!observedRequests.has(this)) {
+      observedRequests.add(this);
+      this.addEventListener('load', function () {
+        try {
+          if (this.responseType === '' || this.responseType === 'text' || this.responseType === 'json') {
+            let responseData: unknown = this.response;
+            if (typeof responseData === 'string') {
+              try {
+                responseData = JSON.parse(responseData);
+              } catch {
+                return;
+              }
+            }
+            const parsed = parseTrickcalApiPayload(responseData);
+            if (parsed) {
+              dispatchCapturedData(parsed);
             }
           }
-          if (containsTrickcalData(responseData)) {
-            dispatchCapturedData(responseData);
-          }
+        } catch {
+          // 에러 무시
         }
-      } catch {
-        // 에러 무시
-      }
-    });
+      });
+    }
     return originalSend.call(this, body);
   };
 })();

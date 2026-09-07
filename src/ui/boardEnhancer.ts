@@ -1,9 +1,9 @@
+import { matchesApostleFilter } from '../domain/filters.ts';
 /**
  * @file boardEnhancer.ts
  * @description 트릭컬 노트의 사도 카드 DOM을 감지하여 뱃지/하이라이트/필터/정렬을 오케스트레이션하는 진입점 모듈
  */
 
-import { STAT_META_LIST } from '../domain/boardProgress.ts';
 import type { ApostleProgress, FilterState } from '../domain/types.ts';
 import { createBadgeElement } from './badge.ts';
 import { findCardContainer, findProgressByName } from './cardDetector.ts';
@@ -20,6 +20,9 @@ export { STAT_TO_POSITIONS, updateBoardTileHighlights } from './tileHighlight.ts
 export const ATTR_APOSTLE_NAME = 'data-tcbe-apostle-name';
 export const ATTR_APOSTLE_ID = 'data-tcbe-apostle-id';
 export const ATTR_ENHANCED = 'data-tcbe-enhanced';
+
+/** 분리된 행은 자동 해제하고 새 API 데이터는 객체 참조로 구분한다. */
+const renderedProgress = new WeakMap<Element, ApostleProgress>();
 
 /**
  * 골드 수치를 트릭컬 노트 스타일의 'k' 단위로 포맷팅 (예: 300,000 -> '300k', 10,000 -> '10k', 0 -> '0k')
@@ -184,7 +187,7 @@ export function enhanceApostleCards(
 
     if (!progress) return;
 
-    if (!cachedName) {
+    if (cachedName !== progress.name) {
       card.setAttribute(ATTR_APOSTLE_NAME, progress.name);
       card.setAttribute(ATTR_APOSTLE_ID, String(progress.apostleId));
     }
@@ -194,7 +197,7 @@ export function enhanceApostleCards(
     const existingOldBadge = card.querySelector('.tcbe-badge-container');
 
     // 이미 올바른 필터 조건으로 렌더링된 배지 행이 있다면 DOM 재생성 및 교체 생략
-    if (!existingRow || existingRow.getAttribute('data-tcbe-rendered-filter') !== filterKey) {
+    if (!existingRow || renderedProgress.get(existingRow) !== progress || existingRow.getAttribute('data-tcbe-rendered-filter') !== filterKey) {
       if (!nameElement && !existingRow && !existingOldBadge) {
         const textElements = Array.from(
           card.querySelectorAll<HTMLElement>('div, span, h2, h3, h4, p, strong, b')
@@ -213,6 +216,7 @@ export function enhanceApostleCards(
 
       const newRow = createApostleEnhanceRow(progress, activeFilter);
       newRow.setAttribute('data-tcbe-rendered-filter', filterKey);
+      renderedProgress.set(newRow, progress);
 
       if (existingRow) {
         existingRow.replaceWith(newRow);
@@ -259,9 +263,10 @@ export function enhanceApostleCards(
       const existingRow = card.querySelector('.tcbe-badge-row');
       const existingOldBadge = card.querySelector('.tcbe-badge-container');
 
-      if (!existingRow || existingRow.getAttribute('data-tcbe-rendered-filter') !== filterKey) {
+      if (!existingRow || renderedProgress.get(existingRow) !== progress || existingRow.getAttribute('data-tcbe-rendered-filter') !== filterKey) {
         const newRow = createApostleEnhanceRow(progress, activeFilter);
         newRow.setAttribute('data-tcbe-rendered-filter', filterKey);
+        renderedProgress.set(newRow, progress);
 
         if (existingRow) {
           existingRow.replaceWith(newRow);
@@ -301,7 +306,7 @@ export function applyFilterToCards(
   let visible = 0;
 
   // 사도 가나다순(한국어 이름 순) 인덱스 맵 생성 (기본 정렬 및 2차 정렬 키)
-  const sortedNames = Array.from(apostleProgressMap.values())
+  const sortedNames = Array.from(new Set(apostleProgressMap.values()))
     .map((p) => p.name)
     .sort((a, b) => a.localeCompare(b, 'ko'));
   const nameOrderMap = new Map<string, number>();
@@ -327,79 +332,7 @@ export function applyFilterToCards(
     // 2. 보드 타일 하이라이트 실시간 적용 (보크 타일만 대상)
     updateBoardTileHighlights(card, progress, filter);
 
-    let isMatch = true;
-
-    // 1. 초기 성급 필터 (1성, 2성, 3성)
-    if (filter.grade !== 'all') {
-      if (progress.gradeDefault !== filter.grade) {
-        isMatch = false;
-      }
-    }
-
-    // 2. 해금 관문 필터 (1차, 2차, 3차)
-    if (isMatch && filter.unlockedTier !== 'all') {
-      if (progress.unlockedBoardCount !== filter.unlockedTier) {
-        isMatch = false;
-      }
-    }
-
-    // 3. 성격 필터
-    if (isMatch && filter.personality !== 'all') {
-      if (progress.personality !== filter.personality) {
-        isMatch = false;
-      }
-    }
-
-    // 4. 보드 차수(1차/2차/3차/전체)에 따른 판정 대상 보크 데이터 추출
-    let targetPicked = progress.bokr.picked;
-    let targetTotal = progress.bokr.allTotal;
-    let targetRemaining = progress.bokr.remainingAll;
-    let isTargetComplete = progress.bokr.isCompleted;
-    let targetStatSummary = filter.statCategory !== 'all' ? progress.bokr.byStat[filter.statCategory] : null;
-
-    if (isMatch && filter.boardLevel !== 'all') {
-      const levelNum = Number(filter.boardLevel);
-      const boardProg = progress.boards.find((b) => b.boardStepLevel === levelNum);
-      if (boardProg) {
-        targetPicked = boardProg.bokr.picked;
-        targetTotal = boardProg.bokr.total;
-        targetRemaining = boardProg.bokr.remaining;
-        isTargetComplete = boardProg.unlocked && boardProg.bokr.picked === boardProg.bokr.total && boardProg.bokr.total > 0;
-        targetStatSummary = filter.statCategory !== 'all' ? boardProg.bokr.byStat[filter.statCategory] : null;
-      } else {
-        isMatch = false;
-      }
-    }
-
-    // 5. 스탯 지정 필터가 활성화된 경우
-    if (isMatch && filter.statCategory !== 'all') {
-      if (!targetStatSummary || targetStatSummary.total === 0) {
-        // 선택된 보드(또는 전체)에 해당 스탯 보크가 아예 없는 사도는 숨김
-        isMatch = false;
-      } else {
-        const isStatDone = targetStatSummary.remaining === 0 && targetStatSummary.total > 0;
-        if (filter.status === 'incomplete' && isStatDone) {
-          // 해당 스탯 칸을 전부 칠했으면 미완료 필터에서 숨김!
-          isMatch = false;
-        } else if (filter.status === 'complete' && !isStatDone) {
-          // 해당 스탯 칸이 아직 남아있으면 완료 필터에서 숨김!
-          isMatch = false;
-        }
-      }
-    } else if (isMatch) {
-      // 6. 전체 스탯 기준 보크 완료/미완료 판정
-      if (filter.status === 'incomplete') {
-        if (isTargetComplete || targetRemaining === 0) {
-          // 해당 범위의 모든 보크를 전부 칠했으면 미완료 필터에서 숨김!
-          isMatch = false;
-        }
-      } else if (filter.status === 'complete') {
-        if (!isTargetComplete || targetRemaining > 0) {
-          // 아직 칠해야 할 보크가 남아있으면 완료 필터에서 숨김!
-          isMatch = false;
-        }
-      }
-    }
+    const isMatch = matchesApostleFilter(progress, filter);
 
     if (isMatch) {
       if (card.classList.contains('tcbe-card-hidden')) {

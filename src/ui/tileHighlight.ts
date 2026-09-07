@@ -65,7 +65,7 @@ export function updateBoardTileHighlights(
   activeFilter?: FilterState
 ) {
   const targetStat = activeFilter?.statCategory || 'all';
-  const currentStat = card.getAttribute('data-tcbe-highlight-stat') || 'all';
+  const currentStat = card.getAttribute('data-tcbe-highlight-stat');
 
   // 캐시 확인: 이미 동일한 하이라이트 상태가 적용되어 있다면 수천 개 타일 DOM 순회 생략
   if (currentStat === targetStat) {

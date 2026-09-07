@@ -71,7 +71,7 @@ export function findCardContainer(nameElement: Element): HTMLElement | null {
   let curr: Element | null = nameElement;
   for (let i = 0; i < 8; i++) {
     if (!curr || curr === document.body) break;
-    const parent = curr.parentElement;
+    const parent: HTMLElement | null = curr.parentElement;
     if (!parent) break;
 
     if (

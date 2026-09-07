@@ -5,6 +5,22 @@
 
 import type { ExtractedApiData, HeroInfo, MasterBoardNode, UserApostle } from './types.ts';
 
+/** 외부 응답의 배열과 객체, 숫자를 구분하여 계산 중 예외를 차단한다. */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+function isNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+function isNode(value: unknown): boolean {
+  if (!isRecord(value) || !isNumber(value.id) || !isNumber(value.nodeType)) return false;
+  if (value.requireGold !== undefined && !isNumber(value.requireGold)) return false;
+  if (value.stats !== undefined && (!Array.isArray(value.stats) || !value.stats.every(
+    stat => isRecord(stat) && isNumber(stat.statType) && isNumber(stat.statValue)))) return false;
+  return value.requireItems === undefined || (Array.isArray(value.requireItems) && value.requireItems.every(
+    item => isRecord(item) && isNumber(item.item) && isNumber(item.value)));
+}
+
 /**
  * 객체가 트릭컬 노트의 보드 데이터 구조를 충족하는지 검증
  * @param data 검증 대상 객체
@@ -60,17 +76,31 @@ export function parseTrickcalApiPayload(data: unknown): ExtractedApiData | null 
   if (
     !Array.isArray(apostles) ||
     !board ||
-    typeof board !== 'object' ||
+    !isRecord(board) ||
     !heroInfo ||
-    typeof heroInfo !== 'object' ||
+    !isRecord(heroInfo) ||
     !text ||
-    typeof text !== 'object'
+    !isRecord(text)
   ) {
     return null;
   }
 
+  // 필요한 중첩 구조도 검증하여 잘못된 응답이 기존 진행도를 덮어쓰지 않게 한다.
+  if (!apostles.every(apostle => isRecord(apostle) && isNumber(apostle.apostleId ?? apostle.id) &&
+      (apostle.boardSteps === undefined || (Array.isArray(apostle.boardSteps) &&
+        apostle.boardSteps.every(step => isRecord(step) && typeof step.step === 'string')))) ||
+      !Object.values(board).every(levels => (isRecord(levels) || Array.isArray(levels)) && Object.values(levels).every(
+        nodes => Array.isArray(nodes) && nodes.every(isNode))) ||
+      !Object.values(heroInfo).every(hero => isRecord(hero) && typeof hero.name === 'string' &&
+        isNumber(hero.gradeDefault) && isNumber(hero.personality)) ||
+      !Object.values(text).every(value => typeof value === 'string')) return null;
+
   return {
-    apostles,
+    // 계정 부가 필드는 월드 간 메시지나 마지막 응답 캐시에 보관하지 않는다.
+    apostles: apostles.map(apostle => ({
+      apostleId: apostle.apostleId ?? apostle.id,
+      boardSteps: apostle.boardSteps?.map(({ step }) => ({ step })),
+    })),
     board,
     heroInfo,
     text,

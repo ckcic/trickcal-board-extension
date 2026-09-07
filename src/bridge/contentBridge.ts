@@ -14,7 +14,7 @@ export type OnDataReceivedCallback = (data: ExtractedApiData) => void;
 export function listenForBoardData(callback: OnDataReceivedCallback): () => void {
   const handler = (event: MessageEvent) => {
     // 동일 윈도우의 메시지만 수신
-    if (event.source !== window) {
+    if (event.source !== window || event.origin !== window.location.origin) {
       return;
     }
 
@@ -34,6 +34,7 @@ export function listenForBoardData(callback: OnDataReceivedCallback): () => void
   };
 
   window.addEventListener('message', handler);
+  window.postMessage({ type: 'TCBE_BOARD_DATA_REQUEST', source: 'tcbe-content-bridge' }, window.location.origin);
 
   return () => {
     window.removeEventListener('message', handler);

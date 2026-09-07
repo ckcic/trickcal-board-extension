@@ -3,6 +3,7 @@
  * @description esbuild를 이용한 Chrome 확장 프로그램 빌드 및 정적 에셋 복사 스크립트
  */
 
+import { execFileSync } from 'node:child_process';
 import * as esbuild from 'esbuild';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -83,6 +84,8 @@ function verifySecurityIntegrity() {
 }
 
 async function build() {
+  // esbuild의 번들 생성 전에 TypeScript 타입 검사를 실행한다.
+  execFileSync(process.execPath, [path.join(rootDir, 'node_modules/typescript/bin/tsc'), '--noEmit'], { cwd: rootDir, stdio: 'inherit' });
   ensureDistDir();
   copyStaticFiles();
 

@@ -14,6 +14,7 @@ import type {
   PersonalityFilterTarget,
   StatCategory,
   StatFilterTarget,
+  UnlockedTierFilter,
 } from '../domain/types.ts';
 
 export interface FilterChangeCallback {
@@ -111,12 +112,15 @@ export class FilterPanelController {
         if (updateInfo?.hasUpdate) {
           const slot = document.getElementById('tcbe-update-badge-slot') || header.querySelector('#tcbe-update-badge-slot');
           if (slot) {
-            slot.innerHTML = `
-              <a href="${updateInfo.releaseUrl}" target="_blank" class="tcbe-update-badge" title="새로운 버전(v${updateInfo.latestVersion})이 출시되었습니다! 클릭하여 다운로드 페이지로 이동">
-                🚀 v${updateInfo.latestVersion} 업데이트
-              </a>
-            `;
-            slot.querySelector('a')?.addEventListener('click', (e) => e.stopPropagation());
+            const link = document.createElement('a');
+            link.href = 'https://github.com/ckcic/trickcal-board-extension/releases/latest';
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.className = 'tcbe-update-badge';
+            link.title = '새 버전 다운로드 페이지로 이동';
+            link.textContent = '🚀 v' + updateInfo.latestVersion + ' 업데이트';
+            link.addEventListener('click', (event) => event.stopPropagation());
+            slot.replaceChildren(link);
           }
         }
       });

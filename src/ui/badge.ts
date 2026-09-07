@@ -1,3 +1,4 @@
+import { escapeHtml } from './html.ts';
 /**
  * @file badge.ts
  * @description 사도 카드에 삽입되는 상급칸(보크) 진행도 뱃지 및 상세 툴팁 포털 DOM 생성 모듈
@@ -15,7 +16,7 @@ function generateBokrTooltipHtml(progress: ApostleProgress): string {
 
   let html = `
     <div class="tcbe-tt-header">
-      <span>${persIconHtml}${progress.name} (태생 ${progress.gradeDefault}성) <span class="tcbe-pastel-icon tcbe-pastel-epic"></span> 상급칸 현황</span>
+      <span>${persIconHtml}${escapeHtml(progress.name)} (태생 ${progress.gradeDefault}성) <span class="tcbe-pastel-icon tcbe-pastel-epic"></span> 상급칸 현황</span>
       <span>총 ${progress.bokr.picked}/${progress.bokr.allTotal}개</span>
     </div>
   `;

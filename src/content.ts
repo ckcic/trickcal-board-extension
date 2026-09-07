@@ -1,3 +1,5 @@
+import { isSiteMutation } from './ui/mutations.ts';
+import { matchesApostleFilter } from './domain/filters.ts';
 /**
  * @file content.ts
  * @description 트릭컬 노트 확장 프로그램의 콘텐츠 스크립트 (ISOLATED world) 메인 엔트리
@@ -125,41 +127,7 @@ import { FilterPanelController } from './ui/filterPanel.ts';
     const masterTotal = uniqueApostles.size;
 
     uniqueApostles.forEach((prog) => {
-      // 태생 성급 필터
-      if (filter.grade !== 'all' && prog.gradeDefault !== filter.grade) {
-        return;
-      }
-
-      // 성격 필터
-      if (filter.personality !== 'all' && prog.personality !== filter.personality) {
-        return;
-      }
-
-      let isComplete = prog.bokr.isCompleted;
-      let remaining = prog.bokr.remainingAll;
-      let statSummary = filter.statCategory !== 'all' ? prog.bokr.byStat[filter.statCategory] : null;
-
-      if (filter.boardLevel !== 'all') {
-        const levelNum = Number(filter.boardLevel);
-        const boardProg = prog.boards.find((b) => b.boardStepLevel === levelNum);
-        if (boardProg) {
-          isComplete = boardProg.unlocked && boardProg.bokr.picked === boardProg.bokr.total && boardProg.bokr.total > 0;
-          remaining = boardProg.bokr.remaining;
-          statSummary = filter.statCategory !== 'all' ? boardProg.bokr.byStat[filter.statCategory] : null;
-        } else {
-          return;
-        }
-      }
-
-      if (filter.statCategory !== 'all') {
-        if (statSummary && statSummary.total > 0 && statSummary.remaining > 0) {
-          incompleteCount++;
-        }
-      } else {
-        if (!isComplete && remaining > 0) {
-          incompleteCount++;
-        }
-      }
+      if (matchesApostleFilter(prog, { ...filter, status: 'incomplete' })) incompleteCount++;
     });
 
     return { incompleteCount, masterTotal, statName, persName };
@@ -204,6 +172,8 @@ import { FilterPanelController } from './ui/filterPanel.ts';
             statCategory: 'all' as const,
             personality: 'all' as const,
             grade: 'all' as const,
+            unlockedTier: 'all' as const,
+            sortBy: 'name_asc' as const,
           };
 
       // 1. 사도 카드에 뱃지 삽입 및 업데이트
@@ -235,20 +205,8 @@ import { FilterPanelController } from './ui/filterPanel.ts';
     }, delay);
   }
 
-  function handleFilterChange(newState: FilterState) {
-    if (!latestProgressMap) return;
-
-    enhanceApostleCards(latestProgressMap, newState);
-    const { total, visible } = applyFilterToCards(newState, latestProgressMap);
-    const { incompleteCount, masterTotal, statName, persName } = countIncompleteApostles(
-      latestProgressMap,
-      newState
-    );
-
-    if (filterController) {
-      filterController.updateStats(visible, total, masterTotal, incompleteCount, statName, persName);
-      filterController.updateStatSummaryGrid(latestProgressMap, newState);
-    }
+  function handleFilterChange() {
+    refreshUI();
   }
 
   injectSpriteStyles();
@@ -266,60 +224,32 @@ import { FilterPanelController } from './ui/filterPanel.ts';
     }
   });
 
-  /**
-   * 대상 노드가 확장 프로그램(TCBE)에 의해 생성/관리되는 요소인지 판별
-   * (data-tcbe 속성 기반 경량 판별로 셀렉터 엔진 부하 절감)
-   */
-  function isTcbeElement(node: Node | null): boolean {
-    if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
-    const el = node as HTMLElement;
-    // 1. ID 접두사 확인 (최소 비용)
-    if (el.id && el.id.startsWith('tcbe-')) return true;
-    // 2. 클래스명 접두사 확인
-    if (el.className && typeof el.className === 'string' && el.className.includes('tcbe-')) return true;
-    // 3. data-tcbe 속성 확인 (closest보다 경량)
-    if (el.hasAttribute('data-tcbe-enhanced') || el.hasAttribute('data-tcbe-apostle-name')) return true;
-    // 4. 부모 체인 최소 탐색 (closest 대신 직접 5단계만 탐색)
-    let parent = el.parentElement;
-    for (let i = 0; i < 5 && parent; i++) {
-      if (parent.id === 'tcbe-filter-panel') return true;
-      if (parent.className && typeof parent.className === 'string' && parent.className.includes('tcbe-')) return true;
-      parent = parent.parentElement;
-    }
-    return false;
-  }
-
   const observer = new MutationObserver((mutations) => {
-    // 확장 프로그램 자체의 DOM 변경(호버, 툴팁, 팝업, 필터 버튼 등)을 완전히 제외
-    const hasExternalChanges = mutations.some((m) => {
-      const target = m.target as HTMLElement;
-      if (isTcbeElement(target)) return false;
-
-      // 추가/제거된 노드가 모두 확장 프로그램 내부 요소인 경우 무시
-      for (let i = 0; i < m.addedNodes.length; i++) {
-        if (!isTcbeElement(m.addedNodes[i])) return true;
-      }
-      for (let i = 0; i < m.removedNodes.length; i++) {
-        if (!isTcbeElement(m.removedNodes[i])) return true;
-      }
-
-      return !isTcbeElement(target);
-    });
-
-    if (hasExternalChanges && latestProgressMap) {
-      scheduleRefresh();
+    const externalChanges = mutations.filter(isSiteMutation);
+    for (const mutation of externalChanges) {
+      const element = mutation.target instanceof Element ? mutation.target : mutation.target.parentElement;
+      const card = element?.closest('[data-tcbe-apostle-name]');
+      // 사이트가 카드 내부를 재사용하거나 교체하면 DOM 기준 캐시를 무효화한다.
+      card?.removeAttribute('data-tcbe-visible-level');
+      card?.removeAttribute('data-tcbe-highlight-stat');
+      card?.removeAttribute('data-tcbe-apostle-name');
+      card?.removeAttribute('data-tcbe-apostle-id');
     }
+    if (externalChanges.length && latestProgressMap) scheduleRefresh();
   });
 
   observer.observe(document.body || document.documentElement, {
     childList: true,
     subtree: true,
-    attributes: false,  // 속성 변경은 감시 불필요 (불필요한 mutation 이벤트 감소)
+    characterData: true,
+    attributes: true,
+    attributeOldValue: true,
+    attributeFilter: ['class', 'alt'],
   });
 
   // 탭 전환 버튼 등 클릭 시 신속하게 재판별
   document.addEventListener('click', (e) => {
-    const target = e.target as HTMLElement;
+    const target = e.target instanceof Element ? e.target : null;
     if (target && !target.closest('#tcbe-filter-panel')) {
       scheduleRefresh(50);
     }

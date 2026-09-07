@@ -247,3 +247,9 @@ export interface FilterState {
   unlockedTier: UnlockedTierFilter;  // 해금 관문 필터 ('all' | 1 | 2 | 3)
   sortBy: SortOption;                // 정렬 옵션
 }
+
+/** 필터 선택값을 UI와 계산 계층에서 공유 */
+export type BokrFilterStatus = 'all' | 'incomplete' | 'complete';
+export type BoardFilterLevel = 'all' | '1' | '2' | '3';
+export type StatFilterTarget = 'all' | StatCategory;
+export type PersonalityFilterTarget = 'all' | PersonalityType;

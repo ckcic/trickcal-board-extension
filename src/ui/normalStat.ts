@@ -1,3 +1,4 @@
+import { escapeHtml } from './html.ts';
 /**
  * @file normalStat.ts
  * @description 사도 카드에 삽입되는 일반칸(nodeType: 3)의 상세 진행도 팝업 및 스탯 테이블 DOM 생성 모듈
@@ -55,7 +56,7 @@ export function createNormalStatElement(progress: ApostleProgress): HTMLElement 
     header.className = 'tcbe-np-header';
     header.innerHTML = `
       <div class="tcbe-np-title">
-        ${persIconHtml}${progress.name} (태생 ${progress.gradeDefault}성) <span class="tcbe-pastel-icon tcbe-pastel-basic"></span> 일반칸 현황
+        ${persIconHtml}${escapeHtml(progress.name)} (태생 ${progress.gradeDefault}성) <span class="tcbe-pastel-icon tcbe-pastel-basic"></span> 일반칸 현황
       </div>
       <div class="tcbe-np-header-right">
         <span class="tcbe-np-total-badge">총 ${normal.pickedNodes}/${normal.totalNodes} (${pct}%)</span>
@@ -168,15 +169,16 @@ export function createNormalStatElement(progress: ApostleProgress): HTMLElement 
     let currentTier: 'all' | number = 'all';
 
     function renderTable() {
-      const isAll = currentTier === 'all';
+      const tier = currentTier;
+      const isAll = tier === 'all';
 
       // 1. 타이틀 업데이트
       if (isAll) {
         tableTitle.innerHTML = `스탯별 상세 <span>(전체 1~3차 통합)</span>:`;
       } else {
-        const bObj = progress.boards[currentTier];
+        const bObj = progress.boards[tier];
         const isUnlocked = bObj ? bObj.unlocked : false;
-        tableTitle.innerHTML = `${currentTier + 1}차 보드 스탯별 상세 ${isUnlocked ? '' : '<span style="color:#ef4444; font-size:11px;">(미개방 보드)</span>'}:`;
+        tableTitle.innerHTML = `${tier + 1}차 보드 스탯별 상세 ${isUnlocked ? '' : '<span style="color:#ef4444; font-size:11px;">(미개방 보드)</span>'}:`;
       }
 
       // 2. 헤더 구성
@@ -196,7 +198,7 @@ export function createNormalStatElement(progress: ApostleProgress): HTMLElement 
       `;
 
       const tbody = table.querySelector('tbody')!;
-      const activeStats = isAll ? normal.stats : progress.boards[currentTier]?.normal.stats;
+      const activeStats = isAll ? normal.stats : progress.boards[tier]?.normal.stats;
       let hasStat = false;
 
       for (const meta of STAT_META_LIST) {
