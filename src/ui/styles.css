@@ -4,9 +4,79 @@
  */
 
 :root {
+  /* ── 에셋 URL (chrome-extension:// 런타임 해석) ── */
   --tcbe-stat-sprite: url('chrome-extension://__MSG_@@extension_id__/webp/Stat.webp');
   --tcbe-personality-sprite: url('chrome-extension://__MSG_@@extension_id__/webp/Common_UnitPersonality.webp');
   --tcbe-gate-icon: url('chrome-extension://__MSG_@@extension_id__/webp/Gate.webp');
+
+  /* ── 색상 토큰 (Semantic Colors) ── */
+  /* 공통 배경 및 표면 */
+  --tcbe-bg-white: #ffffff;
+  --tcbe-bg-muted: #f8fafc;
+  --tcbe-bg-subtle: #f1f5f9;
+
+  /* 텍스트 색상 */
+  --tcbe-text-primary: #1e293b;
+  --tcbe-text-secondary: #475569;
+  --tcbe-text-muted: #64748b;
+  --tcbe-text-faint: #94a3b8;
+  --tcbe-text-heading: #0f172a;
+
+  /* 보더 색상 */
+  --tcbe-border-default: #cbd5e1;
+  --tcbe-border-light: #e2e8f0;
+  --tcbe-border-subtle: #f1f5f9;
+
+  /* 그린 계열 (보크/완료/성공) */
+  --tcbe-green-accent: #86efac;
+  --tcbe-green-text: #15803d;
+  --tcbe-green-text-dark: #276749;
+  --tcbe-green-icon: #16a34a;
+  --tcbe-green-bright: #22c55e;
+  --tcbe-green-bg: #dcfce7;
+  --tcbe-green-bg-soft: #f0fdf4;
+
+  /* 블루 계열 (일반칸/선택/정보) */
+  --tcbe-blue-primary: #3b82f6;
+  --tcbe-blue-dark: #1d4ed8;
+  --tcbe-blue-text: #2563eb;
+  --tcbe-blue-light: #93c5fd;
+  --tcbe-blue-accent: #60a5fa;
+  --tcbe-blue-bg: #eff6ff;
+  --tcbe-blue-sky: #0284c7;
+
+  /* 오렌지 계열 (잔여/경고) */
+  --tcbe-orange-text: #ea580c;
+  --tcbe-orange-badge: #f97316;
+
+  /* 레드 계열 (하이라이트/위험) */
+  --tcbe-red-primary: #ef4444;
+  --tcbe-red-dark: #dc2626;
+
+  /* 패널 배경 (트릭컬 시그니처 그린) */
+  --tcbe-panel-bg: #f4f6ea;
+  --tcbe-panel-border: #e2e8d5;
+  --tcbe-panel-border-dark: #cbd5b8;
+
+  /* ── 간격 토큰 ── */
+  --tcbe-gap-xs: 3px;
+  --tcbe-gap-sm: 5px;
+  --tcbe-gap-md: 8px;
+  --tcbe-gap-lg: 12px;
+
+  /* ── 반지름 토큰 ── */
+  --tcbe-radius-sm: 4px;
+  --tcbe-radius-md: 6px;
+  --tcbe-radius-lg: 8px;
+  --tcbe-radius-xl: 12px;
+  --tcbe-radius-badge: 7px;
+
+  /* ── 전환 토큰 ── */
+  --tcbe-transition-fast: all 0.15s ease;
+
+  /* ── 폰트 토큰 ── */
+  --tcbe-font-stack: inherit, "Pretendard", "SUIT", sans-serif;
+  --tcbe-font-mono: "Pretendard", "Consolas", monospace, sans-serif;
 }
 
 /* --- 관문 아이콘 --- */
@@ -171,17 +241,17 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-backgroun
 .tcbe-badge-container {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--tcbe-gap-sm);
   min-height: 28px;
   height: 28px;
   margin: 0;
-  padding: 0 8px;
+  padding: 0 var(--tcbe-gap-md);
   background: #f1f5e8;
   border: 1.5px solid #d5e0ca;
-  border-radius: 7px;
+  border-radius: var(--tcbe-radius-badge);
   font-size: 11.5px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--tcbe-text-primary);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   user-select: none;
   cursor: pointer;
@@ -190,54 +260,54 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-backgroun
   width: fit-content;
   max-width: 100%;
   box-sizing: border-box;
-  font-family: inherit, "Pretendard", "SUIT", sans-serif;
-  transition: all 0.15s ease;
+  font-family: var(--tcbe-font-stack);
+  transition: var(--tcbe-transition-fast);
 }
 
 .tcbe-badge-container:hover {
-  border-color: #86efac;
+  border-color: var(--tcbe-green-accent);
   background: #f8faf2;
   box-shadow: 0 0 8px rgba(74, 222, 128, 0.3);
   z-index: 100 !important;
 }
 
 .tcbe-badge-bokr-tag {
-  color: #276749;
+  color: var(--tcbe-green-text-dark);
   font-weight: 800;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: var(--tcbe-gap-xs);
 }
 
 .tcbe-badge-counts {
-  color: #1e293b;
+  color: var(--tcbe-text-primary);
   font-weight: 800;
 }
 
 .tcbe-badge-remaining {
-  background: #f97316;
-  color: #ffffff;
+  background: var(--tcbe-orange-badge);
+  color: var(--tcbe-bg-white);
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: var(--tcbe-radius-sm);
   font-size: 10px;
   font-weight: 800;
   line-height: 1.2;
 }
 
 .tcbe-badge-complete {
-  background: #dcfce7;
-  border-color: #86efac;
+  background: var(--tcbe-green-bg);
+  border-color: var(--tcbe-green-accent);
 }
 
 .tcbe-badge-complete .tcbe-badge-bokr-tag {
-  color: #15803d;
+  color: var(--tcbe-green-text);
 }
 
 .tcbe-badge-complete-icon {
-  background: #16a34a;
-  color: #ffffff;
+  background: var(--tcbe-green-icon);
+  color: var(--tcbe-bg-white);
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: var(--tcbe-radius-sm);
   font-size: 10px;
   font-weight: 800;
   line-height: 1.2;
@@ -247,12 +317,12 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-backgroun
 .tcbe-stat-highlight-tag {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: var(--tcbe-gap-xs);
   height: 22px;
   padding: 0 7px;
   background: #e0f2fe;
   border: 1.5px solid #7dd3fc;
-  border-radius: 6px;
+  border-radius: var(--tcbe-radius-md);
   font-size: 10.5px;
   font-weight: 800;
   color: #0369a1;
@@ -262,9 +332,9 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-backgroun
 }
 
 .tcbe-stat-highlight-tag.tcbe-stat-done {
-  background: #dcfce7;
-  border-color: #86efac;
-  color: #15803d;
+  background: var(--tcbe-green-bg);
+  border-color: var(--tcbe-green-accent);
+  color: var(--tcbe-green-text);
 }
 
 /* --- 사도 카드 상급칸 전역 포털 툴팁 (어떤 카드/모달 쌓임 맥락에도 가려지지 않는 최상위 레이어) --- */
@@ -289,16 +359,16 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-backgroun
 
 .tcbe-portal-tooltip-inner {
   position: relative;
-  background: #ffffff;
-  border: 2px solid #86efac;
-  border-radius: 12px;
-  padding: 12px 16px;
+  background: var(--tcbe-bg-white);
+  border: 2px solid var(--tcbe-green-accent);
+  border-radius: var(--tcbe-radius-xl);
+  padding: var(--tcbe-gap-lg) 16px;
   font-size: 12px;
   width: max-content;
   min-width: 350px;
   max-width: min(440px, calc(100vw - 32px));
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
-  color: #1e293b;
+  color: var(--tcbe-text-primary);
   line-height: 1.5;
   box-sizing: border-box;
   font-family: "ONE-Mobile-POP", var(--font-one-mobile-pop), "Pretendard", "SUIT", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif !important;
@@ -316,22 +386,22 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-backgroun
   margin-left: -6px;
   border-width: 6px;
   border-style: solid;
-  border-color: #86efac transparent transparent transparent;
+  border-color: var(--tcbe-green-accent) transparent transparent transparent;
 }
 
 /* 상단 공간 부족 시 아래쪽으로 전개될 때 꼭짓점 화살표 반전 */
 .tcbe-portal-tooltip.tcbe-popup-bottom .tcbe-portal-tooltip-inner::after {
   top: auto;
   bottom: 100%;
-  border-color: transparent transparent #86efac transparent;
+  border-color: transparent transparent var(--tcbe-green-accent) transparent;
 }
 
 .tcbe-tt-header {
   font-weight: 800;
-  color: #15803d;
+  color: var(--tcbe-green-text);
   border-bottom: 2px solid #f1f5e8;
   padding-bottom: 6px;
-  margin-bottom: 8px;
+  margin-bottom: var(--tcbe-gap-md);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -339,9 +409,9 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-backgroun
 }
 
 .tcbe-tt-board-row {
-  margin-bottom: 8px;
+  margin-bottom: var(--tcbe-gap-md);
   padding-bottom: 6px;
-  border-bottom: 1px dashed #e2e8d5;
+  border-bottom: 1px dashed var(--tcbe-panel-border);
 }
 
 .tcbe-tt-board-row:last-child {
@@ -352,8 +422,8 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-backgroun
 
 .tcbe-tt-board-title {
   font-weight: 800;
-  color: #276749;
-  margin-bottom: 5px;
+  color: var(--tcbe-green-text-dark);
+  margin-bottom: var(--tcbe-gap-sm);
   font-size: 12px;
 }
 
@@ -373,7 +443,7 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-backgroun
 }
 
 .tcbe-tt-stat-name {
-  color: #475569;
+  color: var(--tcbe-text-secondary);
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -382,15 +452,15 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-backgroun
 
 .tcbe-tt-stat-val {
   font-weight: 800;
-  color: #0f172a;
+  color: var(--tcbe-text-heading);
 }
 
 .tcbe-tt-stat-done {
-  color: #16a34a;
+  color: var(--tcbe-green-icon);
 }
 
 .tcbe-tt-stat-rem {
-  color: #ea580c;
+  color: var(--tcbe-orange-text);
 }
 
 /* ==========================================================================
@@ -420,10 +490,10 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-backgroun
   gap: 4px;
   min-height: 28px;
   height: 28px;
-  padding: 0 8px;
-  background: #f1f5f9;
-  border: 1.5px solid #cbd5e1;
-  border-radius: 7px;
+  padding: 0 var(--tcbe-gap-md);
+  background: var(--tcbe-bg-subtle);
+  border: 1.5px solid var(--tcbe-border-default);
+  border-radius: var(--tcbe-radius-badge);
   font-size: 11px;
   font-weight: 700;
   color: #334155;
@@ -431,61 +501,61 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-backgroun
   user-select: none;
   cursor: pointer;
   box-sizing: border-box;
-  font-family: inherit, "Pretendard", "SUIT", sans-serif;
-  transition: all 0.15s ease;
+  font-family: var(--tcbe-font-stack);
+  transition: var(--tcbe-transition-fast);
   line-height: 1;
 }
 
 .tcbe-normal-btn:hover {
-  border-color: #60a5fa;
-  background: #f8fafc;
+  border-color: var(--tcbe-blue-accent);
+  background: var(--tcbe-bg-muted);
   box-shadow: 0 0 8px rgba(96, 165, 250, 0.35);
-  color: #1d4ed8;
+  color: var(--tcbe-blue-dark);
 }
 
 /* 클릭으로 핀(고정)되었을 때 버튼 스타일 */
 .tcbe-normal-badge-container.tcbe-pinned .tcbe-normal-btn {
-  background: #eff6ff;
-  border-color: #3b82f6;
-  color: #1d4ed8;
+  background: var(--tcbe-blue-bg);
+  border-color: var(--tcbe-blue-primary);
+  color: var(--tcbe-blue-dark);
   box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
 }
 
 .tcbe-normal-tag {
-  color: #2563eb;
+  color: var(--tcbe-blue-text);
   font-weight: 800;
   font-size: 11px;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: var(--tcbe-gap-xs);
 }
 
 .tcbe-normal-counts {
-  color: #0f172a;
+  color: var(--tcbe-text-heading);
   font-weight: 800;
   font-size: 11px;
 }
 
 .tcbe-normal-pct {
-  background: #e2e8f0;
-  color: #475569;
+  background: var(--tcbe-border-light);
+  color: var(--tcbe-text-secondary);
   padding: 1px 5px;
-  border-radius: 4px;
+  border-radius: var(--tcbe-radius-sm);
   font-size: 9.5px;
   font-weight: 800;
 }
 
 /* 일반칸 1~3차 올클리어 완료 상태 */
 .tcbe-normal-complete .tcbe-normal-btn {
-  background: #eff6ff;
-  border-color: #93c5fd;
+  background: var(--tcbe-blue-bg);
+  border-color: var(--tcbe-blue-light);
 }
 
 .tcbe-normal-complete-icon {
-  background: #3b82f6;
-  color: #ffffff;
+  background: var(--tcbe-blue-primary);
+  color: var(--tcbe-bg-white);
   padding: 1px 5px;
-  border-radius: 4px;
+  border-radius: var(--tcbe-radius-sm);
   font-size: 10px;
   font-weight: 800;
 }
@@ -515,8 +585,8 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-backgroun
 }
 
 .tcbe-normal-popup-inner {
-  background: #ffffff;
-  border: 2px solid #93c5fd;
+  background: var(--tcbe-bg-white);
+  border: 2px solid var(--tcbe-blue-light);
   border-radius: 14px;
   padding: 10px 14px;
   font-size: 11.5px;
@@ -526,10 +596,10 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-backgroun
   max-height: calc(100vh - 24px);
   overflow-y: auto;
   box-shadow: 0 14px 35px rgba(15, 23, 42, 0.18);
-  color: #1e293b;
+  color: var(--tcbe-text-primary);
   line-height: 1.35;
   box-sizing: border-box;
-  font-family: inherit, "Pretendard", "SUIT", sans-serif;
+  font-family: var(--tcbe-font-stack);
   cursor: default;
 }
 
@@ -538,15 +608,15 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-backgroun
   width: 5px;
 }
 .tcbe-normal-popup-inner::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 4px;
+  background: var(--tcbe-bg-subtle);
+  border-radius: var(--tcbe-radius-sm);
 }
 .tcbe-normal-popup-inner::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+  background: var(--tcbe-border-default);
+  border-radius: var(--tcbe-radius-sm);
 }
 .tcbe-normal-popup-inner::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--tcbe-text-faint);
 }
 
 /* 호버 시 또는 핀 고정 시 팝업 열기 */
@@ -567,15 +637,15 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 2px solid #e2e8f0;
-  padding-bottom: 8px;
+  border-bottom: 2px solid var(--tcbe-border-light);
+  padding-bottom: var(--tcbe-gap-md);
   margin-bottom: 10px;
 }
 
 .tcbe-np-title {
   font-weight: 800;
   font-size: 13px;
-  color: #1d4ed8;
+  color: var(--tcbe-blue-dark);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -588,31 +658,31 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
 }
 
 .tcbe-np-total-badge {
-  background: #eff6ff;
+  background: var(--tcbe-blue-bg);
   border: 1px solid #bfdbfe;
   color: #1e40af;
   padding: 2px 7px;
-  border-radius: 6px;
+  border-radius: var(--tcbe-radius-md);
   font-size: 10.5px;
   font-weight: 800;
   white-space: nowrap;
 }
 
 .tcbe-np-breakdown-badge {
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
-  color: #475569;
+  background: var(--tcbe-bg-muted);
+  border: 1px solid var(--tcbe-border-default);
+  color: var(--tcbe-text-secondary);
   padding: 2px 7px;
-  border-radius: 6px;
+  border-radius: var(--tcbe-radius-md);
   font-size: 10.5px;
   font-weight: 700;
   white-space: nowrap;
 }
 
 .tcbe-np-close-btn {
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  color: #64748b;
+  background: var(--tcbe-bg-subtle);
+  border: 1px solid var(--tcbe-border-default);
+  color: var(--tcbe-text-muted);
   width: 22px;
   height: 22px;
   border-radius: 50%;
@@ -623,7 +693,7 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
   padding: 0;
   margin-left: 6px;
   flex-shrink: 0;
-  transition: all 0.15s ease;
+  transition: var(--tcbe-transition-fast);
   box-sizing: border-box;
 }
 
@@ -650,18 +720,18 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
 .tcbe-np-section-title {
   font-size: 11px;
   font-weight: 800;
-  color: #64748b;
+  color: var(--tcbe-text-muted);
 }
 
 .tcbe-np-section-title span {
   font-weight: 600;
   font-size: 10.5px;
-  color: #94a3b8;
+  color: var(--tcbe-text-faint);
 }
 
 .tcbe-np-section-hint {
   font-size: 10px;
-  color: #94a3b8;
+  color: var(--tcbe-text-faint);
   font-weight: 600;
 }
 
@@ -669,10 +739,10 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
 .tcbe-np-tabs-container {
   display: flex;
   gap: 4px;
-  margin-bottom: 8px;
-  background: #f1f5f9;
+  margin-bottom: var(--tcbe-gap-md);
+  background: var(--tcbe-bg-subtle);
   padding: 3px;
-  border-radius: 8px;
+  border-radius: var(--tcbe-radius-lg);
 }
 
 .tcbe-np-tab-btn {
@@ -681,22 +751,22 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
   font-size: 10.5px;
   font-weight: 700;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: var(--tcbe-radius-md);
   background: transparent;
-  color: #64748b;
+  color: var(--tcbe-text-muted);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: var(--tcbe-transition-fast);
   line-height: 1.2;
 }
 
 .tcbe-np-tab-btn:hover {
-  color: #1e293b;
+  color: var(--tcbe-text-primary);
   background: rgba(255, 255, 255, 0.6);
 }
 
 .tcbe-np-tab-btn.tcbe-active {
-  background: #ffffff;
-  color: #1d4ed8;
+  background: var(--tcbe-bg-white);
+  color: var(--tcbe-blue-dark);
   border-color: #bfdbfe;
   font-weight: 800;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -714,39 +784,39 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
 }
 
 .tcbe-np-board-card {
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 8px;
+  background: var(--tcbe-bg-muted);
+  border: 1.5px solid var(--tcbe-border-light);
+  border-radius: var(--tcbe-radius-lg);
   padding: 6px 8px;
   box-sizing: border-box;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: var(--tcbe-transition-fast);
 }
 
 .tcbe-np-board-card:hover {
-  border-color: #93c5fd;
-  background: #eff6ff;
+  border-color: var(--tcbe-blue-light);
+  background: var(--tcbe-blue-bg);
   transform: translateY(-1px);
 }
 
 .tcbe-np-board-card.tcbe-card-selected {
-  border-color: #3b82f6 !important;
-  background: #eff6ff !important;
+  border-color: var(--tcbe-blue-primary) !important;
+  background: var(--tcbe-blue-bg) !important;
   box-shadow: 0 0 8px rgba(59, 130, 246, 0.35);
 }
 
 .tcbe-np-board-card.tcbe-np-board-done {
-  background: #f0fdf4;
-  border-color: #86efac;
+  background: var(--tcbe-green-bg-soft);
+  border-color: var(--tcbe-green-accent);
 }
 
 .tcbe-np-board-card.tcbe-np-board-done.tcbe-card-selected {
-  border-color: #22c55e !important;
+  border-color: var(--tcbe-green-bright) !important;
   box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
 }
 
 .tcbe-np-board-card.tcbe-np-board-locked {
-  background: #f8fafc;
+  background: var(--tcbe-bg-muted);
   opacity: 0.75;
 }
 
@@ -764,47 +834,47 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
 }
 
 .tcbe-np-board-card.tcbe-np-board-done .tcbe-np-board-label {
-  color: #16a34a;
+  color: var(--tcbe-green-icon);
 }
 
 .tcbe-np-board-status {
   font-size: 10px;
   font-weight: 700;
-  color: #475569;
+  color: var(--tcbe-text-secondary);
 }
 
 .tcbe-np-board-status.tcbe-done {
-  color: #16a34a;
+  color: var(--tcbe-green-icon);
   font-weight: 800;
 }
 
 .tcbe-np-board-status.tcbe-locked {
-  color: #94a3b8;
+  color: var(--tcbe-text-faint);
 }
 
 .tcbe-np-board-sub-status {
   font-size: 9.5px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--tcbe-text-muted);
   margin-top: 2px;
 }
 
 .tcbe-np-board-sub-status.tcbe-done {
-  color: #15803d;
+  color: var(--tcbe-green-text);
 }
 
 .tcbe-np-board-sub-status.tcbe-locked {
-  color: #94a3b8;
+  color: var(--tcbe-text-faint);
 }
 
 /* 보드 카드 내부의 스탯 미니 요약 칩 그리드 */
 .tcbe-np-board-stats-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 3px;
+  gap: var(--tcbe-gap-xs);
   margin-top: 6px;
-  padding-top: 5px;
-  border-top: 1px dashed #e2e8f0;
+  padding-top: var(--tcbe-gap-sm);
+  border-top: 1px dashed var(--tcbe-border-light);
 }
 
 .tcbe-np-card-stat-chip {
@@ -813,38 +883,38 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
   gap: 2px;
   font-size: 9px;
   font-weight: 700;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  background: var(--tcbe-bg-white);
+  border: 1px solid var(--tcbe-border-default);
   color: #334155;
   padding: 1px 4px;
-  border-radius: 4px;
+  border-radius: var(--tcbe-radius-sm);
   line-height: 1.2;
 }
 
 .tcbe-np-card-stat-chip.tcbe-chip-done {
-  background: #f0fdf4;
-  border-color: #86efac;
-  color: #16a34a;
+  background: var(--tcbe-green-bg-soft);
+  border-color: var(--tcbe-green-accent);
+  color: var(--tcbe-green-icon);
 }
 
 .tcbe-np-board-bar-bg {
   width: 100%;
   height: 4px;
-  background: #e2e8f0;
+  background: var(--tcbe-border-light);
   border-radius: 2px;
-  margin-top: 5px;
+  margin-top: var(--tcbe-gap-sm);
   overflow: hidden;
 }
 
 .tcbe-np-board-bar-fill {
   height: 100%;
-  background: linear-gradient(to right, #3b82f6, #60a5fa);
+  background: linear-gradient(to right, var(--tcbe-blue-primary), var(--tcbe-blue-accent));
   border-radius: 2px;
   transition: width 0.3s ease;
 }
 
 .tcbe-np-board-done .tcbe-np-board-bar-fill {
-  background: linear-gradient(to right, #22c55e, #4ade80);
+  background: linear-gradient(to right, var(--tcbe-green-bright), #4ade80);
 }
 
 /* 스탯별 상세 수치 테이블 */
@@ -860,46 +930,46 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
 }
 
 .tcbe-np-table th {
-  background: #f8fafc;
-  color: #64748b;
+  background: var(--tcbe-bg-muted);
+  color: var(--tcbe-text-muted);
   font-weight: 800;
   font-size: 10px;
   padding: 3.5px 6px;
-  border-bottom: 1.5px solid #e2e8f0;
+  border-bottom: 1.5px solid var(--tcbe-border-light);
 }
 
 .tcbe-np-table td {
   padding: 3px 6px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--tcbe-border-subtle);
   vertical-align: middle;
 }
 
 .tcbe-np-table tbody tr:hover {
-  background: #f8fafc;
+  background: var(--tcbe-bg-muted);
 }
 
 .tcbe-np-td-stat {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--tcbe-gap-sm);
   font-weight: 700;
-  color: #1e293b;
+  color: var(--tcbe-text-primary);
   white-space: nowrap;
 }
 
 .tcbe-np-td-val {
-  font-family: "Pretendard", "Consolas", monospace, sans-serif;
+  font-family: var(--tcbe-font-mono);
 }
 
 .tcbe-np-val-picked {
   text-align: right;
-  color: #2563eb;
+  color: var(--tcbe-blue-text);
   font-weight: 800;
 }
 
 .tcbe-np-val-rem {
   text-align: right;
-  color: #ea580c;
+  color: var(--tcbe-orange-text);
   font-weight: 700;
 }
 
@@ -907,14 +977,14 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #dcfce7;
-  border: 1px solid #86efac;
-  color: #15803d;
+  background: var(--tcbe-green-bg);
+  border: 1px solid var(--tcbe-green-accent);
+  color: var(--tcbe-green-text);
   font-family: "Pretendard", "SUIT", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 10.5px;
   font-weight: 700;
   padding: 1px 5px;
-  border-radius: 4px;
+  border-radius: var(--tcbe-radius-sm);
   line-height: 1.2;
   letter-spacing: -0.3px;
   box-sizing: border-box;
@@ -933,8 +1003,8 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
   font-size: 9.5px;
   font-weight: 700;
   padding: 1px 5px;
-  border-radius: 4px;
-  font-family: "Pretendard", "Consolas", monospace, sans-serif;
+  border-radius: var(--tcbe-radius-sm);
+  font-family: var(--tcbe-font-mono);
 }
 
 /* 기본/강화 일반칸 분리 뱃지 */
@@ -951,14 +1021,14 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
   font-size: 9.5px;
   font-weight: 700;
   padding: 1px 5px;
-  border-radius: 4px;
+  border-radius: var(--tcbe-radius-sm);
   line-height: 1.2;
 }
 
 .tcbe-np-pill-small {
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  color: #475569;
+  background: var(--tcbe-bg-subtle);
+  border: 1px solid var(--tcbe-border-default);
+  color: var(--tcbe-text-secondary);
   margin-right: 3px;
 }
 
@@ -970,9 +1040,9 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
 
 .tcbe-np-pill-small.tcbe-pill-done,
 .tcbe-np-pill-large.tcbe-pill-done {
-  background: #dcfce7;
-  border-color: #86efac;
-  color: #15803d;
+  background: var(--tcbe-green-bg);
+  border-color: var(--tcbe-green-accent);
+  color: var(--tcbe-green-text);
 }
 
 .tcbe-np-mini-pct-wrap {
@@ -985,49 +1055,49 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
 .tcbe-np-mini-pct-text {
   font-size: 9.5px;
   font-weight: 800;
-  color: #475569;
+  color: var(--tcbe-text-secondary);
 }
 
 .tcbe-np-tr-done .tcbe-np-mini-pct-text {
-  color: #16a34a;
+  color: var(--tcbe-green-icon);
 }
 
 .tcbe-np-mini-bar-bg {
   width: 44px;
   height: 4px;
-  background: #e2e8f0;
+  background: var(--tcbe-border-light);
   border-radius: 2px;
   overflow: hidden;
 }
 
 .tcbe-np-mini-bar-fill {
   height: 100%;
-  background: #3b82f6;
+  background: var(--tcbe-blue-primary);
   border-radius: 2px;
 }
 
 .tcbe-np-tr-done .tcbe-np-mini-bar-fill {
-  background: #22c55e;
+  background: var(--tcbe-green-bright);
 }
 
 /* --- 잔여 필요 재화(크레파스 및 골드) 요약 카드 --- */
 .tcbe-np-cost-box {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  background: var(--tcbe-bg-muted);
+  border: 1px solid var(--tcbe-border-light);
+  border-radius: var(--tcbe-radius-lg);
   padding: 6px 10px;
   margin-bottom: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--tcbe-gap-md);
   font-size: 11px;
   flex-wrap: wrap;
 }
 
 .tcbe-np-cost-title {
   font-weight: 800;
-  color: #475569;
+  color: var(--tcbe-text-secondary);
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -1036,7 +1106,7 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
 
 .tcbe-np-cost-title span {
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--tcbe-text-faint);
   font-size: 10.5px;
 }
 
@@ -1050,14 +1120,14 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
 .tcbe-cost-item {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  gap: var(--tcbe-gap-xs);
+  background: var(--tcbe-bg-white);
+  border: 1px solid var(--tcbe-border-default);
   padding: 2px 7px;
-  border-radius: 6px;
+  border-radius: var(--tcbe-radius-md);
   font-weight: 700;
-  color: #1e293b;
-  font-family: "Pretendard", "Consolas", monospace, sans-serif;
+  color: var(--tcbe-text-primary);
+  font-family: var(--tcbe-font-mono);
   font-size: 10.5px;
   line-height: 1.2;
 }
@@ -1069,16 +1139,16 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
 }
 
 .tcbe-cost-zero {
-  color: #94a3b8;
-  background: #f1f5f9;
-  border-color: #e2e8f0;
+  color: var(--tcbe-text-faint);
+  background: var(--tcbe-bg-subtle);
+  border-color: var(--tcbe-border-light);
 }
 
 /* 툴팁 내 상급칸 잔여 필요 재화 영역 */
 .tcbe-tt-cost-box {
-  margin-top: 8px;
+  margin-top: var(--tcbe-gap-md);
   padding-top: 7px;
-  border-top: 1px dashed #cbd5e1;
+  border-top: 1px dashed var(--tcbe-border-default);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -1087,7 +1157,7 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
 .tcbe-tt-cost-title {
   font-weight: 800;
   font-size: 10.5px;
-  color: #475569;
+  color: var(--tcbe-text-secondary);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -1106,8 +1176,8 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
   display: flex;
   flex-direction: column;
   margin: 10px 0 18px 0;
-  background: #f4f6ea;
-  border: 3px solid #e2e8d5;
+  background: var(--tcbe-panel-bg);
+  border: 3px solid var(--tcbe-panel-border);
   border-radius: 18px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   color: #2d3748;
@@ -1135,11 +1205,11 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
   align-items: center;
   justify-content: center;
   position: relative;
-  padding: 8px 16px;
+  padding: var(--tcbe-gap-md) 16px;
   background: linear-gradient(to right, #52a832, #6ec03c);
-  border: 3px solid #f4f6ea;
+  border: 3px solid var(--tcbe-panel-bg);
   border-radius: 16px;
-  color: #f8fafc;
+  color: var(--tcbe-bg-muted);
   font-weight: 600;
   font-size: 17px;
   cursor: pointer;
@@ -1149,7 +1219,7 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
   outline: none;
   user-select: none;
   box-sizing: border-box;
-  font-family: inherit, "Pretendard", "SUIT", sans-serif;
+  font-family: var(--tcbe-font-stack);
 }
 
 /* 열렸을 때 헤더 하단 라운드 */
@@ -1221,9 +1291,9 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
 .tcbe-accordion-content {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--tcbe-gap-md);
   padding: 10px 14px;
-  background: #f4f6ea;
+  background: var(--tcbe-panel-bg);
 }
 
 .tcbe-accordion-content.tcbe-closed {
@@ -1234,14 +1304,14 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: var(--tcbe-gap-md);
 }
 
 .tcbe-panel-group {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 3px;
+  gap: var(--tcbe-gap-xs);
 }
 
 .tcbe-panel-label {
@@ -1251,25 +1321,25 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  background: #e2e8d5;
+  background: var(--tcbe-panel-border);
   padding: 2px 7px;
-  border-radius: 6px;
+  border-radius: var(--tcbe-radius-md);
 }
 
 .tcbe-btn {
-  background: #ffffff;
+  background: var(--tcbe-bg-white);
   border: 1.5px solid #d0dcc0;
   color: #4a5568;
   padding: 3px 8px;
-  border-radius: 6px;
+  border-radius: var(--tcbe-radius-md);
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: var(--tcbe-transition-fast);
   user-select: none;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: var(--tcbe-gap-xs);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
@@ -1304,9 +1374,9 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
   font-size: 11px;
   color: #2e6930;
   font-weight: 700;
-  background: #e2e8d5;
+  background: var(--tcbe-panel-border);
   padding: 3px 8px;
-  border-radius: 6px;
+  border-radius: var(--tcbe-radius-md);
   border: 1px solid #c8d8b8;
   white-space: nowrap;
   flex-shrink: 0;
@@ -1334,15 +1404,15 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
   flex-direction: column;
   gap: 6px;
   margin-top: 2px;
-  padding-top: 8px;
-  border-top: 1.5px dashed #cbd5b8;
+  padding-top: var(--tcbe-gap-md);
+  border-top: 1.5px dashed var(--tcbe-panel-border-dark);
 }
 
 .tcbe-stat-summary-title {
   font-weight: 800;
-  color: #276749;
+  color: var(--tcbe-green-text-dark);
   font-size: 11.5px;
-  font-family: inherit, "Pretendard", "SUIT", sans-serif;
+  font-family: var(--tcbe-font-stack);
 }
 
 .tcbe-stat-summary-items {
@@ -1355,17 +1425,17 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  background: #ffffff;
+  gap: var(--tcbe-gap-sm);
+  background: var(--tcbe-bg-white);
   border: 1.5px solid #d0dcc0;
-  border-radius: 6px;
+  border-radius: var(--tcbe-radius-md);
   padding: 3px 8px;
   font-size: 11.5px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: var(--tcbe-transition-fast);
   user-select: none;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  font-family: inherit, "Pretendard", "SUIT", sans-serif;
+  font-family: var(--tcbe-font-stack);
 }
 
 .tcbe-summary-card:hover {
@@ -1382,39 +1452,39 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
 }
 
 .tcbe-summary-done {
-  border-color: #86efac;
-  background: #f0fdf4;
+  border-color: var(--tcbe-green-accent);
+  background: var(--tcbe-green-bg-soft);
 }
 
 .tcbe-summary-name {
   font-weight: 700;
-  color: #0f172a;
+  color: var(--tcbe-text-heading);
 }
 
 .tcbe-summary-val {
-  color: #475569;
+  color: var(--tcbe-text-secondary);
   font-weight: 700;
   font-size: 11px;
 }
 
 .tcbe-stat-done-text {
-  color: #15803d !important;
+  color: var(--tcbe-green-text) !important;
 }
 
 .tcbe-summary-badge {
   background: #ffedd5;
   color: #c2410c;
   border: 1px solid #fed7aa;
-  border-radius: 4px;
+  border-radius: var(--tcbe-radius-sm);
   padding: 0.5px 5px;
   font-size: 10px;
   font-weight: 800;
 }
 
 .tcbe-badge-done-bg {
-  background: #dcfce7 !important;
-  color: #15803d !important;
-  border-color: #86efac !important;
+  background: var(--tcbe-green-bg) !important;
+  color: var(--tcbe-green-text) !important;
+  border-color: var(--tcbe-green-accent) !important;
 }
 
 /* --- 스탯 요약 카드 전용 커스텀 호버 툴팁 (트릭컬 공식 화이트 다이얼로그 스타일) --- */
@@ -1423,9 +1493,9 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
   position: absolute;
   bottom: calc(100% + 8px);
   left: 0;
-  background: #ffffff;
-  border: 2px solid #86efac;
-  border-radius: 12px;
+  background: var(--tcbe-bg-white);
+  border: 2px solid var(--tcbe-green-accent);
+  border-radius: var(--tcbe-radius-xl);
   padding: 10px 14px;
   font-size: 12px;
   width: max-content;
@@ -1434,10 +1504,10 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
   z-index: 9999999 !important;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
   pointer-events: none !important;
-  color: #1e293b;
+  color: var(--tcbe-text-primary);
   line-height: 1.5;
   box-sizing: border-box;
-  font-family: inherit, "Pretendard", "SUIT", sans-serif;
+  font-family: var(--tcbe-font-stack);
 }
 
 .tcbe-summary-card:hover .tcbe-summary-tooltip {
@@ -1453,7 +1523,7 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
   margin-left: -6px;
   border-width: 6px;
   border-style: solid;
-  border-color: #86efac transparent transparent transparent;
+  border-color: var(--tcbe-green-accent) transparent transparent transparent;
 }
 
 .tcbe-sum-tt-body {
@@ -1472,17 +1542,17 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
 }
 
 .tcbe-sum-tt-label {
-  color: #475569;
+  color: var(--tcbe-text-secondary);
   font-weight: 600;
 }
 
 .tcbe-sum-tt-val {
-  color: #0f172a;
+  color: var(--tcbe-text-heading);
   font-weight: 800;
 }
 
 .tcbe-sum-tt-val-curr {
-  color: #0284c7;
+  color: var(--tcbe-blue-sky);
   font-weight: 800;
 }
 
@@ -1495,15 +1565,15 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
 .tcbe-tile-highlight-rem,
 .tcbe-tile-highlight-done {
   position: relative;
-  outline: 3.5px solid #ef4444 !important;
+  outline: 3.5px solid var(--tcbe-red-primary) !important;
   outline-offset: -1px !important;
-  border-radius: 6px !important;
+  border-radius: var(--tcbe-radius-md) !important;
   box-shadow: 0 0 8px rgba(239, 68, 68, 0.95), inset 0 0 4px rgba(239, 68, 68, 0.5) !important;
   z-index: 20 !important;
 }
 
 .tcbe-tile-highlight-done {
-  outline: 3.5px solid #dc2626 !important;
+  outline: 3.5px solid var(--tcbe-red-dark) !important;
   box-shadow: 0 0 10px rgba(220, 38, 38, 1), inset 0 0 6px rgba(220, 38, 38, 0.6) !important;
 }
 

@@ -32,6 +32,13 @@ export const BOKR_ITEM_ID = 610003;
 /** 최상급 크레파스 (황금 크레파스 / 황크) 아이템 ID */
 export const HWANG_ITEM_ID = 610004;
 
+/** 보드 노드 타입 상수 */
+export const NODE_TYPE = {
+  NORMAL: 3,
+  BOKR: 4,
+  HWANG: 5,
+} as const;
+
 /** 스탯 카테고리 정의 목록 */
 export const STAT_CATEGORIES: StatCategory[] = [
   'hp',
@@ -131,36 +138,24 @@ export function getNodeStatCategories(node: MasterBoardNode): StatCategory[] {
   return Array.from(result);
 }
 
-/** 빈 스탯 카운트 맵 생성 */
+/** 빈 스탯 카운트 맵 생성 (STAT_CATEGORIES 배열 기반 자동 생성) */
 export function createEmptyStatCountMap(): Record<StatCategory, StatCountSummary> {
-  return {
-    hp: { total: 0, picked: 0, remaining: 0 },
-    atk_phys: { total: 0, picked: 0, remaining: 0 },
-    atk_mag: { total: 0, picked: 0, remaining: 0 },
-    def_phys: { total: 0, picked: 0, remaining: 0 },
-    def_mag: { total: 0, picked: 0, remaining: 0 },
-    crit: { total: 0, picked: 0, remaining: 0 },
-    crit_dmg: { total: 0, picked: 0, remaining: 0 },
-    crit_res: { total: 0, picked: 0, remaining: 0 },
-    crit_dmg_res: { total: 0, picked: 0, remaining: 0 },
-  };
+  return Object.fromEntries(
+    STAT_CATEGORIES.map(cat => [cat, { total: 0, picked: 0, remaining: 0 }])
+  ) as Record<StatCategory, StatCountSummary>;
 }
 
 /**
- * 빈 일반칸 스탯 수치 집계 맵 생성
+ * 빈 일반칸 스탯 수치 집계 맵 생성 (STAT_CATEGORIES 배열 기반 자동 생성)
  */
 export function createEmptyNormalStatMap(): Record<StatCategory, NormalStatDetail> {
-  return {
-    hp: { picked: 0, remaining: 0, total: 0, smallPicked: 0, smallTotal: 0, largePicked: 0, largeTotal: 0, smallUnitValue: 0, largeUnitValue: 0 },
-    atk_phys: { picked: 0, remaining: 0, total: 0, smallPicked: 0, smallTotal: 0, largePicked: 0, largeTotal: 0, smallUnitValue: 0, largeUnitValue: 0 },
-    atk_mag: { picked: 0, remaining: 0, total: 0, smallPicked: 0, smallTotal: 0, largePicked: 0, largeTotal: 0, smallUnitValue: 0, largeUnitValue: 0 },
-    def_phys: { picked: 0, remaining: 0, total: 0, smallPicked: 0, smallTotal: 0, largePicked: 0, largeTotal: 0, smallUnitValue: 0, largeUnitValue: 0 },
-    def_mag: { picked: 0, remaining: 0, total: 0, smallPicked: 0, smallTotal: 0, largePicked: 0, largeTotal: 0, smallUnitValue: 0, largeUnitValue: 0 },
-    crit: { picked: 0, remaining: 0, total: 0, smallPicked: 0, smallTotal: 0, largePicked: 0, largeTotal: 0, smallUnitValue: 0, largeUnitValue: 0 },
-    crit_dmg: { picked: 0, remaining: 0, total: 0, smallPicked: 0, smallTotal: 0, largePicked: 0, largeTotal: 0, smallUnitValue: 0, largeUnitValue: 0 },
-    crit_res: { picked: 0, remaining: 0, total: 0, smallPicked: 0, smallTotal: 0, largePicked: 0, largeTotal: 0, smallUnitValue: 0, largeUnitValue: 0 },
-    crit_dmg_res: { picked: 0, remaining: 0, total: 0, smallPicked: 0, smallTotal: 0, largePicked: 0, largeTotal: 0, smallUnitValue: 0, largeUnitValue: 0 },
-  };
+  return Object.fromEntries(
+    STAT_CATEGORIES.map(cat => [cat, {
+      picked: 0, remaining: 0, total: 0,
+      smallPicked: 0, smallTotal: 0, largePicked: 0, largeTotal: 0,
+      smallUnitValue: 0, largeUnitValue: 0,
+    }])
+  ) as Record<StatCategory, NormalStatDetail>;
 }
 
 /**
@@ -212,7 +207,7 @@ export function isBokrNode(node: MasterBoardNode): boolean {
       return true;
     }
   }
-  return node.nodeType === 4;
+  return node.nodeType === NODE_TYPE.BOKR;
 }
 
 /**
@@ -224,7 +219,7 @@ export function isHwangNode(node: MasterBoardNode): boolean {
       return true;
     }
   }
-  return node.nodeType === 5;
+  return node.nodeType === NODE_TYPE.HWANG;
 }
 
 /**
@@ -399,7 +394,7 @@ export function calculateApostleProgress(
             apostleHwangByStat[cat].picked++;
           }
         }
-      } else if (node.nodeType === 3) {
+      } else if (node.nodeType === NODE_TYPE.NORMAL) {
         // 일반칸(nodeType: 3)의 칸 수 및 스탯 수치 집계 (기본/강화 구분)
         bTotalNormal++;
         apostleNormalTotalNodes++;

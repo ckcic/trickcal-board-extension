@@ -268,13 +268,24 @@ import { FilterPanelController } from './ui/filterPanel.ts';
 
   /**
    * 대상 노드가 확장 프로그램(TCBE)에 의해 생성/관리되는 요소인지 판별
+   * (data-tcbe 속성 기반 경량 판별로 셀렉터 엔진 부하 절감)
    */
   function isTcbeElement(node: Node | null): boolean {
     if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
     const el = node as HTMLElement;
+    // 1. ID 접두사 확인 (최소 비용)
     if (el.id && el.id.startsWith('tcbe-')) return true;
+    // 2. 클래스명 접두사 확인
     if (el.className && typeof el.className === 'string' && el.className.includes('tcbe-')) return true;
-    if (el.closest && el.closest('[class*="tcbe-"], #tcbe-filter-panel, [data-tcbe-enhanced]')) return true;
+    // 3. data-tcbe 속성 확인 (closest보다 경량)
+    if (el.hasAttribute('data-tcbe-enhanced') || el.hasAttribute('data-tcbe-apostle-name')) return true;
+    // 4. 부모 체인 최소 탐색 (closest 대신 직접 5단계만 탐색)
+    let parent = el.parentElement;
+    for (let i = 0; i < 5 && parent; i++) {
+      if (parent.id === 'tcbe-filter-panel') return true;
+      if (parent.className && typeof parent.className === 'string' && parent.className.includes('tcbe-')) return true;
+      parent = parent.parentElement;
+    }
     return false;
   }
 
@@ -303,6 +314,7 @@ import { FilterPanelController } from './ui/filterPanel.ts';
   observer.observe(document.body || document.documentElement, {
     childList: true,
     subtree: true,
+    attributes: false,  // 속성 변경은 감시 불필요 (불필요한 mutation 이벤트 감소)
   });
 
   // 탭 전환 버튼 등 클릭 시 신속하게 재판별

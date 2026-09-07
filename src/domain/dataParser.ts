@@ -15,31 +15,46 @@ export function parseTrickcalApiPayload(data: unknown): ExtractedApiData | null 
     return null;
   }
 
-  const raw = data as Record<string, any>;
+  const raw = data as Record<string, unknown>;
 
   // payload로 감싸져 있는 경우와 루트에 직접 배치된 경우 모두 대응
-  const root = raw.payload && typeof raw.payload === 'object' ? raw.payload : raw;
+  const payloadVal = raw.payload;
+  const root = (payloadVal && typeof payloadVal === 'object' ? payloadVal : raw) as Record<string, unknown>;
+
+  // unknown 타입의 깊은 속성 접근 헬퍼
+  const dig = (base: unknown, ...keys: string[]): unknown => {
+    let current: unknown = base;
+    for (const key of keys) {
+      if (!current || typeof current !== 'object') return undefined;
+      current = (current as Record<string, unknown>)[key];
+    }
+    return current;
+  };
 
   // 1. 사도 유저 데이터 탐색
-  const apostles: UserApostle[] | undefined =
-    root.user?.data?.apostle?.apostles ||
-    root.apostle?.apostles ||
-    root.apostles;
+  const apostles = (
+    dig(root, 'user', 'data', 'apostle', 'apostles') ||
+    dig(root, 'apostle', 'apostles') ||
+    dig(root, 'apostles')
+  ) as UserApostle[] | undefined;
 
   // 2. 보드 마스터 데이터 탐색
-  const board: Record<string, Record<string, MasterBoardNode[]>> | undefined =
-    root.data?.data?.board ||
-    root.board;
+  const board = (
+    dig(root, 'data', 'data', 'board') ||
+    dig(root, 'board')
+  ) as Record<string, Record<string, MasterBoardNode[]>> | undefined;
 
   // 3. 사도 마스터 정보(heroInfo) 탐색
-  const heroInfo: Record<string, HeroInfo> | undefined =
-    root.data?.data?.heroInfo ||
-    root.heroInfo;
+  const heroInfo = (
+    dig(root, 'data', 'data', 'heroInfo') ||
+    dig(root, 'heroInfo')
+  ) as Record<string, HeroInfo> | undefined;
 
   // 4. 텍스트 사전 탐색
-  const text: Record<string, string> | undefined =
-    root.data?.data?.text ||
-    root.text;
+  const text = (
+    dig(root, 'data', 'data', 'text') ||
+    dig(root, 'text')
+  ) as Record<string, string> | undefined;
 
   // 필수 요소 존재 확인
   if (
