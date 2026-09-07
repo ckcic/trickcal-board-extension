@@ -196,6 +196,7 @@ export interface ApostleProgress {
   name: string;
   personality: PersonalityType;
   gradeDefault: number; // 태생 성급 (1, 2, 3)
+  isOwned?: boolean; // 유저 보유 여부 (미보유 시 false)
   unlockedBoardCount: number;
   boards: BoardProgress[];
   bokr: {

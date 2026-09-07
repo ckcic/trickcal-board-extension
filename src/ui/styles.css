@@ -34,13 +34,16 @@ div.bg-dialog-background[data-tcbe-enhanced]:has(.tcbe-normal-badge-container.tc
   position: relative !important;
 }
 
-/* --- 호버된 사도 카드를 위 레이어로 올려 툴팁이 다른 카드에 가려지는 문제 방지 (모달 다이얼로그는 엄격 제외) --- */
-[data-slot="card"][data-tcbe-enhanced]:hover,
-[data-slot="card"]:has(.tcbe-badge-container:hover),
-[data-slot="card"]:has(.tcbe-normal-badge-container:hover),
-div.bg-dialog-background[data-tcbe-enhanced]:not([role="dialog"]):not([data-slot="dialog-content"]):not([data-slot="dialog-overlay"]):hover,
-div.bg-dialog-background[data-tcbe-enhanced]:has(.tcbe-badge-container:hover),
-div.bg-dialog-background[data-tcbe-enhanced]:has(.tcbe-normal-badge-container:hover) {
+/* --- 호버된 사도 카드를 위 레이어로 올려 툴팁이 다른 카드에 가려지는 문제 방지 --- */
+/* ★ 핀 고정된 카드가 없을 때만 다른 카드의 호버 z-index를 올려 깜빡임/레이어 충돌 완벽 방지 */
+body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) [data-slot="card"][data-tcbe-enhanced]:hover,
+body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) [data-slot="card"]:has(.tcbe-normal-badge-container:hover),
+body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) [data-slot="card"]:has(.tcbe-normal-badge-container.tcbe-open),
+body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) [data-slot="card"]:has(.tcbe-badge-container:hover),
+body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-background[data-tcbe-enhanced]:not([role="dialog"]):not([data-slot="dialog-content"]):not([data-slot="dialog-overlay"]):hover,
+body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-background[data-tcbe-enhanced]:has(.tcbe-normal-badge-container:hover),
+body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-background[data-tcbe-enhanced]:has(.tcbe-normal-badge-container.tcbe-open),
+body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-background[data-tcbe-enhanced]:has(.tcbe-badge-container:hover) {
   z-index: 40 !important;
   position: relative !important;
 }
@@ -183,6 +186,7 @@ div.bg-dialog-background[data-tcbe-enhanced]:has(.tcbe-normal-badge-container:ho
   user-select: none;
   cursor: pointer;
   position: relative;
+  z-index: 25;
   width: fit-content;
   max-width: 100%;
   box-sizing: border-box;
@@ -194,6 +198,7 @@ div.bg-dialog-background[data-tcbe-enhanced]:has(.tcbe-normal-badge-container:ho
   border-color: #86efac;
   background: #f8faf2;
   box-shadow: 0 0 8px rgba(74, 222, 128, 0.3);
+  z-index: 100 !important;
 }
 
 .tcbe-badge-bokr-tag {
@@ -262,12 +267,28 @@ div.bg-dialog-background[data-tcbe-enhanced]:has(.tcbe-normal-badge-container:ho
   color: #15803d;
 }
 
-/* --- 사도 카드 호버 툴팁 (트릭컬 공식 화이트/크림 다이얼로그 스타일) --- */
-.tcbe-tooltip {
+/* --- 사도 카드 상급칸 전역 포털 툴팁 (어떤 카드/모달 쌓임 맥락에도 가려지지 않는 최상위 레이어) --- */
+.tcbe-portal-tooltip {
   display: none;
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: -6px;
+  position: fixed;
+  padding-bottom: 8px;
+  padding-top: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  z-index: 2147483647 !important;
+  pointer-events: auto !important;
+  cursor: default;
+  box-sizing: border-box;
+}
+
+.tcbe-portal-tooltip.tcbe-popup-bottom {
+  padding-bottom: 0;
+  padding-top: 8px;
+}
+
+.tcbe-portal-tooltip-inner {
+  position: relative;
   background: #ffffff;
   border: 2px solid #86efac;
   border-radius: 12px;
@@ -276,20 +297,17 @@ div.bg-dialog-background[data-tcbe-enhanced]:has(.tcbe-normal-badge-container:ho
   width: max-content;
   min-width: 350px;
   max-width: min(440px, calc(100vw - 32px));
-  z-index: 9999999 !important;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
-  pointer-events: none !important;
   color: #1e293b;
   line-height: 1.5;
   box-sizing: border-box;
-  font-family: inherit, "Pretendard", "SUIT", sans-serif;
+  font-family: "ONE-Mobile-POP", var(--font-one-mobile-pop), "Pretendard", "SUIT", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  letter-spacing: -0.2px;
 }
 
-.tcbe-badge-container:hover .tcbe-tooltip {
-  display: block;
-}
-
-.tcbe-tooltip::after {
+.tcbe-portal-tooltip-inner::after {
   content: '';
   position: absolute;
   top: 100%;
@@ -301,8 +319,8 @@ div.bg-dialog-background[data-tcbe-enhanced]:has(.tcbe-normal-badge-container:ho
   border-color: #86efac transparent transparent transparent;
 }
 
-/* 상급칸 툴팁이 아래쪽으로 열릴 때 화살표를 상단에 배치 */
-.tcbe-tooltip.tcbe-popup-bottom::after {
+/* 상단 공간 부족 시 아래쪽으로 전개될 때 꼭짓점 화살표 반전 */
+.tcbe-portal-tooltip.tcbe-popup-bottom .tcbe-portal-tooltip-inner::after {
   top: auto;
   bottom: 100%;
   border-color: transparent transparent #86efac transparent;
@@ -359,7 +377,7 @@ div.bg-dialog-background[data-tcbe-enhanced]:has(.tcbe-normal-badge-container:ho
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .tcbe-tt-stat-val {
@@ -383,7 +401,16 @@ div.bg-dialog-background[data-tcbe-enhanced]:has(.tcbe-normal-badge-container:ho
   display: inline-flex;
   align-items: center;
   position: relative;
+  z-index: 20;
   box-sizing: border-box;
+}
+
+.tcbe-normal-badge-container:hover {
+  z-index: 30;
+}
+
+.tcbe-normal-badge-container.tcbe-pinned {
+  z-index: 45;
 }
 
 /* 일반칸 캡슐 버튼 */
@@ -467,8 +494,27 @@ div.bg-dialog-background[data-tcbe-enhanced]:has(.tcbe-normal-badge-container:ho
 .tcbe-normal-popup {
   display: none;
   position: absolute;
-  bottom: calc(100% + 8px);
+  bottom: 100%;
   left: -6px;
+  padding-bottom: 8px;
+  padding-top: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  z-index: 9000000 !important;
+  cursor: default;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+.tcbe-normal-popup.tcbe-popup-bottom {
+  bottom: auto;
+  top: 100%;
+  padding-bottom: 0;
+  padding-top: 8px;
+}
+
+.tcbe-normal-popup-inner {
   background: #ffffff;
   border: 2px solid #93c5fd;
   border-radius: 14px;
@@ -479,7 +525,6 @@ div.bg-dialog-background[data-tcbe-enhanced]:has(.tcbe-normal-badge-container:ho
   max-width: min(640px, calc(100vw - 32px));
   max-height: calc(100vh - 24px);
   overflow-y: auto;
-  z-index: 9999999 !important;
   box-shadow: 0 14px 35px rgba(15, 23, 42, 0.18);
   color: #1e293b;
   line-height: 1.35;
@@ -489,23 +534,24 @@ div.bg-dialog-background[data-tcbe-enhanced]:has(.tcbe-normal-badge-container:ho
 }
 
 /* 팝업 스크롤바 (극소형 화면 대비) */
-.tcbe-normal-popup::-webkit-scrollbar {
+.tcbe-normal-popup-inner::-webkit-scrollbar {
   width: 5px;
 }
-.tcbe-normal-popup::-webkit-scrollbar-track {
+.tcbe-normal-popup-inner::-webkit-scrollbar-track {
   background: #f1f5f9;
   border-radius: 4px;
 }
-.tcbe-normal-popup::-webkit-scrollbar-thumb {
+.tcbe-normal-popup-inner::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 4px;
 }
-.tcbe-normal-popup::-webkit-scrollbar-thumb:hover {
+.tcbe-normal-popup-inner::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
 
 /* 호버 시 또는 핀 고정 시 팝업 열기 */
-.tcbe-normal-badge-container:hover .tcbe-normal-popup,
+body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-container:hover .tcbe-normal-popup,
+body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-container.tcbe-open .tcbe-normal-popup,
 .tcbe-normal-badge-container.tcbe-pinned .tcbe-normal-popup {
   display: block;
 }

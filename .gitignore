@@ -1,7 +1,11 @@
 node_modules/
 dist/
-data.json
+data*.json
 scratch/
 *.log
 *.zip
 .DS_Store
+GEMINI.md
+AGENTS.md
+.agents/
+references/

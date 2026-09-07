@@ -249,7 +249,8 @@ export function calculateApostleProgress(
   userApostle: UserApostle,
   masterBoardMap: ExtractedApiData['board'],
   heroInfoMap: ExtractedApiData['heroInfo'],
-  textMap: ExtractedApiData['text']
+  textMap: ExtractedApiData['text'],
+  isOwned: boolean = true
 ): ApostleProgress {
   const apostleId = Number(userApostle.apostleId ?? userApostle.id);
   const apostleName = resolveApostleName(apostleId, heroInfoMap, textMap);
@@ -538,6 +539,7 @@ export function calculateApostleProgress(
     name: apostleName,
     personality,
     gradeDefault,
+    isOwned,
     unlockedBoardCount: boardSteps.length,
     boards,
     bokr: {
@@ -578,16 +580,51 @@ export function calculateAllApostlesProgress(
   apiData: ExtractedApiData
 ): Map<string, ApostleProgress> {
   const result = new Map<string, ApostleProgress>();
+  const ownedIdSet = new Set<number>();
 
+  // 1. 유저 보유 사도 진행도 계산 및 등록
   for (const apostle of apiData.apostles) {
     const progress = calculateApostleProgress(
       apostle,
       apiData.board,
       apiData.heroInfo,
-      apiData.text
+      apiData.text,
+      true
     );
     result.set(progress.name, progress);
     result.set(String(progress.apostleId), progress);
+    ownedIdSet.add(progress.apostleId);
+  }
+
+  // 2. 미보유 사도(heroInfo에는 있으나 user.apostles에 없는 사도) 가상 등록
+  // 트릭컬 노트 웹사이트는 heroInfo 전체를 렌더링하므로 미보유 사도도 맵에 등록되어야
+  // 뱃지가 정상 생성되고 필터 패널에서 누락 없이 제어됨
+  if (apiData.heroInfo && typeof apiData.heroInfo === 'object') {
+    for (const [heroIdStr, hero] of Object.entries(apiData.heroInfo)) {
+      const heroId = Number(heroIdStr);
+      if (Number.isNaN(heroId) || ownedIdSet.has(heroId)) {
+        continue;
+      }
+
+      const emptyApostle: UserApostle = {
+        apostleId: heroId,
+        level: 1,
+        grade: hero.gradeDefault ?? 3,
+        rank: 1,
+        boardSteps: [], // 보드 미해금 상태
+      };
+
+      const progress = calculateApostleProgress(
+        emptyApostle,
+        apiData.board,
+        apiData.heroInfo,
+        apiData.text,
+        false
+      );
+
+      result.set(progress.name, progress);
+      result.set(String(progress.apostleId), progress);
+    }
   }
 
   return result;

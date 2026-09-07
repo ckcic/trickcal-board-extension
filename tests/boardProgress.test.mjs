@@ -154,8 +154,43 @@ describe('API 페이로드 파서 테스트', () => {
     assert.equal(map.has('10001'), true);
   });
 
+  test('유저 데이터에 미보유 사도가 있더라도 heroInfo를 참조해 전체 사도를 맵에 등록한다', () => {
+    // 유저는 사도A(10001)만 보유하고 사도B(10002), 사도C(10003)는 미보유인 상황
+    const rawPayload = {
+      user: { data: { apostle: { apostles: [mockUserApostles[0]] } } },
+      data: { data: { board: mockMasterBoard, heroInfo: mockHeroInfo, text: mockText } },
+    };
+
+    const parsed = parseTrickcalApiPayload(rawPayload);
+    assert.notEqual(parsed, null);
+    assert.equal(parsed.apostles.length, 1);
+
+    const map = calculateAllApostlesProgress(parsed);
+    // 보유 사도(10001) 검증
+    const ownedProg = map.get('10001');
+    assert.notEqual(ownedProg, undefined);
+    assert.equal(ownedProg.isOwned, true);
+    assert.equal(ownedProg.bokr.picked, 3);
+
+    // 미보유 사도(10002 테스트사도B)도 맵에 정상 등록되어야 함!
+    const unownedProg = map.get('10002');
+    assert.notEqual(unownedProg, undefined);
+    assert.equal(unownedProg.name, '테스트사도B');
+    assert.equal(unownedProg.isOwned, false);
+    assert.equal(unownedProg.unlockedBoardCount, 0);
+    assert.equal(unownedProg.bokr.picked, 0);
+    assert.equal(unownedProg.bokr.allTotal, 5); // 마스터에 정의된 5개 보크 (1차 2개 + 2차 2개 + 3차 1개)
+    assert.equal(unownedProg.bokr.remainingAll, 5);
+    assert.equal(unownedProg.bokr.isCompleted, false);
+
+    // 이름으로도 조회 가능해야 함
+    assert.equal(map.has('테스트사도B'), true);
+    assert.equal(map.has('테스트사도C'), true);
+  });
+
   test('구조가 유효하지 않은 페이로드는 null을 반환한다', () => {
     assert.equal(parseTrickcalApiPayload(null), null);
     assert.equal(parseTrickcalApiPayload({ invalid: true }), null);
   });
 });
+
