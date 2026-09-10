@@ -3,7 +3,7 @@ export function selectCommentArt(comments: string[]): string | null {
   let selected: string | null = null;
   for (const comment of comments) {
     if (comment.length > 100_000) continue;
-    const text = comment.replace(/^\r?\n/, '').trimEnd();
+    const text = comment;
     const lines = text.split(/\r?\n/);
     if (lines.filter(line => line.trim().length >= 20).length < 8) continue;
     if (!selected || text.length > selected.length) selected = text;

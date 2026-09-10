@@ -4,5 +4,5 @@ header { display: flex; align-items: center; gap: 9px; }
 h1 { font-size: 19px; margin: 0; }
 .sparkle { color: #8ca943; font-size: 25px; }
 p { font-size: 13px; line-height: 1.6; margin: 10px 0 16px; }
-pre { margin: 0; padding: 10px; max-height: 430px; overflow: auto; background: #edf3df; border-radius: 12px; font-family: Consolas, 'Courier New', monospace; line-height: 1.1; white-space: pre; font-variant-ligatures: none; }
+pre { margin: 0; padding: 10px; max-height: 430px; overflow: auto; background: #edf3df; border-radius: 12px; font-family: Consolas, 'Courier New', monospace; line-height: 1.22; white-space: pre; font-variant-ligatures: none; }
 footer { margin-top: 14px; font-size: 11px; color: #75816e; text-align: right; }

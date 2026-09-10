@@ -15,10 +15,21 @@ async function showArt(): Promise<void> {
       return;
     }
     // 페이지에서 읽은 문자열은 HTML로 해석하지 않는다.
-    art.textContent = response.art;
-    const longestLine = Math.max(...response.art.split(/\r?\n/).map(line => line.length));
-    art.style.fontSize = `${Math.max(2, Math.min(9, 540 / (longestLine * 0.61)))}px`;
+    const text = `<!--${response.art}-->`;
+    art.textContent = text;
+    const lines = text.split(/\r?\n/);
+    const longestLine = Math.max(...lines.map(line => line.length));
+    // 문자 셀의 세로를 가로의 약 두 배로 유지하며 가로·세로 공간에 함께 맞춘다.
+    const fontSize = Math.max(2, Math.min(9, 500 / (longestLine * 0.61), 430 / (lines.length * 1.22)));
+    art.style.fontSize = `${fontSize}px`;
     art.hidden = false;
+    // 글꼴별 실제 문자 폭을 측정해 고정 너비 때문에 남는 오른쪽 여백을 없앤다.
+    const range = document.createRange();
+    range.selectNodeContents(art);
+    const textWidth = range.getBoundingClientRect().width;
+    if (textWidth > 0) {
+      document.body.style.width = `${Math.min(560, Math.max(280, Math.ceil(textWidth) + 60))}px`;
+    }
     if (title) title.textContent = '찾았다!';
     status.textContent = '트릭컬 노트에 숨어 있던 작은 선물';
   } catch {
