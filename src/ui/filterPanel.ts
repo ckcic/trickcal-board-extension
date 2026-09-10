@@ -41,6 +41,8 @@ export class FilterPanelController {
 
   /** 스탯 집계 캐시: 필터 조건 키 => 집계 데이터 */
   private statAggregatesCache = new Map<string, Record<StatCategory, { picked: number; total: number; remaining: number }>>();
+  private summaryProgressMap: Map<string, ApostleProgress> | null = null;
+  private renderedSummaries = new WeakMap<HTMLElement, string>();
 
   constructor(onFilterChange: FilterChangeCallback) {
     this.onFilterChange = onFilterChange;
@@ -51,6 +53,7 @@ export class FilterPanelController {
    */
   public clearCache(): void {
     this.statAggregatesCache.clear();
+    this.renderedSummaries = new WeakMap();
   }
 
   public getState(): FilterState {
@@ -536,7 +539,8 @@ export class FilterPanelController {
       if (persName) filters.push(persName);
       if (statName) filters.push(statName);
       const filterPrefix = filters.length > 0 ? `[${filters.join(' ')}] ` : '';
-      statsEl.textContent = `표시: ${visible}명 / 전체 ${masterTotal}명 (${filterPrefix}미완료 ${incompleteCount}명)`;
+      const text = `표시: ${visible}명 / 전체 ${masterTotal}명 (${filterPrefix}미완료 ${incompleteCount}명)`;
+      if (statsEl.textContent !== text) statsEl.textContent = text;
     }
   }
 
@@ -550,8 +554,16 @@ export class FilterPanelController {
     const summaryContainer = document.getElementById('tcbe-stat-summary-row');
     if (!summaryContainer) return;
 
+    // 새 API 데이터는 집계와 DOM 캐시를 함께 무효화한다.
+    if (this.summaryProgressMap !== progressMap) {
+      this.clearCache();
+      this.summaryProgressMap = progressMap;
+    }
+
     // 캐시 키 생성 (해금관문_성급_성격_보드차수)
     const cacheKey = `${filter.unlockedTier}_${filter.grade}_${filter.personality}_${filter.boardLevel}`;
+    const renderKey = `${cacheKey}_${filter.statCategory}`;
+    if (this.renderedSummaries.get(summaryContainer) === renderKey) return;
     let statAggregates = this.statAggregatesCache.get(cacheKey);
 
     if (!statAggregates) {
@@ -632,7 +644,7 @@ export class FilterPanelController {
       const totalValue = (agg.total * meta.valuePerNode).toLocaleString();
 
       const item = document.createElement('div');
-      item.className = `tcbe-summary-card ${this.state.statCategory === meta.key ? 'tcbe-summary-active' : ''} ${isDone ? 'tcbe-summary-done' : ''}`;
+      item.className = `tcbe-summary-card ${filter.statCategory === meta.key ? 'tcbe-summary-active' : ''} ${isDone ? 'tcbe-summary-done' : ''}`;
 
       // 사도별 뱃지 스타일의 커스텀 툴팁 DOM 생성
       const tooltip = document.createElement('div');
@@ -700,6 +712,7 @@ export class FilterPanelController {
     });
 
     summaryContainer.appendChild(itemsContainer);
+    this.renderedSummaries.set(summaryContainer, renderKey);
   }
 
   /**

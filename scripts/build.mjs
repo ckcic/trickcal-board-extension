@@ -31,6 +31,9 @@ function ensureDistDir() {
  * 정적 파일 복사 처리
  */
 function copyStaticFiles() {
+  for (const file of ['popup.html', 'popup.css']) {
+    fs.copyFileSync(path.join(rootDir, 'src', file), path.join(distDir, file));
+  }
   // 1. manifest.json
   const manifestSrc = path.join(rootDir, 'manifest.json');
   const manifestDest = path.join(distDir, 'manifest.json');
@@ -116,6 +119,11 @@ async function build() {
   };
 
   const contexts = await Promise.all([
+    esbuild.context({
+      ...commonJsOptions,
+      entryPoints: [path.join(rootDir, 'src', 'popup.ts')],
+      outfile: path.join(distDir, 'popup.js'),
+    }),
     // 1. MAIN world 인터셉터
     esbuild.context({
       ...commonJsOptions,

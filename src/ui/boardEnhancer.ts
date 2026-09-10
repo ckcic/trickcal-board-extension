@@ -24,6 +24,25 @@ export const ATTR_ENHANCED = 'data-tcbe-enhanced';
 /** 분리된 행은 자동 해제하고 새 API 데이터는 객체 참조로 구분한다. */
 const renderedProgress = new WeakMap<Element, ApostleProgress>();
 
+/** 보크 표시가 달라지는 조건만 캐시 키에 포함한다. */
+function badgeFilterKey(filter?: FilterState): string {
+  return `${filter?.statCategory || 'all'}_${filter?.boardLevel || 'all'}`;
+}
+
+/** 같은 진행도에서는 일반칸 버튼과 팝업을 유지하고 보크 배지만 교체한다. */
+function reuseEnhanceRow(row: Element | null, progress: ApostleProgress, filter?: FilterState): boolean {
+  if (!row || renderedProgress.get(row) !== progress) return false;
+  const badge = row.querySelector('.tcbe-badge-container');
+  const normal = row.querySelector('.tcbe-normal-badge-container');
+  if (!badge || !normal) return false;
+  const key = badgeFilterKey(filter);
+  if (row.getAttribute('data-tcbe-rendered-filter') !== key) {
+    badge.replaceWith(createBadgeElement(progress, filter));
+    row.setAttribute('data-tcbe-rendered-filter', key);
+  }
+  return true;
+}
+
 /**
  * 골드 수치를 트릭컬 노트 스타일의 'k' 단위로 포맷팅 (예: 300,000 -> '300k', 10,000 -> '10k', 0 -> '0k')
  */
@@ -125,7 +144,8 @@ export function applyBoardLevelVisibility(card: HTMLElement, boardLevel: FilterS
  */
 export function enhanceApostleCards(
   apostleProgressMap: Map<string, ApostleProgress>,
-  activeFilter?: FilterState
+  activeFilter?: FilterState,
+  targetCards?: HTMLElement[]
 ): number {
   let enhancedCount = 0;
 
@@ -141,7 +161,7 @@ export function enhanceApostleCards(
   });
 
   // 1. 최상위 사도 카드 요소들 직접 탐색 (모달 다이얼로그 요소는 엄격 제외)
-  const cardElements = document.querySelectorAll<HTMLElement>(
+  const cardElements = targetCards ?? document.querySelectorAll<HTMLElement>(
     '[data-slot="card"]:not([role="dialog"]):not([data-slot="dialog-content"]), div.bg-dialog-background:not([role="dialog"]):not([data-slot="dialog-content"]):not([data-slot="dialog-overlay"])'
   );
 
@@ -192,12 +212,12 @@ export function enhanceApostleCards(
       card.setAttribute(ATTR_APOSTLE_ID, String(progress.apostleId));
     }
 
-    const filterKey = `${activeFilter?.statCategory || 'all'}_${activeFilter?.boardLevel || 'all'}_${activeFilter?.status || 'all'}_${activeFilter?.grade || 'all'}`;
+    const filterKey = badgeFilterKey(activeFilter);
     const existingRow = card.querySelector('.tcbe-badge-row');
     const existingOldBadge = card.querySelector('.tcbe-badge-container');
 
     // 이미 올바른 필터 조건으로 렌더링된 배지 행이 있다면 DOM 재생성 및 교체 생략
-    if (!existingRow || renderedProgress.get(existingRow) !== progress || existingRow.getAttribute('data-tcbe-rendered-filter') !== filterKey) {
+    if (!reuseEnhanceRow(existingRow, progress, activeFilter)) {
       if (!nameElement && !existingRow && !existingOldBadge) {
         const textElements = Array.from(
           card.querySelectorAll<HTMLElement>('div, span, h2, h3, h4, p, strong, b')
@@ -244,8 +264,8 @@ export function enhanceApostleCards(
     enhancedCount++;
   });
 
-  // 폴백: 혹시 cardElements로 잡히지 않은 카드가 있다면 기존 방식으로 탐색
-  if (enhancedCount < apostleProgressMap.size / 2) {
+  // 검색 결과는 전체 사도 수보다 적을 수 있다. 정상 카드를 하나도 식별하지 못했을 때만 보조 탐색한다.
+  if (!targetCards && enhancedCount === 0) {
     const candidates = document.querySelectorAll('span, p, div, h2, h3, h4, strong, b');
     candidates.forEach((el) => {
       const text = el.textContent?.trim();
@@ -259,11 +279,11 @@ export function enhanceApostleCards(
       card.setAttribute(ATTR_APOSTLE_NAME, progress.name);
       card.setAttribute(ATTR_APOSTLE_ID, String(progress.apostleId));
 
-      const filterKey = `${activeFilter?.statCategory || 'all'}_${activeFilter?.boardLevel || 'all'}_${activeFilter?.status || 'all'}_${activeFilter?.grade || 'all'}`;
+      const filterKey = badgeFilterKey(activeFilter);
       const existingRow = card.querySelector('.tcbe-badge-row');
       const existingOldBadge = card.querySelector('.tcbe-badge-container');
 
-      if (!existingRow || renderedProgress.get(existingRow) !== progress || existingRow.getAttribute('data-tcbe-rendered-filter') !== filterKey) {
+      if (!reuseEnhanceRow(existingRow, progress, activeFilter)) {
         const newRow = createApostleEnhanceRow(progress, activeFilter);
         newRow.setAttribute('data-tcbe-rendered-filter', filterKey);
         renderedProgress.set(newRow, progress);
@@ -299,9 +319,10 @@ export function enhanceApostleCards(
  */
 export function applyFilterToCards(
   filter: FilterState,
-  apostleProgressMap: Map<string, ApostleProgress>
+  apostleProgressMap: Map<string, ApostleProgress>,
+  targetCards?: HTMLElement[]
 ): { total: number; visible: number } {
-  const cards = document.querySelectorAll<HTMLElement>(`[${ATTR_APOSTLE_NAME}]`);
+  const cards = targetCards ?? document.querySelectorAll<HTMLElement>(`[${ATTR_APOSTLE_NAME}]`);
   let total = 0;
   let visible = 0;
 

@@ -1,4 +1,5 @@
-import { isSiteMutation } from './ui/mutations.ts';
+import { collectChangedCards, invalidateCardCaches } from './ui/mutations.ts';
+import { readCommentArt } from './ui/commentArt.ts';
 import { matchesApostleFilter } from './domain/filters.ts';
 /**
  * @file content.ts
@@ -16,10 +17,17 @@ import { applyFilterToCards, enhanceApostleCards, setBadgesVisible } from './ui/
 import { FilterPanelController } from './ui/filterPanel.ts';
 
 (() => {
+  chrome.runtime.onMessage.addListener((message, sender, respond) => {
+    if (sender.id !== chrome.runtime.id || !message || typeof message !== 'object' ||
+        !('type' in message) || message.type !== 'TCBE_READ_COMMENT_ART') return;
+    respond({ art: readCommentArt() });
+  });
   let latestProgressMap: Map<string, ApostleProgress> | null = null;
   let filterController: FilterPanelController | null = null;
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let isEnhancing = false;
+  const pendingCards = new Set<HTMLElement>();
+  let pendingFullRefresh = false;
 
   /**
    * 확장 프로그램의 스프라이트 및 크레파스 이미지 URL을 CSS 커스텀 속성에 주입
@@ -136,7 +144,16 @@ import { FilterPanelController } from './ui/filterPanel.ts';
   /**
    * 현재 보드 진행도와 필터 상태를 바탕으로 UI 갱신
    */
-  function refreshUI() {
+  function refreshUI(targetCards?: HTMLElement[]) {
+    const dirtyCards = [...pendingCards];
+    pendingCards.clear();
+    pendingFullRefresh = false;
+    invalidateCardCaches(dirtyCards);
+    // 직접 갱신이 예약된 갱신까지 처리하므로 중복 실행을 취소한다.
+    if (debounceTimer !== null) {
+      clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
     if (!latestProgressMap || latestProgressMap.size === 0) {
       return;
     }
@@ -177,10 +194,24 @@ import { FilterPanelController } from './ui/filterPanel.ts';
           };
 
       // 1. 사도 카드에 뱃지 삽입 및 업데이트
-      enhanceApostleCards(latestProgressMap, filterState);
+      const connectedCards = targetCards?.filter(card => card.isConnected);
+      const enhanced = enhanceApostleCards(latestProgressMap, filterState, connectedCards);
+      // 카드 식별이 실패하면 원본 구조 변경일 수 있으므로 전체 탐색으로 복구한다.
+      if (connectedCards && enhanced !== connectedCards.length) {
+        scheduleRefresh(0);
+        return;
+      }
 
       // 2. 필터 및 정렬 적용
-      const { total, visible } = applyFilterToCards(filterState, latestProgressMap);
+      let { total, visible } = applyFilterToCards(filterState, latestProgressMap, connectedCards);
+      if (connectedCards) {
+        // 전체 통계에는 카드 속성만 읽고 내부 보드와 배지는 탐색하지 않는다.
+        const cards = Array.from(document.querySelectorAll<HTMLElement>('[data-tcbe-apostle-name]'))
+          .filter(card => !card.closest('[role="dialog"], [data-slot="dialog-content"], [data-slot="dialog-overlay"]') &&
+            latestProgressMap!.has(card.getAttribute('data-tcbe-apostle-name') || ''));
+        total = cards.length;
+        visible = cards.filter(card => !card.classList.contains('tcbe-card-hidden')).length;
+      }
 
       // 3. 통계 정보 및 스탯별 총 칸수/수치 요약 갱신
       if (filterController) {
@@ -196,12 +227,14 @@ import { FilterPanelController } from './ui/filterPanel.ts';
     }
   }
 
-  function scheduleRefresh(delay = 150) {
+  function scheduleRefresh(delay = 150, cards?: Set<HTMLElement>) {
+    if (cards) cards.forEach(card => pendingCards.add(card));
+    else pendingFullRefresh = true;
     if (debounceTimer) {
       clearTimeout(debounceTimer);
     }
     debounceTimer = setTimeout(() => {
-      refreshUI();
+      refreshUI(pendingFullRefresh ? undefined : [...pendingCards]);
     }, delay);
   }
 
@@ -225,17 +258,10 @@ import { FilterPanelController } from './ui/filterPanel.ts';
   });
 
   const observer = new MutationObserver((mutations) => {
-    const externalChanges = mutations.filter(isSiteMutation);
-    for (const mutation of externalChanges) {
-      const element = mutation.target instanceof Element ? mutation.target : mutation.target.parentElement;
-      const card = element?.closest('[data-tcbe-apostle-name]');
-      // 사이트가 카드 내부를 재사용하거나 교체하면 DOM 기준 캐시를 무효화한다.
-      card?.removeAttribute('data-tcbe-visible-level');
-      card?.removeAttribute('data-tcbe-highlight-stat');
-      card?.removeAttribute('data-tcbe-apostle-name');
-      card?.removeAttribute('data-tcbe-apostle-id');
-    }
-    if (externalChanges.length && latestProgressMap) scheduleRefresh();
+    const changes = collectChangedCards(mutations);
+    if (!changes.changed) return;
+    changes.cards.forEach(card => pendingCards.add(card));
+    if (latestProgressMap) scheduleRefresh(150, changes.fullRefresh ? undefined : changes.cards);
   });
 
   observer.observe(document.body || document.documentElement, {
