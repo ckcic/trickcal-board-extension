@@ -3,7 +3,8 @@ async function showArt(): Promise<void> {
   const status = document.getElementById('status');
   const art = document.getElementById('art');
   const title = document.getElementById('title');
-  if (!status || !art) return;
+  const frame = document.getElementById('art-frame');
+  if (!status || !art || !frame) return;
   if (title) title.textContent = '숨은 그림';
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -17,18 +18,18 @@ async function showArt(): Promise<void> {
     // 페이지에서 읽은 문자열은 HTML로 해석하지 않는다.
     const text = `<!--${response.art}-->`;
     art.textContent = text;
-    const lines = text.split(/\r?\n/);
-    const longestLine = Math.max(...lines.map(line => line.length));
-    // 문자 셀의 세로를 가로의 약 두 배로 유지하며 가로·세로 공간에 함께 맞춘다.
-    const fontSize = Math.max(2, Math.min(9, 500 / (longestLine * 0.61), 430 / (lines.length * 1.22)));
-    art.style.fontSize = `${fontSize}px`;
-    art.hidden = false;
-    // 글꼴별 실제 문자 폭을 측정해 고정 너비 때문에 남는 오른쪽 여백을 없앤다.
-    const range = document.createRange();
-    range.selectNodeContents(art);
-    const textWidth = range.getBoundingClientRect().width;
-    if (textWidth > 0) {
-      document.body.style.width = `${Math.min(560, Math.max(280, Math.ceil(textWidth) + 60))}px`;
+    frame.hidden = false;
+    art.style.transform = 'none';
+    // 글꼴 크기를 바꾸지 않고 전체 줄 상자를 함께 축소해 줄 높이 반올림 오차를 피한다.
+    const original = art.getBoundingClientRect();
+    if (original.width > 0 && original.height > 0) {
+      const scale = Math.min(1, 500 / original.width, 400 / original.height);
+      const width = Math.ceil(original.width * scale);
+      const height = Math.ceil(original.height * scale);
+      art.style.transform = `scale(${scale})`;
+      frame.style.width = `${width}px`;
+      frame.style.height = `${height}px`;
+      document.body.style.width = `${Math.max(280, width + 60)}px`;
     }
     if (title) title.textContent = '찾았다!';
     status.textContent = '트릭컬 노트에 숨어 있던 작은 선물';

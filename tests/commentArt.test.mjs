@@ -17,13 +17,16 @@ test('팝업은 매번 새 아트를 받아 HTML 실행 없이 표시하고 연�
   const title = { textContent: '' };
   const body = { style: {} };
   const art = { textContent: '', hidden: true, style: {} };
+  const frame = { hidden: true, style: {} };
   let reply = '<img src=x onerror=alert(1)>\n문자 아트';
   let fail = false;
+  let originalWidth = 450;
+  let originalHeight = 100;
+  art.getBoundingClientRect = () => ({ width: originalWidth, height: originalHeight });
   const context = vm.createContext({
     document: {
       body,
-      getElementById: id => id === 'status' ? status : id === 'title' ? title : art,
-      createRange: () => ({ selectNodeContents() {}, getBoundingClientRect: () => ({ width: 450 }) }),
+      getElementById: id => id === 'status' ? status : id === 'title' ? title : id === 'art-frame' ? frame : art,
     },
     chrome: { tabs: {
       query: async () => [{ id: 1 }],
@@ -36,16 +39,20 @@ test('팝업은 매번 새 아트를 받아 HTML 실행 없이 표시하고 연�
   };
   await open();
   assert.equal(art.textContent, `<!--${reply}-->`);
-  assert.equal(art.hidden, false);
+  assert.equal(frame.hidden, false);
   assert.equal(body.style.width, '510px');
   assert.equal(title.textContent, '찾았다!');
   reply = ['x'.repeat(124), ...Array(52).fill('x'.repeat(128)), 'x'.repeat(125)].join('\n');
+  originalWidth = 832;
+  originalHeight = 702;
   await open();
   assert.equal(art.textContent, `<!--${reply}-->`);
   assert.ok(art.textContent.split('\n').every(line => line.length === 128));
-  const size = Number.parseFloat(art.style.fontSize);
-  assert.ok(size * 128 * 0.61 <= 500.001);
-  assert.ok(size * 54 * 1.22 <= 430.001);
+  const scale = Number(art.style.transform.match(/scale\((.+)\)/)[1]);
+  assert.ok(originalWidth * scale <= 500.001);
+  assert.ok(originalHeight * scale <= 400.001);
+  assert.equal(Number.parseFloat(frame.style.width), Math.ceil(originalWidth * scale));
+  assert.equal(Number.parseFloat(frame.style.height), Math.ceil(originalHeight * scale));
   fail = true;
   await open();
   assert.match(status.textContent, /새로고침/);
