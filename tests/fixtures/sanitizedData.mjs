@@ -27,7 +27,7 @@ export const mockText = {
   KEY_C_NAME: '테스트사도C',
 };
 
-// 10001: 3차까지 열림, 1차(보크2), 2차(보크4), 3차(보크6)
+// 10001: 3차까지 열림, 1차(보크2), 2차(보크4), 3차(보크3)
 // 10002: 2차까지 열림
 // 10003: 1차만 열림, 보크 모두 획득 (완료 사도)
 export const mockMasterBoard = {
@@ -43,6 +43,7 @@ export const mockMasterBoard = {
       { id: 6, nodeType: 4, requireItems: [{ item: 610003, value: 6 }] }, // 보크
       { id: 7, nodeType: 4, requireItems: [{ item: 610003, value: 6 }] }, // 보크
       { id: 8, nodeType: 4, requireItems: [{ item: 610003, value: 6 }] }, // 보크
+      { id: 12, nodeType: 1, requireItems: [] }, // 3차 해금 관문
     ],
     '2': [
       { id: 9, nodeType: 4, requireItems: [{ item: 610003, value: 9 }] }, // 보크
@@ -54,10 +55,12 @@ export const mockMasterBoard = {
     '0': [
       { id: 21, nodeType: 4, requireItems: [{ item: 610003, value: 3 }] },
       { id: 22, nodeType: 4, requireItems: [{ item: 610003, value: 3 }] },
+      { id: 26, nodeType: 1, requireItems: [] }, // 2차 해금 관문
     ],
     '1': [
       { id: 23, nodeType: 4, requireItems: [{ item: 610003, value: 6 }] },
       { id: 24, nodeType: 4, requireItems: [{ item: 610003, value: 6 }] },
+      { id: 27, nodeType: 1, requireItems: [] }, // 3차 해금 관문
     ],
     '2': [
       { id: 25, nodeType: 4, requireItems: [{ item: 610003, value: 9 }] },
@@ -67,9 +70,11 @@ export const mockMasterBoard = {
     '0': [
       { id: 31, nodeType: 4, requireItems: [{ item: 610003, value: 3 }] },
       { id: 32, nodeType: 4, requireItems: [{ item: 610003, value: 3 }] },
+      { id: 35, nodeType: 1, requireItems: [] }, // 2차 해금 관문
     ],
     '1': [
       { id: 33, nodeType: 4, requireItems: [{ item: 610003, value: 6 }] },
+      { id: 36, nodeType: 1, requireItems: [] }, // 3차 해금 관문
     ],
     '2': [
       { id: 34, nodeType: 4, requireItems: [{ item: 610003, value: 9 }] },
@@ -78,12 +83,12 @@ export const mockMasterBoard = {
 };
 
 export const mockUserApostles = [
-  // 10001: 3차까지 열림, step 문자열이 짧은 케이스 (1차: "110", 2차: "10", 3차: "1")
+  // 10001: 두 관문 모두 활성화, 1차와 3차의 step 문자열이 짧은 케이스
   {
     apostleId: 10001,
     boardSteps: [
       { step: '110' }, // node0(1), node1(1-보크), node2(0-보크), node3(황크-범위밖) -> 보크 1/2
-      { step: '10' },  // node0(1-보크), node1(0-보크), node2,3 범위밖 -> 보크 1/4
+      { step: '10001' }, // 보크 1/4, 마지막 관문 활성화로 3차 해금
       { step: '1' },   // node0(1-보크), node1,2 범위밖 -> 보크 1/3
     ],
   },
@@ -91,7 +96,7 @@ export const mockUserApostles = [
   {
     apostleId: 10002,
     boardSteps: [
-      { step: '11' }, // 1차 보크 2/2
+      { step: '111' }, // 1차 보크 2/2, 마지막 관문 활성화로 2차 해금
       { step: '01' }, // 2차 보크 1/2
     ],
   },

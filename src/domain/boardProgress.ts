@@ -34,6 +34,7 @@ export const HWANG_ITEM_ID = 610004;
 
 /** 보드 노드 타입 상수 */
 export const NODE_TYPE = {
+  GATE: 1,
   NORMAL: 3,
   BOKR: 4,
   HWANG: 5,
@@ -257,6 +258,12 @@ export function calculateApostleProgress(
   const boardSteps = userApostle.boardSteps || [];
 
   const boardKeys = Object.keys(heroBoards).sort((a, b) => Number(a) - Number(b));
+  // 원본 사이트와 동일하게 보유 사도의 기본 1차에 활성화된 관문 수를 더한다.
+  // 관문은 이전 보드에 있으므로 다음 보드의 칠한 기록이 없어도 해금된다.
+  const unlockedBoardCount = isOwned ? 1 + boardKeys.filter((key, stepIndex) =>
+    heroBoards[key]?.some((node, nodeIndex) =>
+      node.nodeType === NODE_TYPE.GATE && boardSteps[stepIndex]?.step[nodeIndex] === '1')
+  ).length : 0;
 
   let bokrAllTotal = 0;
   let bokrUnlockedTotal = 0;
@@ -294,7 +301,7 @@ export function calculateApostleProgress(
   boardKeys.forEach((bKey, stepIndex) => {
     const boardIndexNum = Number(bKey);
     const nodes = heroBoards[bKey] || [];
-    const isUnlocked = stepIndex < boardSteps.length;
+    const isUnlocked = stepIndex < unlockedBoardCount;
     const stepEntry = isUnlocked ? boardSteps[stepIndex] : null;
     const stepStr = stepEntry && typeof stepEntry.step === 'string' ? stepEntry.step : '';
 
@@ -535,7 +542,7 @@ export function calculateApostleProgress(
     personality,
     gradeDefault,
     isOwned,
-    unlockedBoardCount: boardSteps.length,
+    unlockedBoardCount,
     boards,
     bokr: {
       allTotal: bokrAllTotal,

@@ -44,6 +44,7 @@ describe('일반칸(nodeType 3)의 진행도 및 스탯 집계 테스트', () =>
           ],
           requireGold: 30000,
         },
+        { id: 104, nodeType: 1, requireItems: [] }, // 2차 해금 관문
       ],
       1: [
         {
@@ -76,7 +77,7 @@ describe('일반칸(nodeType 3)의 진행도 및 스탯 집계 테스트', () =>
       apostleId: 10001,
       // 1차 보드: 101번(기본) 획득('1'), 102번(강화) 미획득('0'), 103번(보크) 미획득('0')
       // 2차 보드: 201번(강화) 획득('1')
-      boardSteps: [{ step: '100' }, { step: '1' }],
+      boardSteps: [{ step: '1001' }, { step: '1' }],
     };
 
     const progress = calculateApostleProgress(

@@ -34,6 +34,57 @@ test('파서는 보드 진행도에 필요한 유저 필드만 추출하며 래�
   assert.equal(parseTrickcalApiPayload(p).apostles.length, 0);
 });
 
+test('3차를 열고 칠하지 않은 사도는 기록 유무와 관계없이 3차 관문으로 필터링된다', () => {
+  for (const thirdStep of [undefined, { step: '' }, { step: '000' }]) {
+    const p = payload();
+    p.apostles[0].boardSteps = p.apostles[0].boardSteps.slice(0, 2);
+    if (thirdStep) p.apostles[0].boardSteps.push(thirdStep);
+    // 실제 응답처럼 board 필드 없이 두 월드의 파싱을 거쳐 관문 상태를 계산한다.
+    const parsed = parseTrickcalApiPayload(parseTrickcalApiPayload(p));
+    const a = calculateAllApostlesProgress(parsed).get('10001');
+    assert.equal(a.unlockedBoardCount, 3);
+    assert.equal(a.boards[2].unlocked, true);
+    assert.equal(a.boards[2].bokr.picked, 0);
+    assert.equal(a.boards[2].bokr.remaining, 3);
+    assert.equal(a.bokr.unlockedTotal, 9);
+    assert.equal(a.bokr.remainingUnlocked, 7);
+    assert.equal(matchesApostleFilter(a, { ...filter, unlockedTier: 2 }), false);
+    assert.equal(matchesApostleFilter(a, { ...filter, unlockedTier: 3 }), true);
+  }
+});
+
+test('보유 사도는 기록이 없거나 빈 기록만 있어도 1차만 열려 있다', () => {
+  for (const boardSteps of [undefined, [], [{ step: '' }, { step: '' }, { step: '' }]]) {
+    const p = payload();
+    p.apostles[0] = { apostleId: 10001, boardSteps };
+    const a = calculateAllApostlesProgress(parseTrickcalApiPayload(p)).get('10001');
+    assert.equal(a.unlockedBoardCount, 1);
+    assert.deepEqual(a.boards.map(b => b.unlocked), [true, false, false]);
+    assert.equal(a.bokr.picked, 0);
+  }
+});
+
+test('2차 관문만 열면 빈 2차 기록 유무와 관계없이 2차로 분류한다', () => {
+  for (const boardSteps of [[{ step: '110' }], [{ step: '110' }, { step: '' }]]) {
+    const p = payload();
+    p.apostles[0].boardSteps = boardSteps;
+    const a = calculateAllApostlesProgress(parseTrickcalApiPayload(p)).get('10001');
+    assert.equal(a.unlockedBoardCount, 2);
+    assert.deepEqual(a.boards.map(b => b.unlocked), [true, true, false]);
+    assert.equal(matchesApostleFilter(a, { ...filter, unlockedTier: 2 }), true);
+    assert.equal(matchesApostleFilter(a, { ...filter, unlockedTier: 3 }), false);
+  }
+});
+
+test('관문을 찍지 않았다면 기록 배열의 길이만으로 다음 보드를 열지 않는다', () => {
+  const p = payload();
+  p.apostles[0].boardSteps = [{ step: '011' }, { step: '' }, { step: '' }];
+  const a = calculateAllApostlesProgress(parseTrickcalApiPayload(p)).get('10001');
+  assert.equal(a.unlockedBoardCount, 1);
+  assert.deepEqual(a.boards.map(b => b.unlocked), [true, false, false]);
+  assert.equal(a.bokr.picked, 2);
+});
+
 test('카드와 집계의 공통 판정은 해금 관문, 성격, 성급, 보드 범위를 함께 적용한다', () => {
   const map = calculateAllApostlesProgress(payload());
   const a = map.get('10001');
@@ -64,6 +115,11 @@ test('인터셉터는 초기 응답을 재전달하고 XHR 재사용 시 중복 
   class FakeXHR extends EventTarget {
     responseType = 'json';
     response = payload();
+    constructor() {
+      super();
+      // 3차 해금 후 아직 3차 기록이 없는 실제 응답 구조를 재현한다.
+      this.response.apostles[0].boardSteps.pop();
+    }
     send() { this.dispatchEvent(new Event('load')); }
   }
   const win = {
@@ -77,6 +133,8 @@ test('인터셉터는 초기 응답을 재전달하고 XHR 재사용 시 중복 
   assert.equal(messages.length, 2);
   assert.equal(messages[0].origin, win.location.origin);
   assert.deepEqual(Object.keys(messages[0].message.payload).sort(), ['apostles', 'board', 'heroInfo', 'text']);
+  const parsed = parseTrickcalApiPayload(messages[0].message.payload);
+  assert.equal(calculateAllApostlesProgress(parsed).get('10001').unlockedBoardCount, 3);
   const request = { source: win, origin: win.location.origin, data: { type: 'TCBE_BOARD_DATA_REQUEST', source: 'tcbe-content-bridge' } };
   listeners[0](request);
   assert.equal(messages.length, 3);
