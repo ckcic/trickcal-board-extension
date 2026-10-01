@@ -57,6 +57,7 @@ export interface MasterBoardNode {
   grid?: { x: number; y: number };
   requireGold?: number;
   stats?: NodeStat[];
+  displayStat?: number[]; // 수치 없이 내려오는 일반칸 스탯 종류 (0은 빈 표시)
   requireItems?: RequireItem[];
 }
 
@@ -110,6 +111,7 @@ export interface StatCountSummary {
 
 /** 일반칸(nodeType: 3)의 스탯 수치 상세 */
 export interface NormalStatDetail {
+  valuesKnown: boolean; // 모든 칸의 상승량을 API 또는 태생 성급별 표로 계산할 수 있는지 여부
   picked: number;    // 획득한 스탯 수치
   remaining: number; // 미획득 잔여 스탯 수치
   total: number;     // 총 스탯 수치 (picked + remaining)

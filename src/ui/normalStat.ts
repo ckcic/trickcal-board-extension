@@ -199,14 +199,24 @@ export function createNormalStatElement(progress: ApostleProgress): HTMLElement 
 
       const tbody = table.querySelector('tbody')!;
       const activeStats = isAll ? normal.stats : progress.boards[tier]?.normal.stats;
+      if (activeStats && STAT_META_LIST.some(meta => {
+        const stat = activeStats[meta.key];
+        return stat && stat.smallTotal + stat.largeTotal > 0 && !stat.valuesKnown;
+      })) {
+        const caption = document.createElement('caption');
+        caption.textContent = '현재 사이트 응답에는 일반칸 상승량이 없어 수치를 계산할 수 없습니다. 칸 수와 달성률은 정상 표시됩니다.';
+        caption.style.cssText = 'caption-side:bottom;text-align:left;padding-top:8px;font-size:11px;color:#64748b;';
+        table.appendChild(caption);
+      }
       let hasStat = false;
 
       for (const meta of STAT_META_LIST) {
         const s = activeStats ? activeStats[meta.key] : null;
-        if (s && s.total > 0) {
+        if (s && s.smallTotal + s.largeTotal > 0) {
           hasStat = true;
-          const statPct = ((s.picked / s.total) * 100).toFixed(0);
-          const isStatDone = s.remaining === 0;
+          const statPct = (((s.smallPicked + s.largePicked) / (s.smallTotal + s.largeTotal)) * 100).toFixed(0);
+          const isStatDone = s.smallPicked + s.largePicked === s.smallTotal + s.largeTotal;
+          const unknown = '<span title="현재 API는 일반칸 상승량을 제공하지 않습니다">—</span>';
 
           const isSmallDone = s.smallTotal > 0 && s.smallPicked === s.smallTotal;
           const isLargeDone = s.largeTotal > 0 && s.largePicked === s.largeTotal;
@@ -218,15 +228,15 @@ export function createNormalStatElement(progress: ApostleProgress): HTMLElement 
               <span class="tcbe-sprite-stat tcbe-sprite-stat-${meta.spriteIndex}"></span>
               <span>${meta.nameKo}</span>
             </td>
-            <td class="tcbe-np-td-val tcbe-np-val-picked">+${s.picked.toLocaleString()}</td>
-            <td class="tcbe-np-td-val tcbe-np-val-rem">${isStatDone ? '<span class="tcbe-np-done-tag">완료</span>' : `+${s.remaining.toLocaleString()}`}</td>
-            <td class="tcbe-np-td-val tcbe-np-val-total">+${s.total.toLocaleString()}</td>
+            <td class="tcbe-np-td-val tcbe-np-val-picked">${s.valuesKnown ? `+${s.picked.toLocaleString()}` : unknown}</td>
+            <td class="tcbe-np-td-val tcbe-np-val-rem">${isStatDone ? '<span class="tcbe-np-done-tag">완료</span>' : s.valuesKnown ? `+${s.remaining.toLocaleString()}` : unknown}</td>
+            <td class="tcbe-np-td-val tcbe-np-val-total">${s.valuesKnown ? `+${s.total.toLocaleString()}` : unknown}</td>
             <td class="tcbe-np-td-unit-val">
               <span class="tcbe-np-unit-chip tcbe-np-pill-small">
-                <span class="tcbe-pastel-icon-mini tcbe-pastel-basic"></span>+${s.smallUnitValue.toLocaleString()}
+                <span class="tcbe-pastel-icon-mini tcbe-pastel-basic"></span>${s.valuesKnown ? `+${s.smallUnitValue.toLocaleString()}` : unknown}
               </span>
               <span class="tcbe-np-unit-chip tcbe-np-pill-large">
-                <span class="tcbe-pastel-icon-mini tcbe-pastel-average"></span>+${s.largeUnitValue.toLocaleString()}
+                <span class="tcbe-pastel-icon-mini tcbe-pastel-average"></span>${s.valuesKnown ? `+${s.largeUnitValue.toLocaleString()}` : unknown}
               </span>
             </td>
             <td class="tcbe-np-td-breakdown">

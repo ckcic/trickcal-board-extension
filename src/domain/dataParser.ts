@@ -14,6 +14,7 @@ function isNumber(value: unknown): value is number {
 }
 function isNode(value: unknown): boolean {
   if (!isRecord(value) || !isNumber(value.id) || !isNumber(value.nodeType)) return false;
+  if (value.displayStat !== undefined && (!Array.isArray(value.displayStat) || !value.displayStat.every(isNumber))) return false;
   if (value.requireGold !== undefined && !isNumber(value.requireGold)) return false;
   if (value.stats !== undefined && (!Array.isArray(value.stats) || !value.stats.every(
     stat => isRecord(stat) && isNumber(stat.statType) && isNumber(stat.statValue)))) return false;

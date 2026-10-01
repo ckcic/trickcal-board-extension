@@ -1,6 +1,7 @@
 import { collectChangedCards, invalidateCardCaches } from './ui/mutations.ts';
 import { readCommentArt } from './ui/commentArt.ts';
 import { matchesApostleFilter } from './domain/filters.ts';
+import { selectApostleIds } from './domain/listSelection.ts';
 /**
  * @file content.ts
  * @description 트릭컬 노트 확장 프로그램의 콘텐츠 스크립트 (ISOLATED world) 메인 엔트리
@@ -28,6 +29,28 @@ import { FilterPanelController } from './ui/filterPanel.ts';
   let isEnhancing = false;
   const pendingCards = new Set<HTMLElement>();
   let pendingFullRefresh = false;
+  let gridSelectionKey = '';
+  let gridStats: { visible: number; total: number; key: string } | null = null;
+
+  window.addEventListener('message', (event: MessageEvent) => {
+    const data = event.data;
+    if (event.source !== window || event.origin !== window.location.origin ||
+        data?.type !== 'TCBE_GRID_STATS' || data.source !== 'tcbe-main-interceptor' ||
+        data.key !== gridSelectionKey || !Number.isSafeInteger(data.visible) || !Number.isSafeInteger(data.total) ||
+        data.visible < 0 || data.total < data.visible) return;
+    if (gridStats && gridStats.visible === data.visible && gridStats.total === data.total && gridStats.key === data.key) return;
+    gridStats = { visible: data.visible, total: data.total, key: data.key };
+    scheduleRefresh(50);
+  });
+
+  function updateVirtualGrid(active: boolean, filter?: FilterState) {
+    const ids = active && latestProgressMap && filter ? selectApostleIds(latestProgressMap, filter) : [];
+    const key = JSON.stringify([active, filter, ids]);
+    if (key === gridSelectionKey) return;
+    gridSelectionKey = key;
+    gridStats = null;
+    window.postMessage({ type: 'TCBE_GRID_FILTER', source: 'tcbe-content-bridge', active, ids, key }, window.location.origin);
+  }
 
   /**
    * 확장 프로그램의 스프라이트 및 크레파스 이미지 URL을 CSS 커스텀 속성에 주입
@@ -167,6 +190,8 @@ import { FilterPanelController } from './ui/filterPanel.ts';
 
       // /board URL이 아니거나 사도별 탭이 아닌 경우 완전히 언마운트/숨김 처리 후 종료
       if (!isApostleTab) {
+        document.documentElement.removeAttribute('data-tcbe-board-level');
+        updateVirtualGrid(false);
         if (filterController) {
           filterController.unmount();
         }
@@ -194,6 +219,8 @@ import { FilterPanelController } from './ui/filterPanel.ts';
           };
 
       // 1. 사도 카드에 뱃지 삽입 및 업데이트
+      document.documentElement.setAttribute('data-tcbe-board-level', filterState.boardLevel);
+      updateVirtualGrid(true, filterState);
       const connectedCards = targetCards?.filter(card => card.isConnected);
       const enhanced = enhanceApostleCards(latestProgressMap, filterState, connectedCards);
       // 카드 식별이 실패하면 원본 구조 변경일 수 있으므로 전체 탐색으로 복구한다.
@@ -214,6 +241,9 @@ import { FilterPanelController } from './ui/filterPanel.ts';
       }
 
       // 3. 통계 정보 및 스탯별 총 칸수/수치 요약 갱신
+      if (gridStats?.key === gridSelectionKey && document.querySelector('[data-testid="virtuoso-item-list"]')) {
+        ({ total, visible } = gridStats);
+      }
       if (filterController) {
         const { incompleteCount, masterTotal, statName, persName } = countIncompleteApostles(
           latestProgressMap,

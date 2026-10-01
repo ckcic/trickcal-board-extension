@@ -1,4 +1,5 @@
 import { parseTrickcalApiPayload } from '../domain/dataParser.ts';
+import { installVirtualGridBridge } from './virtualGrid.ts';
 import type { ExtractedApiData } from '../domain/types.ts';
 /**
  * @file interceptor.ts
@@ -19,6 +20,7 @@ declare global {
     return;
   }
   window.__TCBE_INTERCEPTOR_INSTALLED__ = true;
+  if (typeof document !== 'undefined') installVirtualGridBridge();
 
   const MESSAGE_TYPE = 'TCBE_BOARD_DATA_INTERCEPTED';
 

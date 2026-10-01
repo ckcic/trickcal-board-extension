@@ -225,16 +225,32 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-backgroun
   flex-shrink: 0;
 }
 
-/* --- 뱃지 영역 래퍼 (보크 뱃지와 일반칸 버튼을 한 줄에 정돈) --- */
+/* --- 배지 영역은 폭이나 필터에 관계없이 두 줄 높이를 유지한다. --- */
 .tcbe-badge-row {
-  display: inline-flex;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  height: 62px;
+  min-height: 62px;
   margin: 4px 0 6px 0;
   width: fit-content;
   max-width: 100%;
   box-sizing: border-box;
+}
+
+/* 새 가상 카드에도 배지 공간을 먼저 확보하여 주입 전후 측정 높이를 유지한다. */
+html[data-tcbe-board-level] .virtuoso-grid-item > :is([data-slot="card"], .bg-dialog-background) > .flex.flex-row.gap-2 {
+  min-height: 122px;
+}
+
+/* 차수 필터는 지연된 배지 갱신과 독립적으로 새 카드의 첫 측정부터 적용한다. */
+html:is([data-tcbe-board-level="1"], [data-tcbe-board-level="2"]) .virtuoso-grid-item > :is([data-slot="card"], .bg-dialog-background) > .items-center > :nth-child(2),
+html[data-tcbe-board-level="3"] .virtuoso-grid-item > :is([data-slot="card"], .bg-dialog-background) > .items-center > :nth-child(1),
+html[data-tcbe-board-level="1"] .virtuoso-grid-item > :is([data-slot="card"], .bg-dialog-background) > .items-center > :nth-child(1) > :nth-child(2),
+html[data-tcbe-board-level="2"] .virtuoso-grid-item > :is([data-slot="card"], .bg-dialog-background) > .items-center > :nth-child(1) > :nth-child(1) {
+  display: none;
 }
 
 /* --- 뱃지 컨테이너 (사도 카드 위의 보크 현황 뱃지 - 트릭컬 공식 스타일) --- */

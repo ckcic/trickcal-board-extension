@@ -3,12 +3,14 @@
  * @description 사도의 보드 진행도(상급 크레파스/최상급 크레파스 노드) 및 스탯별/성격별/성급별 진행도를 계산하는 순수 함수 모음
  */
 
+import { getNormalStatUnitValue } from './normalStatValues.ts';
 import type {
   ApostleProgress,
   BoardNodeProgress,
   BoardProgress,
   ExtractedApiData,
   MasterBoardNode,
+  NodeStat,
   NormalBoardProgress,
   NormalStatDetail,
   PersonalityMeta,
@@ -136,6 +138,12 @@ export function getNodeStatCategories(node: MasterBoardNode): StatCategory[] {
       }
     }
   }
+  if (!node.stats?.length && node.displayStat) {
+    for (const statType of node.displayStat) {
+      const cat = getStatCategoryFromStatType(statType);
+      if (cat) result.add(cat);
+    }
+  }
   return Array.from(result);
 }
 
@@ -152,6 +160,7 @@ export function createEmptyStatCountMap(): Record<StatCategory, StatCountSummary
 export function createEmptyNormalStatMap(): Record<StatCategory, NormalStatDetail> {
   return Object.fromEntries(
     STAT_CATEGORIES.map(cat => [cat, {
+      valuesKnown: true,
       picked: 0, remaining: 0, total: 0,
       smallPicked: 0, smallTotal: 0, largePicked: 0, largeTotal: 0,
       smallUnitValue: 0, largeUnitValue: 0,
@@ -447,10 +456,26 @@ export function calculateApostleProgress(
           addNodeCost(apostleNormalCost.remaining, node);
         }
 
-        if (node.stats && Array.isArray(node.stats)) {
-          for (const s of node.stats) {
+        // API의 실제 수치를 우선하고 종류만 제공되면 태생 성급별 일반칸 표로 복원한다.
+        let valuesKnown = Boolean(node.stats?.length);
+        const normalStats: NodeStat[] = node.stats?.length ? node.stats : [...new Set(node.displayStat ?? [])]
+          .filter(statType => getStatCategoryFromStatType(statType) !== null)
+          .map(statType => {
+            const category = getStatCategoryFromStatType(statType)!;
+            const value = getNormalStatUnitValue(gradeDefault, category, isLargeNormal);
+            return { statType, statValue: value ?? 0 };
+          });
+        if (!node.stats?.length && normalStats.length > 0) {
+          valuesKnown = normalStats.every(stat => getNormalStatUnitValue(
+            gradeDefault, getStatCategoryFromStatType(stat.statType)!, isLargeNormal
+          ) !== null);
+        }
+        if (normalStats.length) {
+          for (const s of normalStats) {
             const cat = getStatCategoryFromStatType(s.statType);
             if (cat) {
+              boardNormalStats[cat].valuesKnown &&= valuesKnown;
+              apostleNormalStats[cat].valuesKnown &&= valuesKnown;
               const val = Number(s.statValue) || 0;
               boardNormalStats[cat].total += val;
               apostleNormalStats[cat].total += val;

@@ -81,6 +81,8 @@ export function createApostleEnhanceRow(
  * 보드 기준 필터에 따라 사도 카드 내부의 1, 2, 3차 보드 열 및 묶음 row 표시/숨김 (캐시 적용)
  */
 export function applyBoardLevelVisibility(card: HTMLElement, boardLevel: FilterState['boardLevel']) {
+  // 가상 목록은 새 카드가 측정되기 전부터 전역 CSS로 같은 차수를 표시한다.
+  if (card.closest('.virtuoso-grid-item')) return;
   // 캐시 확인: 이미 동일한 표시 상태가 적용되어 있다면 DOM 순회/갱신 생략
   if (card.getAttribute('data-tcbe-visible-level') === boardLevel) {
     return;
@@ -346,6 +348,16 @@ export function applyFilterToCards(
     if (!progress) return;
 
     total++;
+
+    // 가상 목록의 입력은 MAIN 브리지에서 이미 필터·정렬했다.
+    // 렌더된 카드만 다시 숨기면 높이 0인 슬롯을 측정하여 스크롤 범위가 흔들린다.
+    if (card.closest('.virtuoso-grid-item')) {
+      card.classList.remove('tcbe-card-hidden');
+      if (card.style.order !== '') card.style.order = '';
+      updateBoardTileHighlights(card, progress, filter);
+      visible++;
+      return;
+    }
 
     // 1. 보드 차수별 카드 내 가시성 적용 (1차 선택 시 1차만 표시 등)
     applyBoardLevelVisibility(card, filter.boardLevel);
