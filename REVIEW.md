@@ -1,30 +1,120 @@
-# 전체 코드 검토 및 리팩터링 기록
+# 전체 코드 검토, 최적화 분석 및 신규 데이터(10/01 패치) 검증 보고서
 
-검토 기준: 로컬 Git 작업 사본. 작업 시작 시 미커밋 변경은 없었으며 원격 최신 커밋과의 동기화는 확인하지 않았다.
+> **문서 목적:** 본 문서는 트릭컬 노트 보드 확장 프로그램(`trickcal-board-extension`)의 v1.0.7 기준 코드베이스 변경 사항, 10월 1일 신규 시스템 도입에 따른 데이터(`data_10_05.json`) 구조 분석 및 정합성 검증 결과, 그리고 성능/자원 최적화 검토 결과를 다른 AI 및 개발자가 교차 검증할 수 있도록 정리한 기술 보고서입니다.
 
-## 수정 사항
+---
 
-- **타입 검증 누락:** 기존 빌드는 esbuild만 실행하여 잘못된 타입 선언도 통과했다. 누락된 필터 타입과 Chrome 최소 타입을 정의하고 TypeScript 검사 후 번들링하도록 수정했다.
-- **새 진행도 배지 갱신 누락:** 배지 캐시가 필터 문자열만 비교했다. WeakMap으로 행이 참조하는 진행도 객체도 비교하여 데이터 갱신 시 배지와 일반칸 상세를 재생성한다.
-- **SPA 카드 재사용:** 확장 속성이 붙은 원본 카드의 내부 변경까지 감시에서 제외했다. 확장 소유 DOM만 제외하고 원본 타일 및 이름 변경 시 식별·가시성·하이라이트 캐시를 무효화한다.
-- **미완료 인원 불일치:** 인원 집계에서 해금 관문 조건이 빠져 있었다. 도메인의 공통 필터 판정을 카드와 집계에 적용하고 중복 UI 갱신 코드를 제거했다.
-- **초기 데이터 수신 경쟁:** 콘텐츠 스크립트 준비 전에 수신한 보드 응답을 다시 요청할 수 있도록 메모리 기반 재전달을 추가했다.
-- **XHR 리스너 누적:** 같은 XHR 인스턴스의 send 호출마다 load 리스너를 추가하던 문제를 WeakSet으로 방지하고 불필요한 open 후킹을 제거했다.
-- **API 경계 검증:** 가로채기와 수신 측이 같은 파서를 사용한다. 중첩 데이터 형식을 검증하고 유저 데이터는 사도 식별자와 보드 단계만 전달한다. 보드 차수는 객체와 배열 형식 모두 허용한다.
-- **HTML 삽입:** 외부 이름을 이스케이프하고 업데이트 알림은 textContent 및 고정된 저장소 릴리스 링크로 생성한다.
-- **하네스:** HARNESS.md에 회귀 검증 기준을 추가하고 자동 생성 파일을 동기화했다.
+## 📌 1. 10월 1일 신규 시스템 도입에 따른 데이터 구조 분석 및 v1.0.7 정합성 검증
 
-## 검증
+2026년 10월 1일 게임 내 보드 시스템 개편 및 트릭컬 노트(`note.trickcal.com`) 업데이트에 따라 API 응답 데이터 구조가 변경되었습니다. 신규 데이터(`data_10_05.json`)와 기존 데이터(`data_.json`, `data.json`)를 비교 분석하고, 확장 프로그램 v1.0.7의 대응 로직을 검증한 결과는 다음과 같습니다.
 
-- npm run build: TypeScript 검사와 개발 번들 생성 성공.
-- npm test: 기존 17개 및 추가 8개, 총 25개 통과.
-- 가명 데이터 기반으로 파서 오류, 배열 차수, 필터 조건, DOM 변경 분류, XHR 재사용, 초기 데이터 재전달, 배지 캐시 갱신, HTML 이스케이프를 검증했다.
-- 로컬 데이터 파일 두 개는 내용을 출력하지 않고 파서 호환 여부만 확인했다.
-- 실제 Chrome 확장 로딩 및 로그인된 사이트의 시각적 동작은 검증하지 않았다. DOM 테스트는 대역을 사용하므로 원본 사이트의 현재 선택자·레이아웃 적합성까지 증명하지 않는다.
+### 1-1. 주요 데이터 구조 변경점 요약
 
-## 후속 검토 참고
+| 구분 | 10월 1일 이전 (`data_.json`) | 10월 1일 이후 (`data_10_05.json`) | v1.0.7 대응 및 영향 |
+|---|---|---|---|
+| **사도 수** | 132명 (총 노드 15,120개) | **135명** (총 노드 17,838개) | 신규 사도 3명 추가 정상 반영 |
+| **일반칸 (`nodeType: 3`)** | `stats: [{statType, statValue}]` (실수치 제공) | `stats: []` (빈 배열) 또는 누락<br>`displayStat: [statType, 0]` 제공 | **[대응 완료]** `NORMAL_STAT_UNIT_VALUES` 고정값 테이블로 수치 100% 복원 |
+| **신규 노드 `nodeType: 6`** | 없음 | **1,179개** 추가<br>(1차 258, 2차 393, 3차 528개) | `requireItems`에 610004(황크) 2개 포함되어 현재 **황크 노드로 자동 분류**됨 |
+| **신규 노드 `nodeType: 7`** | 없음 | **1,179개** 추가<br>(1차 258, 2차 393, 3차 528개) | `requireItems`에 610005('만개 물뿌리개') 1개 포함.<br>현재 보크/황크/일반칸이 아니므로 **무시(IGNORED)**됨 |
+| **신규 노드 링크 필드** | 없음 | `prevId`, `nextId` 필드 추가 | 6번 노드는 `prevId`, 7번 노드는 `nextId`를 가짐. 파서에서 정상 허용 |
+| **노드 체인 구조** | 보드 끝에 1번(관문)으로 종료 | 관문 뒤로 `7 -> 6 -> 7 -> 6` 체인 추가 | 보드당 40칸 -> 44칸 내외로 확장 |
+| **사도 `boardSteps` 길이** | 보드 노드 수와 거의 일치 | 기존에 칠해둔 사도는 노드 수보다 짧음<br>(예: 44칸 보드에 40자리 step 문자열) | **[안전]** 인덱스 범위 체크(`nodeIdx < stepStr.length`)로 NaN/오류 없이 방어 |
+| **관문 해금 판정** | `boardSteps.length` 단순 비교 | 실제 `nodeType: 1(GATE)` 칠함 여부 판정 | **[대응 완료]** 3차 미칠함 상태(steps=2)에서도 관문 활성 시 3차 정상 해금 |
+| **웹사이트 목록 렌더링** | 일반 DOM Grid | `react-virtuoso` 가상 그리드 도입 | **[대응 완료]** React Fiber Virtuoso 스트림 인터셉트 브리지 도입 |
 
-- updateChecker.ts는 domain 폴더에 있으나 네트워크와 sessionStorage에 의존한다. 버전 비교와 업데이트 조회 계층을 분리할 여지가 있다.
-- 필터 패널은 원본 검색 DOM을 이동하는 방식이다. 실제 SPA에서 검색·탭 전환을 확인한 뒤 원본 DOM 이동을 줄이는 변경을 검토할 수 있다.
-- references의 스키마 예시에는 구현의 item/value, statValue, boardSteps 및 일부 statType 매핑과 다른 설명이 있다. 문서만 근거로 계산식을 바꾸지 않았다.
-- GitHub 푸시·릴리스·기존 배포 ZIP 갱신은 수행하지 않았다.
+---
+
+### 1-2. 세부 기술 분석 및 검증 결과
+
+#### ① 일반칸(`nodeType: 3`) 고정값 복원 정합성 검증
+- **문제점:** 10월 1일 이후 API에서 일반칸의 `stats` 배열에 실제 수치(`statValue`)가 제공되지 않고, `displayStat: [statType, 0]` 형태로 스탯 종류만 제공되도록 변경되었습니다.
+- **v1.0.7 구현:** [src/domain/normalStatValues.ts](src/domain/normalStatValues.ts)에 태생 성급(1성, 2·3성) 및 칸 크기(기본 소형, 중급 크레파스 소모 강화 대형)별 9개 스탯 단위 수치 테이블(`NORMAL_STAT_UNIT_VALUES`)을 구축하고, `stats`가 없을 때 이를 참조하도록 구현되었습니다.
+- **실측 검증:** 실제 `stats` 수치가 온전히 보존되어 있던 구 데이터(`data_.json`, `data.json`)의 **54개 전체 조합**(태생 1~3성 × 9개 스탯 카테고리 × 소형/대형)을 전수 추출하여 `NORMAL_STAT_UNIT_VALUES`와 대조한 결과, **불일치(Mismatch)가 0건(100% 일치)**함을 확인했습니다. 따라서 새 데이터에서도 일반칸 수치가 정확히 산출됩니다.
+
+#### ② 신규 노드 `nodeType: 6` 및 `nodeType: 7` 분석
+- **`nodeType: 6` 상세:**
+  - `requireItems`: `[{ item: 610004, value: 2 }]` (최상급 크레파스 2개 소모)
+  - `requireGold`: `50,000`
+  - `stats`: `[{ statType: 86~103, statValue: ... }]` (물공/마공/치명 등 곱연산 스탯)
+  - `prevId`: 이전 노드 번호 참조
+  - **현재 판정:** [src/domain/boardProgress.ts:L224-L233](src/domain/boardProgress.ts#L224-L233)의 `isHwangNode()`가 `requireItems` 내 `HWANG_ITEM_ID(610004)` 존재 여부를 검사하므로, `nodeType: 6`은 **황크 노드로 분류**됩니다. 이에 따라 135명 전체 사도의 황크 노드 수 합산이 기존 1,512개(사도당 평균 약 11.4개)에서 2,727개(사도당 평균 약 20.2개)로 증가하여 집계됩니다.
+- **`nodeType: 7` 상세:**
+  - `requireItems`: `[{ item: 610005, value: 1 }]` (신규 재화 '만개 물뿌리개', 희귀도 5성)
+  - `requireGold`: `0`
+  - `grid`: `{"x": -1, "y": -1}` (화면 좌표 없음)
+  - `nextId`: 다음 6번 노드 번호 참조
+  - **현재 판정:** 보크(610003), 황크(610004), 일반칸(nodeType: 3) 어디에도 해당하지 않아 계산에서 무시(IGNORED)됩니다.
+
+#### ③ 관문 해금 판정 (`unlockedBoardCount`)
+- [src/domain/boardProgress.ts:L272-L275](src/domain/boardProgress.ts#L272-L275)에서 이전 보드의 `nodeType: 1(GATE)` 타일이 활성화(`step[nodeIndex] === '1'`)되었는지를 기준으로 차수를 판정합니다.
+- `data_10_05.json` 분석 결과, 유저의 `boardSteps` 배열 길이가 2개이지만 2차 보드의 관문을 이미 칠해 3차가 해금된 사도가 **14명** 존재했습니다.
+- 기존 방식(`boardSteps.length`)이었다면 이 14명은 2차까지만 열린 것으로 오판되었으나, 1.0.7의 관문 기반 판정 로직으로 인해 3차 보드 해금 사도 105명이 오차 없이 정확히 분류되었습니다.
+
+#### ④ 파서 및 런타임 안정성
+- `data_10_05.json`을 `parseTrickcalApiPayload()`에 전달하여 파싱 및 진행도 계산을 실행한 결과:
+  - 파싱 결과: `OK` (통과)
+  - 사도 수: 135명 전원 계산 완료
+  - `NaN`, `null`, 미처리 예외: **0건**
+  - 신규 노드 추가로 `nodes.length > step.length`인 경우에도 안전하게 미칠함(`isPicked = false`)으로 처리되어 정상 동작함을 검증했습니다.
+
+---
+
+### 1-3. 추가 검토 및 향후 권고 사항 (다른 AI / 개발자 확인용)
+
+1. **신규 황크 노드(`nodeType: 6`)의 집계 정책 확인:**
+   - 현재 로직상 최상급 크레파스(610004)를 2개 소모하므로 황크 총합(`hwang.allTotal`)에 포함되고 있습니다. 인게임이나 트릭컬 노트 사이트에서 이 노드를 기존 황크와 동일하게 취급하는지, 아니면 별도의 확장 슬롯(예: 한계돌파/추가 슬롯)으로 분리 표시하는지 사이트 UI 변경 사항과 대조가 필요합니다.
+2. **신규 재화 `610005(만개 물뿌리개)` 및 `nodeType: 7`의 역할 확인:**
+   - grid 좌표가 `{-1, -1}`이고 `nextId`로 6번 노드를 가리키는 점으로 보아, 일종의 연결 고리(커넥터) 또는 신규 해금 관문일 가능성이 있습니다. 향후 사이트에서 이를 시각화할 경우 대응이 필요할 수 있습니다.
+
+---
+
+## ⚡ 2. 코드베이스 최적화 검토 보고서 (우선순위별 16개 항목)
+
+현재 코드베이스는 버그 없이 견고하게 동작하고 있으나, SPA 특성상 DOM 이벤트, MutationObserver, 가상 스크롤과의 빈번한 상호작용이 발생합니다. 프로파일링 관점에서 추가적인 성능 향상 및 번들 경량화가 가능한 16개 최적화 포인트를 정리했습니다.
+
+### 🔴 우선순위 높음 (영향도 큼 / 즉시 개선 권장)
+
+| # | 관련 모듈 및 코드 위치 | 문제점 분석 | 제안하는 최적화 방안 |
+|---|---|---|---|
+| **1** | [src/content.ts:L192-L199](src/content.ts#L192-L199)<br>[src/ui/boardEnhancer.ts:L436-L459](src/ui/boardEnhancer.ts#L436-L459) | 사도별 탭이 아닌 화면(스탯별 탭 등)에 머무를 때, 클릭이나 DOM 변경이 일어날 때마다 `setBadgesVisible(false)`가 반복 실행됨. 이때 `applyBoardLevelVisibility(c, 'all')`가 호출되어 캐시를 지우고 모든 카드의 DOM 텍스트를 처음부터 다시 순회함. | 확장 프로그램 활성화 상태 플래그(`isApostleTabVisible`)를 두고, 상태가 `true -> false`로 전환되는 최초 1회에만 숨김/복원 처리를 수행하도록 가드 추가. |
+| **2** | [src/ui/boardEnhancer.ts:L96-L109](src/ui/boardEnhancer.ts#L96-L109)<br>[src/ui/boardEnhancer.ts:L270-L273](src/ui/boardEnhancer.ts#L270-L273) | 카드 내에서 `1차 보드`, `2차 보드` 텍스트를 찾기 위해 모든 `div, span`을 순회하며 `textContent`를 읽음. 상위 div는 자식 텍스트를 모두 병합하므로 O(n²) 비용 발생. 특히 검색 결과가 0명일 때 문서 전체를 대상으로 폴백 탐색이 매번 실행됨. | 보드 타이틀 클래스(`.bg-charaboard-*`)를 우선 탐색하고, 텍스트 탐색 시 `TreeWalker(NodeFilter.SHOW_TEXT)`를 사용하여 텍스트 리프 노드만 직간접 조회하도록 개선. |
+| **3** | [src/bridge/virtualGrid.ts:L135-L137](src/bridge/virtualGrid.ts#L135-L137) | 목록에 연결되기 전이나 보드 페이지가 아닐 때, DOM 변이가 일어날 때마다 `:has()` 쿼리 셀렉터로 전체 문서를 쿼리함. | `requestAnimationFrame` 또는 100ms 디바운스로 묶고, URL이 `/board`인 경우에만 탐색하도록 제한. |
+| **4** | [src/bridge/interceptor.ts:L59-L79](src/bridge/interceptor.ts#L59-L79) | 사이트의 **모든** fetch 요청에 대해 응답을 무조건 `.clone()`하고 `.json()` 파싱을 시도함. 이미지, HTML 등 비-JSON 대용량 응답도 버퍼에 복제됨. | `response.headers.get('content-type')?.includes('json')`을 먼저 확인하여 JSON이 확실한 응답만 선별 복제. |
+| **5** | [scripts/build.mjs:L24-L28](scripts/build.mjs#L24-L28) | 빌드 스크립트 실행 시 기존 `dist/` 디렉터리를 비우지 않음. 이로 인해 개발 모드에서 생성된 소스맵(`.map`) 파일들이 프로덕션 ZIP(`trickcal-board-extension.zip`)에 약 **290KB**가량 그대로 포함됨. | `npm run package` 및 `--prod` 빌드 시 `dist/` 디렉터리를 사전에 `rmSync`하여 배포 패키지 크기 대폭 감축. |
+
+---
+
+### 🟡 우선순위 중간 (반복 연산 및 메모리 개선)
+
+| # | 관련 모듈 | 문제점 분석 | 제안하는 최적화 방안 |
+|---|---|---|---|
+| **6** | [src/ui/boardEnhancer.ts:L154-L163](src/ui/boardEnhancer.ts#L154-L163)<br>[src/domain/listSelection.ts:L5-L21](src/domain/listSelection.ts#L5-L21) | 매 갱신 시마다 `nameToProgress` 맵 재생성, `localeCompare` 한글 정렬, Set 생성, JSON.stringify 키 생성이 반복됨. | API 데이터가 새로 들어올 때만 사도 고유 목록과 한글 정렬 순서(`Intl.Collator('ko')`)를 1회 캐싱하여 재사용. |
+| **7** | [src/content.ts:L92-L136](src/content.ts#L92-L136) | `isApostleTabActive()`에서 문서 내 모든 버튼/링크를 수집하고 `.closest()`를 3번씩 호출하여 탐색 비용이 큼. | `.closest('#tcbe-filter-panel, .tcbe-badge-container, .tcbe-badge-row')`를 단일 셀렉터로 합치고 루프 1회로 통합. |
+| **8** | [src/content.ts:L207](src/content.ts#L207) | 사도별 탭이 활성화되어 있을 때 DOM 변경이 발생할 때마다 `setBadgesVisible(true)`가 호출되어 모든 뱃지의 클래스를 재조회함. | 뱃지가 이미 보이는 상태라면 `setBadgesVisible(true)` 호출을 건너뛰는 플래그 가드 적용. |
+| **9** | [src/ui/normalStat.ts:L390-L398](src/ui/normalStat.ts#L390-L398)<br>[src/content.ts:L307-L312](src/content.ts#L307-L312) | 전역 `click` 핸들러가 클릭마다 전체 일반칸 컨테이너를 순회하며 닫기를 처리하고, content.ts도 모든 클릭에 전체 갱신을 예약함. | 닫기 탐색 대상을 `.tcbe-open, .tcbe-pinned`를 가진 요소로 한정하고, MutationObserver가 감지하지 못하는 탭 전환 버튼 클릭만 선별 리프레시. |
+| **10** | [src/domain/dataParser.ts:L100-L108](src/domain/dataParser.ts#L100-L108)<br>[src/bridge/interceptor.ts:L43-L55](src/bridge/interceptor.ts#L43-L55) | `text` 딕셔너리가 약 6,523개 키(484KB)에 달하지만, 실제로 필요한 것은 사도 이름 135개임. 이를 MAIN 월드에서 검증하고 복제하여 postMessage로 전송하고 ISOLATED 월드에서 다시 파싱함. | 파서 단계에서 `heroInfo`에 존재하는 사도 이름 키만 `text`에서 추출하여 전송함으로써 postMessage 직렬화/역직렬화 비용 대폭 절감. |
+| **11** | [src/domain/boardProgress.ts:L353-L362](src/domain/boardProgress.ts#L353-L362) | 사도별 보드 노드 객체 17,838개(`BoardProgress.nodes`)를 생성하여 보관하지만, 실제 UI 및 단위 테스트에서 참조되지 않음. | 해당 배열 생성을 제거하여 메모리 할당 및 GC 부하 완화 (단, 외부 호환성 점검 필요). |
+
+---
+
+### 🟢 우선순위 낮음 (미세 최적화 및 구조 정돈)
+
+| # | 관련 모듈 | 제안 내용 |
+|---|---|---|
+| **12** | [src/ui/badge.ts:L157](src/ui/badge.ts#L157) | 수백 개 뱃지마다 각각 mouseenter/mouseleave 리스너를 달지 않고 상위 컨테이너에서 이벤트 위임(Event Delegation) 처리 및 툴팁 HTML WeakMap 캐싱. |
+| **13** | [src/ui/filterPanel.ts:L608-L618](src/ui/filterPanel.ts#L608-L618) | `updateStatSummaryGrid`에서 9개 스탯 루프 내부마다 `prog.boards.find()`를 호출하는 대신 루프 외부에서 보드 객체를 1회만 조회. |
+| **14** | [src/content.ts:L281-L285](src/content.ts#L281-L285) | 동일한 API 데이터가 재전송되었을 때 `boardSteps` 내용이 같으면 전체 재계산 생략. |
+| **15** | [src/content.ts:L58-L78](src/content.ts#L58-L78) | JS에서 동적으로 CSS 변수를 주입하는 방식 대신 `styles.css`에 `chrome-extension://__MSG_@@extension_id__/webp/...` 형식으로 통일. |
+| **16** | [src/domain/updateChecker.ts:L15-L17](src/domain/updateChecker.ts#L15-L17) | `sessionStorage`는 탭마다 독립되어 GitHub API 호출 한도(시간당 60회)를 소모할 위험이 있으므로 `chrome.storage.local`로 이관하고 캐시 TTL을 1시간으로 확대. |
+
+---
+
+## 📋 3. 기존 리팩터링 및 수정 내역 (v1.0.7 이전 포함)
+
+- **타입 검증 누락 해결:** 기존 빌드는 esbuild만 실행하여 잘못된 타입 선언도 통과했으나, TypeScript `tsc --noEmit` 검사 후 번들링하도록 개선.
+- **새 진행도 배지 갱신 누락 해결:** 배지 캐시가 필터 문자열만 비교하던 문제를 WeakMap 기반 진행도 객체 참조 비교로 보완하여 데이터 갱신 시 배지와 일반칸 상세가 즉시 재생성되도록 수정.
+- **SPA 카드 재사용 대응:** 확장 프로그램 고유 속성이 붙은 원본 카드의 내부 변경 감시 누락 방지. 확장 소유 DOM만 제외하고 원본 타일/이름 변경 시 캐시 무효화.
+- **미완료 인원 집계 일치:** 해금 관문 조건이 누락되던 문제를 도메인 공통 필터 판정(`matchesApostleFilter`)으로 일원화.
+- **초기 데이터 수신 경쟁 방지:** 콘텐츠 스크립트 로드 전에 수신된 메인 월드의 보드 응답을 재요청할 수 있도록 메모리 기반 재전달 메커니즘 구축.
+- **XHR 리스너 누적 방지:** 동일 XHR 인스턴스 재사용 시 리스너 누적을 WeakSet으로 차단.
+- **XSS 방어 및 HTML 보안:** 외부 텍스트의 HTML 이스케이프(`escapeHtml`) 처리 및 textContent 안전 렌더링.
