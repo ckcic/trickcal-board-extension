@@ -44,7 +44,7 @@ function renderCostItems(cost: ResourceCostSummary, showPathDefaults = false): s
 
 /** 원본처럼 관문 안내를 경로 재화의 첫 행에 표시한다. */
 export function renderBokrPathCost(pathResult: BokrPathResult): string {
-  if (pathResult.isTargetPicked) return '<p>✓ 이 칸은 색칠되어 있어요</p>';
+  if (pathResult.isTargetPicked) return '<div class="tcbe-cost-item"><span class="tcbe-cost-icon tcbe-cost-check" aria-hidden="true"></span><span>이 칸은 색칠되어 있어요</span></div>';
   const gates = (pathResult.gateRequirements || []).map(gate =>
     `<div class="tcbe-cost-item"><span class="tcbe-cost-icon tcbe-cost-gate" aria-hidden="true"></span><span>${gate.boardLevel}번 관문 오픈 필요</span></div>`
   ).join('');
@@ -60,6 +60,8 @@ export function renderBokrBoard(options: BokrModalOptions): string {
   const maxX = Math.max(...layout.map(entry => entry.x));
   const maxY = Math.max(...layout.map(entry => entry.y));
   const minY = Math.min(...layout.map(entry => entry.y));
+  const columns = Math.max(7, maxX - minX + 1);
+  const columnOffset = Math.floor((columns - (maxX - minX + 1)) / 2);
   const path = new Set(pathResult.pathSteps?.map(step => `${step.boardIndex}:${step.nodeId}`));
   const tiles = layout.map(entry => {
     const node = entry.node;
@@ -76,9 +78,9 @@ export function renderBokrBoard(options: BokrModalOptions): string {
     const position = key ? STAT_TO_POSITIONS[key][entry.picked ? 'active' : 'inactive'][0] : '0%';
     const icon = node.nodeType === NODE_TYPE.GATE ? '<span class="tcbe-map-gate"></span>'
       : `<span class="tcbe-map-icon" style="background-position:${position} 0"></span>`;
-    return `<div class="tcbe-map-tile ${selected ? 'tcbe-map-selected' : ''} ${onPath ? 'tcbe-map-path' : ''}" data-board="${entry.boardIndex + 1}" data-node="${node.id}" style="grid-column:${entry.x - minX + 1};grid-row:${maxY - entry.y + 1};background-position:${frame} 0" title="${escapeHtml(label)}" role="img" aria-label="${escapeHtml(label)}">${icon}${entry.picked ? '<span class="tcbe-map-check" aria-hidden="true"></span>' : ''}</div>`;
+    return `<div class="tcbe-map-tile ${selected ? 'tcbe-map-selected' : ''} ${onPath ? 'tcbe-map-path' : ''}" data-board="${entry.boardIndex + 1}" data-node="${node.id}" style="grid-column:${maxX - entry.x + 1 + columnOffset};grid-row:${maxY - entry.y + 1};background-position:${frame} 0" title="${escapeHtml(label)}" role="img" aria-label="${escapeHtml(label)}">${icon}</div>`;
   }).join('');
-  return `<div class="tcbe-bokr-map" style="aspect-ratio:${maxX - minX + 1}/${maxY - minY + 1};grid-template-columns:repeat(${maxX - minX + 1},1fr);grid-template-rows:repeat(${maxY - minY + 1},1fr)">${tiles}</div>`;
+  return `<div class="tcbe-bokr-map" style="width:${columns * 32}px;aspect-ratio:${columns}/${maxY - minY + 1};grid-template-columns:repeat(${columns},1fr);grid-template-rows:repeat(${maxY - minY + 1},1fr)">${tiles}</div>`;
 }
 
 export function showBokrModal(options: BokrModalOptions): void {
@@ -99,11 +101,10 @@ export function showBokrModal(options: BokrModalOptions): void {
         <div class="tcbe-bokr-profile">${portraitUrl && /^https:\/\/(cdn\.)?note\.trickcal\.com\//.test(portraitUrl) ? `<img class="tcbe-bokr-portrait" src="${escapeHtml(portraitUrl)}" alt="${escapeHtml(progress.name)}">` : ''}<div class="tcbe-bokr-profile-info"><div class="tcbe-bokr-hero-sub">${progress.unlockedBoardCount}차 보드 열림 · ${boardIndex + 1}차 보드</div><div class="tcbe-bokr-hero-name"><span class="tcbe-sprite-pers tcbe-sprite-pers-${personality?.spriteIndex ?? 0}" aria-label="${escapeHtml(personality?.nameKo || '')}"></span><strong>${escapeHtml(progress.name)}</strong></div></div></div>
         <div class="tcbe-bokr-layout">
           <section class="tcbe-bokr-location"><h3>선택한 칸 위치</h3><div class="tcbe-bokr-map-scroll tcbe-map-path-only">${renderBokrBoard(options)}</div>
-            <h3>경로만 강조</h3><div class="tcbe-bokr-toggle-group" role="group" aria-label="경로만 강조"><button type="button" data-highlight="off" aria-pressed="false">끔</button><button type="button" data-highlight="on" aria-pressed="true">켬</button></div>
+            <h3>경로만 강조</h3><div class="tcbe-bokr-toggle-group" role="group" aria-label="경로만 강조"><button type="button" data-highlight="off" aria-pressed="false"><span class="tcbe-toggle-checkbox" aria-hidden="true"></span><span class="tcbe-toggle-label">끔</span></button><button type="button" data-highlight="on" aria-pressed="true"><span class="tcbe-toggle-checkbox" aria-hidden="true"></span><span class="tcbe-toggle-label">켬</span></button></div>
           </section>
           <div class="tcbe-bokr-costs"><section class="tcbe-bokr-card"><h3>선택한 칸 ${pathResult.isTargetPicked ? '원래 비용' : '비용'}</h3><div class="tcbe-bokr-stat-banner"><span class="tcbe-sprite-stat tcbe-sprite-stat-${stat?.spriteIndex ?? 0}" aria-hidden="true"></span><span>${escapeHtml(stat?.nameKo || '스탯 미상')}${increase === undefined ? '' : ` +${increase}`}</span></div>${renderCostItems(pathResult.targetNodeCost)}</section>
             <section class="tcbe-bokr-card"><h3>색칠 경로 추가 비용</h3>${renderBokrPathCost(pathResult)}</section>
-            <details class="tcbe-bokr-total-box"><summary>총 필요 재화</summary>${renderCostItems(pathResult.totalCost)}</details>
           </div>
         </div>
       </div>
@@ -118,7 +119,7 @@ export function showBokrModal(options: BokrModalOptions): void {
   const onKeydown = (event: KeyboardEvent) => {
     if (event.key === 'Escape') { event.preventDefault(); closeBokrModal(); }
     if (event.key !== 'Tab') return;
-    const focusable = Array.from(dialog.querySelectorAll<HTMLElement>('button, summary'));
+    const focusable = Array.from(dialog.querySelectorAll<HTMLElement>('button'));
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
     if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) { event.preventDefault(); last?.focus(); }

@@ -23,19 +23,20 @@
 #tcbe-bokr-modal-container .tcbe-bokr-stat-banner { display: flex; align-items: center; gap: 8px; padding-bottom: 6px; font-size: 13px; }
 #tcbe-bokr-modal-container .tcbe-bokr-layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 8px; }
 #tcbe-bokr-modal-container .tcbe-bokr-map-scroll { width: 224px; max-width: 100%; margin: 16px auto; }
-#tcbe-bokr-modal-container .tcbe-bokr-map { display: grid; width: 100%; gap: 0; }
+#tcbe-bokr-modal-container .tcbe-bokr-map { display: grid; max-width: 100%; margin: auto; gap: 0; }
 #tcbe-bokr-modal-container .tcbe-map-tile { position: relative; aspect-ratio: 1; min-width: 0; background-image: url('https://note.trickcal.com/UI/BoardRect.webp'); background-size: 700% 100%; border-radius: 5px; }
-#tcbe-bokr-modal-container .tcbe-map-check { position: absolute; right: -1px; bottom: -1px; width: 45%; height: 45%; background: url('https://note.trickcal.com/UI/Crayon_check.webp') center / contain no-repeat; }
 #tcbe-bokr-modal-container .tcbe-map-icon { display: block; width: 100%; height: 100%; background-image: url('https://note.trickcal.com/UI/BoardTile.webp'); background-size: 2300% 100%; }
 #tcbe-bokr-modal-container .tcbe-map-gate { display: block; width: 100%; height: 100%; background-image: var(--tcbe-gate-icon); background-size: contain; background-position: center; background-repeat: no-repeat; }
 #tcbe-bokr-modal-container .tcbe-map-path-only .tcbe-map-tile:not(.tcbe-map-path):not(.tcbe-map-selected) { opacity: .4; }
 #tcbe-bokr-modal-container .tcbe-map-selected { outline: 2px solid #466ee8; outline-offset: -2px; }
 #tcbe-bokr-modal-container .tcbe-map-path-only .tcbe-map-path { outline: 2px solid #466ee8; outline-offset: -2px; }
-#tcbe-bokr-modal-container .tcbe-bokr-toggle-group { display: flex; align-items: center; gap: 5px; justify-content: center; }
-#tcbe-bokr-modal-container .tcbe-bokr-toggle-group button { width: 44%; min-height: 28px; font-size: 14px; border: 1px solid #b4c68e; border-radius: 7px; background: #f7fbe9; padding: 3px 8px; }
-#tcbe-bokr-modal-container .tcbe-bokr-toggle-group button::before { content: ''; display: inline-block; vertical-align: middle; width: 18px; height: 18px; background: #c1dc87; border-radius: 3px; margin-right: 8px; }
-#tcbe-bokr-modal-container .tcbe-bokr-toggle-group button[aria-pressed="true"] { background: #ffdc64; border-color: #e1c35d; }
-#tcbe-bokr-modal-container .tcbe-bokr-toggle-group button[aria-pressed="true"]::before { background: url('https://note.trickcal.com/UI/Crayon_check.webp') center / contain no-repeat; }
+#tcbe-bokr-modal-container .tcbe-bokr-toggle-group { display: flex; align-items: center; gap: 8px; justify-content: center; }
+#tcbe-bokr-modal-container .tcbe-bokr-toggle-group button { display: flex; align-items: center; width: 96px; height: 28px; font-size: 14px; border: 2px solid oklch(0.83205 0.09557 133.663); border-radius: 6px; background: oklch(0.98021 0.02841 122.082); padding: 5px; box-shadow: 0 1px 2px #0001; }
+#tcbe-bokr-modal-container .tcbe-toggle-checkbox { position: relative; flex: 0 0 14px; height: 14px; background: oklch(0.8826 0.12733 124.484); border-radius: 2px; }
+#tcbe-bokr-modal-container .tcbe-toggle-label { flex: 1; text-align: center; }
+#tcbe-bokr-modal-container .tcbe-bokr-toggle-group button[aria-pressed="true"] { background: oklch(0.88977 0.1499 94.849); border-color: oklch(0.81572 0.15095 85.199); }
+#tcbe-bokr-modal-container .tcbe-bokr-toggle-group button[aria-pressed="true"] .tcbe-toggle-checkbox { background: oklch(0.97603 0.02614 109.282); }
+#tcbe-bokr-modal-container .tcbe-bokr-toggle-group button[aria-pressed="true"] .tcbe-toggle-checkbox::after { content: ''; position: absolute; width: 24px; height: 24px; bottom: 0; left: 50%; transform: translateX(-50%); background: url('https://note.trickcal.com/UI/PopupOption_CheckIcon.webp') center / contain no-repeat; }
 #tcbe-bokr-modal-container .tcbe-bokr-costs { display: flex; flex-direction: column; gap: 14px; }
 #tcbe-bokr-modal-container .tcbe-cost-item { display: flex; align-items: center; gap: 6px; border: 0; border-radius: 0; background: transparent; box-shadow: none; font-family: inherit; font-size: 16px; padding: 2px 6px; }
 #tcbe-bokr-modal-container .tcbe-cost-icon { width: 24px; height: 24px; flex-shrink: 0; background-size: contain; background-repeat: no-repeat; background-position: center; }
@@ -45,8 +46,7 @@
 #tcbe-bokr-modal-container .pastel-ultra { background-image: var(--tcbe-pastel-ultra); }
 #tcbe-bokr-modal-container .icon-gold { background-image: var(--tcbe-gold-icon); }
 #tcbe-bokr-modal-container .tcbe-cost-gate { background-image: var(--tcbe-gate-icon); }
+#tcbe-bokr-modal-container .tcbe-cost-check { background-image: url('https://note.trickcal.com/UI/Crayon_check.webp'); }
 #tcbe-bokr-modal-container .watering-can { background-image: url('https://cdn.note.trickcal.com/Materials/a6iBdIQUa2Z8GrR0S05hucxq7qjTIFhCl.webp'); }
 #tcbe-bokr-modal-container .tcbe-cost-text, #tcbe-bokr-modal-container .tcbe-bokr-card p { font-size: 14px; line-height: 1.6; margin-bottom: 5px; }
-#tcbe-bokr-modal-container .tcbe-bokr-total-box { border-top: 1px solid #cdd8b9; padding-top: 10px; }
-#tcbe-bokr-modal-container summary { cursor: pointer; font-size: 14px; margin-bottom: 6px; }
 @media (max-width: 480px) { #tcbe-bokr-modal-container .tcbe-bokr-layout { grid-template-columns: 1fr; } }
