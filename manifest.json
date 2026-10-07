@@ -44,15 +44,5 @@
       ],
       "run_at": "document_end"
     }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "webp/*"
-      ],
-      "matches": [
-        "*://note.trickcal.com/*"
-      ]
-    }
   ]
 }

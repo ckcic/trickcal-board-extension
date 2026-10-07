@@ -25,6 +25,8 @@ function ensureDistDir() {
   if (!fs.existsSync(distDir)) {
     fs.mkdirSync(distDir, { recursive: true });
   }
+  // 서버/CDN 이미지를 사용하므로 이전 빌드에서 남은 로컬 WebP 산출물도 제거한다.
+  fs.rmSync(path.join(distDir, 'webp'), { recursive: true, force: true });
 }
 
 /**
@@ -56,19 +58,6 @@ function copyStaticFiles() {
     console.log(`[TCBE Build] Copied ${iconFiles.length} icon files to dist/icons`);
   }
 
-  // 3. webp 디렉터리 (스프라이트 이미지)
-  const webpSrcDir = path.join(rootDir, 'webp');
-  const webpDestDir = path.join(distDir, 'webp');
-  if (fs.existsSync(webpSrcDir)) {
-    if (!fs.existsSync(webpDestDir)) {
-      fs.mkdirSync(webpDestDir, { recursive: true });
-    }
-    const webpFiles = fs.readdirSync(webpSrcDir);
-    for (const file of webpFiles) {
-      fs.copyFileSync(path.join(webpSrcDir, file), path.join(webpDestDir, file));
-    }
-    console.log(`[TCBE Build] Copied ${webpFiles.length} webp sprite files to dist/webp`);
-  }
 }
 
 /**
