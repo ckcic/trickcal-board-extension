@@ -61,3 +61,18 @@ test('위치 보드는 원본처럼 오른쪽에서 왼쪽으로 X 좌표를 배
   assert.match(html, /data-node="2" style="grid-column:3;/);
   assert.match(html, /width:224px;aspect-ratio:7\/1/);
 });
+
+test('미색칠 황크만 원본의 검은 아이콘 처리를 적용하고 색칠된 황크와 보크는 유지한다', () => {
+  const nodes = [
+    { id: 1, nodeType: 5, grid: { x: 1, y: 1 }, requireItems: [{ item: 610004, value: 2 }] },
+    { id: 2, nodeType: 6, grid: { x: 2, y: 1 }, requireItems: [{ item: 610004, value: 2 }] },
+    { id: 3, nodeType: 5, grid: { x: 3, y: 1 }, requireItems: [{ item: 610004, value: 2 }] },
+    { id: 4, nodeType: 4, grid: { x: 4, y: 1 }, requireItems: [{ item: 610003, value: 3 }] },
+  ];
+  const html = renderBokrBoard({ progress: { boards: [{ masterNodes: nodes, stepStr: '0010' }] }, boardIndex: 0, targetNode: nodes[3], pathResult: {} });
+  assert.equal((html.match(/tcbe-map-hwang-inactive/g) || []).length, 2);
+  const coloredHwang = html.split('data-node="3"')[1].split('</div>')[0];
+  const bokr = html.split('data-node="4"')[1].split('</div>')[0];
+  assert.doesNotMatch(coloredHwang, /tcbe-map-hwang-inactive/);
+  assert.doesNotMatch(bokr, /tcbe-map-hwang-inactive/);
+});

@@ -77,7 +77,7 @@ export function renderBokrBoard(options: BokrModalOptions): string {
     const label = `${entry.boardIndex + 1}차 ${meta?.nameKo || kind} ${kind}${selected ? ' · 선택한 칸' : ''}${entry.picked ? ' · 색칠 완료' : ''}`;
     const position = key ? STAT_TO_POSITIONS[key][entry.picked ? 'active' : 'inactive'][0] : '0%';
     const icon = node.nodeType === NODE_TYPE.GATE ? '<span class="tcbe-map-gate"></span>'
-      : `<span class="tcbe-map-icon" style="background-position:${position} 0"></span>`;
+      : `<span class="tcbe-map-icon${isHwangNode(node) && !entry.picked ? ' tcbe-map-hwang-inactive' : ''}" style="background-position:${position} 0"></span>`;
     return `<div class="tcbe-map-tile ${selected ? 'tcbe-map-selected' : ''} ${onPath ? 'tcbe-map-path' : ''}" data-board="${entry.boardIndex + 1}" data-node="${node.id}" style="grid-column:${maxX - entry.x + 1 + columnOffset};grid-row:${maxY - entry.y + 1};background-position:${frame} 0" title="${escapeHtml(label)}" role="img" aria-label="${escapeHtml(label)}">${icon}</div>`;
   }).join('');
   return `<div class="tcbe-bokr-map" style="width:${columns * 32}px;aspect-ratio:${columns}/${maxY - minY + 1};grid-template-columns:repeat(${columns},1fr);grid-template-rows:repeat(${maxY - minY + 1},1fr)">${tiles}</div>`;
