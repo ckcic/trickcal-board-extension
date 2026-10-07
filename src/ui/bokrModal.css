@@ -17,7 +17,18 @@
 #tcbe-bokr-modal-container .tcbe-bokr-close-btn svg { width: 26px; height: 26px; flex-shrink: 0; pointer-events: none; }
 #tcbe-bokr-modal-container .tcbe-bokr-body { padding: 16px 22px 22px; display: flex; flex-direction: column; gap: 10px; }
 #tcbe-bokr-modal-container .tcbe-bokr-profile { display: flex; align-items: center; gap: 10px; }
-#tcbe-bokr-modal-container .tcbe-bokr-portrait { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #c0de89; object-fit: cover; }
+/* 원본처럼 성격 배경 위에 얼굴을 올리고 바깥 테두리와 잎 장식을 겹친다. */
+#tcbe-bokr-modal-container .tcbe-bokr-portrait-frame { position: relative; width: 56px; height: 56px; padding: 3px; flex-shrink: 0; }
+#tcbe-bokr-modal-container .tcbe-bokr-portrait { display: block; width: 50px; height: 50px; border-radius: 50%; border: 0; box-shadow: 0 0 0 2px oklch(90.75% .1082 123.565); object-fit: cover; }
+#tcbe-bokr-modal-container .tcbe-bokr-portrait[data-personality="0"] { background-color: oklch(73.608% .13429 149.845); }
+#tcbe-bokr-modal-container .tcbe-bokr-portrait[data-personality="1"] { background-color: oklch(77.013% .09175 247.218); }
+#tcbe-bokr-modal-container .tcbe-bokr-portrait[data-personality="2"] { background-color: oklch(73.294% .12955 5.345); }
+#tcbe-bokr-modal-container .tcbe-bokr-portrait[data-personality="3"] { background-color: oklch(88.861% .11028 99.237); }
+#tcbe-bokr-modal-container .tcbe-bokr-portrait[data-personality="4"] { background-color: oklch(71.961% .16023 312.162); }
+#tcbe-bokr-modal-container .tcbe-bokr-portrait[data-personality="5"] { background-image: url('https://note.trickcal.com/UI/Common_ResonanceTex_BG.webp'); background-size: cover; }
+#tcbe-bokr-modal-container .tcbe-bokr-portrait-leaf { position: absolute; bottom: 0; width: 33.3333%; transform: translateY(10%); pointer-events: none; }
+#tcbe-bokr-modal-container .tcbe-bokr-portrait-leaf-left { left: 0; }
+#tcbe-bokr-modal-container .tcbe-bokr-portrait-leaf-right { right: 0; transform: translateY(10%) scaleX(-1); }
 #tcbe-bokr-modal-container .tcbe-bokr-profile-info { flex: 1; min-width: 0; }
 #tcbe-bokr-modal-container .tcbe-bokr-hero-sub { font-size: 14px; color: #a4c75c; border-bottom: 2px solid #e3efcb; padding-bottom: 2px; }
 #tcbe-bokr-modal-container .tcbe-bokr-hero-name { display: flex; align-items: center; gap: 6px; font-size: 18px; }
