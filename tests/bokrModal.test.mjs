@@ -76,3 +76,24 @@ test('미색칠 황크만 원본의 검은 아이콘 처리를 적용하고 색�
   assert.doesNotMatch(coloredHwang, /tcbe-map-hwang-inactive/);
   assert.doesNotMatch(bokr, /tcbe-map-hwang-inactive/);
 });
+
+test('꽃잎 장식은 확장 황크에만 표시하고 황크 칠함과 별개로 꽃잎 해금 상태를 사용한다', () => {
+  const nodes = [
+    { id: 141, nodeType: 7, grid: { x: -1, y: -1 }, nextId: 42 },
+    { id: 142, nodeType: 6, grid: { x: 1, y: 1 }, prevId: 41, requireItems: [{ item: 610004, value: 2 }], stats: [{ statType: 88, statValue: 60 }, { statType: 89, statValue: 60 }] },
+    { id: 143, nodeType: 5, grid: { x: 2, y: 1 } },
+  ];
+  const progress = { boards: [{ masterNodes: nodes, stepStr: '000' }] };
+  const options = { progress, boardIndex: 0, targetNode: nodes[1], pathResult: {} };
+  assert.match(renderBokrBoard(options), /tcbe-map-flower-closed/);
+  progress.boards[0].stepStr = '100';
+  const opened = renderBokrBoard(options);
+  assert.match(opened, /tcbe-map-flower-open/);
+  assert.match(opened, /꽃잎 열림/);
+  assert.match(opened, /물마공 황크/);
+  assert.match(opened, /background-position:95.4545% 0/);
+  assert.equal((opened.match(/tcbe-map-flower-frame/g) || []).length, 1);
+  assert.equal((opened.match(/role="img"/g) || []).length, 2);
+  progress.boards[0].unlocked = false;
+  assert.match(renderBokrBoard(options), /tcbe-map-flower-closed/);
+});

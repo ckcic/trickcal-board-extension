@@ -59,6 +59,8 @@ export interface MasterBoardNode {
   stats?: NodeStat[];
   displayStat?: number[]; // 수치 없이 내려오는 일반칸 스탯 종류 (0은 빈 표시)
   requireItems?: RequireItem[];
+  prevId?: number; // 확장 황크의 선행 꽃잎 번호
+  nextId?: number; // 꽃잎이 여는 확장 황크 번호
 }
 
 /** 사도 마스터 정보 */

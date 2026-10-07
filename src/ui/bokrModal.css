@@ -28,6 +28,10 @@
 #tcbe-bokr-modal-container .tcbe-map-icon { display: block; width: 100%; height: 100%; background-image: url('https://note.trickcal.com/UI/BoardTile.webp'); background-size: auto 100%; }
 /* 원본은 미색칠 황크의 아이콘을 검게 표시해 어두운 테두리와 구분한다. */
 #tcbe-bokr-modal-container .tcbe-map-hwang-inactive { filter: brightness(0); }
+#tcbe-bokr-modal-container .tcbe-map-flower { padding: 16%; transform: scale(1.1); background-size: cover; }
+#tcbe-bokr-modal-container .tcbe-map-flower-closed { background-image: url('https://note.trickcal.com/UI/FloweringGate_HeroClose.webp'); }
+#tcbe-bokr-modal-container .tcbe-map-flower-open { background-image: url('https://note.trickcal.com/UI/FloweringGate_HeroOpen.webp'); }
+#tcbe-bokr-modal-container .tcbe-map-flower-frame { display: block; width: 100%; height: 100%; background-image: url('https://note.trickcal.com/UI/BoardRect.webp'); background-size: auto 100%; }
 #tcbe-bokr-modal-container .tcbe-map-gate { display: block; width: 100%; height: 100%; background-image: var(--tcbe-gate-icon); background-size: contain; background-position: center; background-repeat: no-repeat; }
 #tcbe-bokr-modal-container .tcbe-map-path-only .tcbe-map-tile:not(.tcbe-map-path):not(.tcbe-map-selected) { opacity: .4; }
 #tcbe-bokr-modal-container .tcbe-map-selected { outline: 2px solid #466ee8; outline-offset: -2px; }

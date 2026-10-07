@@ -47,6 +47,15 @@ export interface BokrPathResult {
   totalCost: ResourceCostSummary;
 }
 
+/** 연결 필드는 전체 ID 또는 같은 보드 내 두 자리 번호를 사용한다. */
+export function findLinkedPetalNode(nodes: MasterBoardNode[], hwang: MasterBoardNode): MasterBoardNode | undefined {
+  if (hwang.nodeType !== NODE_TYPE.HWANG_EXT || !Number.isSafeInteger(hwang.prevId)) return undefined;
+  const matches = (reference: number | undefined, target: MasterBoardNode, source: MasterBoardNode) =>
+    reference === target.id || (reference === target.id % 100 && Math.floor(target.id / 100) === Math.floor(source.id / 100));
+  return nodes.find(node => node.nodeType === NODE_TYPE.PETAL &&
+    matches(hwang.prevId, node, hwang) && matches(node.nextId, hwang, node));
+}
+
 /** 위치 보드와 경로 탐색이 동일한 차수별 좌표를 사용한다. */
 export function getApostleBoardLayout(progress: ApostleProgress, lastBoardIndex = progress.boards.length - 1) {
   const layout: Array<{ boardIndex: number; nodeIndex: number; nodeId: number; node: MasterBoardNode; x: number; y: number; picked: boolean }> = [];
@@ -76,9 +85,19 @@ export function findApostlePathToBokr(progress: ApostleProgress, boardIndex: num
   const targetIndex = layout.findIndex(entry => entry.boardIndex === boardIndex && entry.nodeId === nodeId);
   if (targetIndex < 0) return null;
   // 탐색 내부에서만 고유 인덱스를 사용하고 결과에는 원본 식별자를 돌려준다.
-  const nodes = layout.map((entry, index) => ({ ...entry.node, id: index,
-    nodeType: entry.boardIndex > 0 && entry.node.nodeType === NODE_TYPE.START ? NODE_TYPE.NORMAL : entry.node.nodeType,
-    grid: { x: entry.x, y: entry.y } }));
+  const nodes = layout.map((entry, index) => {
+    const board = progress.boards[entry.boardIndex]!;
+    const petal = findLinkedPetalNode(board.masterNodes || [], entry.node);
+    const petalIndex = petal ? board.masterNodes!.indexOf(petal) : -1;
+    const petalPicked = board.unlocked !== false && board.stepStr?.[petalIndex] === '1';
+    // 좌표 없는 꽃잎의 선행 비용을 확장 황크 진입 비용에 포함한다.
+    const needsPetal = !entry.picked && petal && !petalPicked;
+    return { ...entry.node, id: index,
+      requireGold: (entry.node.requireGold || 0) + (needsPetal ? petal.requireGold || 0 : 0),
+      requireItems: [...(entry.node.requireItems || []), ...(needsPetal ? petal.requireItems || [] : [])],
+      nodeType: entry.boardIndex > 0 && entry.node.nodeType === NODE_TYPE.START ? NODE_TYPE.NORMAL : entry.node.nodeType,
+      grid: { x: entry.x, y: entry.y } };
+  });
   const result = findShortestPathToBokr(nodes, layout.map(entry => entry.picked ? '1' : '0').join(''), targetIndex);
   if (!result) return null;
   const pathSteps = result.pathNodeIndices.map(index => {

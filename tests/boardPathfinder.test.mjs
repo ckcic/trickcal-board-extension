@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   findApostlePathToBokr,
+  findLinkedPetalNode,
   findShortestPathToBokr,
   getAdjacentGridOffsets,
 } from '../src/domain/boardPathfinder.ts';
@@ -14,6 +15,33 @@ test('원본 보드의 상하좌우 연결만 허용하고 대각선은 연결�
     { id: 1, nodeType: 2, grid: { x: 1, y: 1 } },
     { id: 2, nodeType: 4, grid: { x: 2, y: 2 } },
   ], '10', 2), null);
+});
+
+test('닫힌 꽃잎을 거치는 경로는 물뿌리개와 꽃잎 비용을 포함하며 열린 꽃잎은 제외한다', () => {
+  const nodes = [
+    { id: 101, nodeType: 2, grid: { x: 1, y: 1 } },
+    { id: 141, nodeType: 7, grid: { x: -1, y: -1 }, nextId: 42, requireGold: 100, requireItems: [{ item: 610005, value: 2 }] },
+    { id: 142, nodeType: 6, grid: { x: 1, y: 2 }, prevId: 41, requireGold: 10, requireItems: [{ item: 610004, value: 2 }] },
+    { id: 143, nodeType: 4, grid: { x: 1, y: 3 }, requireGold: 20, requireItems: [{ item: 610003, value: 3 }] },
+  ];
+  const progress = { boards: [{ masterNodes: nodes, stepStr: '1000' }] };
+  const closed = findApostlePathToBokr(progress, 0, 143);
+  assert.equal(closed.pathCost.wateringCan, 2);
+  assert.equal(closed.pathCost.gold, 110);
+  assert.equal(closed.totalCost.gold, 130);
+  assert.equal(closed.totalCost.ultraCrayon, 2);
+  progress.boards[0].stepStr = '1100';
+  const opened = findApostlePathToBokr(progress, 0, 143);
+  assert.equal(opened.pathCost.wateringCan, 0);
+  assert.equal(opened.pathCost.gold, 10);
+});
+
+test('꽃잎 연결은 양방향 번호를 대조하며 다른 보드의 같은 끝 번호를 연결하지 않는다', () => {
+  const hwang = { id: 142, nodeType: 6, prevId: 41 };
+  assert.equal(findLinkedPetalNode([{ id: 241, nodeType: 7, nextId: 42 }], hwang), undefined);
+  assert.equal(findLinkedPetalNode([{ id: 141, nodeType: 7, nextId: 43 }], hwang), undefined);
+  const petal = { id: 141, nodeType: 7, nextId: 142 };
+  assert.equal(findLinkedPetalNode([petal], { ...hwang, prevId: 141 }), petal);
 });
 
 test('findShortestPathToBokr: 이미 색칠된 보크 노드는 추가 경로 비용 0 반환', () => {
