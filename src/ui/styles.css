@@ -4,10 +4,10 @@
  */
 
 :root {
-  /* ── 에셋 URL (chrome-extension:// 런타임 해석) ── */
-  --tcbe-stat-sprite: url('chrome-extension://__MSG_@@extension_id__/webp/Stat.webp');
-  --tcbe-personality-sprite: url('chrome-extension://__MSG_@@extension_id__/webp/Common_UnitPersonality.webp');
-  --tcbe-gate-icon: url('chrome-extension://__MSG_@@extension_id__/webp/Gate.webp');
+  /* ── 에셋 URL (서버 원본 및 CDN 에셋 참조) ── */
+  --tcbe-stat-sprite: url('https://note.trickcal.com/UI/Stat.webp');
+  --tcbe-personality-sprite: url('https://note.trickcal.com/UI/Common_UnitPersonality.webp');
+  --tcbe-gate-icon: url('https://note.trickcal.com/UI/Gate.webp');
 
   /* ── 색상 토큰 (Semantic Colors) ── */
   /* 공통 배경 및 표면 */

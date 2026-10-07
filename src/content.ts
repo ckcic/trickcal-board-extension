@@ -52,28 +52,20 @@ import { FilterPanelController } from './ui/filterPanel.ts';
     window.postMessage({ type: 'TCBE_GRID_FILTER', source: 'tcbe-content-bridge', active, ids, key }, window.location.origin);
   }
 
-  /**
-   * 확장 프로그램의 스프라이트 및 크레파스 이미지 URL을 CSS 커스텀 속성에 주입
-   */
+  /** 화면에서 사용하는 원본 및 CDN WebP 주소만 주입한다. */
   function injectSpriteStyles() {
-    try {
-      const statUrl = chrome.runtime.getURL('webp/Stat.webp');
-      const persUrl = chrome.runtime.getURL('webp/Common_UnitPersonality.webp');
-      const basicPastelUrl = chrome.runtime.getURL('webp/basic_pastel.webp');
-      const avgPastelUrl = chrome.runtime.getURL('webp/average_pastel.webp');
-      const epicPastelUrl = chrome.runtime.getURL('webp/epic_pastel.webp');
-      const ultraPastelUrl = chrome.runtime.getURL('webp/ultra_pastel.webp');
-      const goldUrl = chrome.runtime.getURL('webp/gold.webp');
-
-      document.documentElement.style.setProperty('--tcbe-stat-sprite', `url("${statUrl}")`);
-      document.documentElement.style.setProperty('--tcbe-personality-sprite', `url("${persUrl}")`);
-      document.documentElement.style.setProperty('--tcbe-pastel-basic', `url("${basicPastelUrl}")`);
-      document.documentElement.style.setProperty('--tcbe-pastel-average', `url("${avgPastelUrl}")`);
-      document.documentElement.style.setProperty('--tcbe-pastel-epic', `url("${epicPastelUrl}")`);
-      document.documentElement.style.setProperty('--tcbe-pastel-ultra', `url("${ultraPastelUrl}")`);
-      document.documentElement.style.setProperty('--tcbe-gold-icon', `url("${goldUrl}")`);
-    } catch {
-      // 개발 환경 등에서 chrome.runtime을 사용할 수 없을 때의 폴백
+    const assets: Record<string, string> = {
+      '--tcbe-stat-sprite': 'https://note.trickcal.com/UI/Stat.webp',
+      '--tcbe-personality-sprite': 'https://note.trickcal.com/UI/Common_UnitPersonality.webp',
+      '--tcbe-gate-icon': 'https://note.trickcal.com/UI/Gate.webp',
+      '--tcbe-pastel-basic': 'https://cdn.note.trickcal.com/Materials/aSidEcauOucIZOMZV_ilvVhKEpMIog9hK.webp',
+      '--tcbe-pastel-average': 'https://cdn.note.trickcal.com/Materials/aXi__OXRlprdJ2aKDSV7RDndcgNnTjV4o.webp',
+      '--tcbe-pastel-epic': 'https://cdn.note.trickcal.com/Materials/a1QwfDWjjHCxQv7K-KJLBtxDFxWM1CERq.webp',
+      '--tcbe-pastel-ultra': 'https://cdn.note.trickcal.com/Materials/aekAKPsosli3qEanhqzUxly-2E_PXu1kV.webp',
+      '--tcbe-gold-icon': 'https://cdn.note.trickcal.com/Materials/aJ3ElQvrIrOM6vPr2fJb_v79A_RC2YX6_.webp',
+    };
+    for (const [name, url] of Object.entries(assets)) {
+      document.documentElement.style.setProperty(name, `url("${url}")`);
     }
   }
 

@@ -106,7 +106,7 @@ async function build() {
     legalComments: isProd ? 'none' : 'inline',
   };
 
-  // CSS 번들 옵션 (chrome-extension:// URL은 런타임에 해석되므로 외부 경로로 처리)
+  // CSS 번들 옵션 (서버 원본 에셋 및 chrome-extension:// URL은 외부 경로로 처리)
   const cssOptions = {
     entryPoints: [path.join(rootDir, 'src', 'ui', 'styles.css')],
     outfile: path.join(distDir, 'styles.css'),
@@ -115,7 +115,7 @@ async function build() {
     sourcemap: !isProd,
     target: ['chrome110'],
     legalComments: isProd ? 'none' : 'inline',
-    external: ['chrome-extension://*'],
+    external: ['chrome-extension://*', '/UI/*', 'https://*'],
   };
 
   const contexts = await Promise.all([
