@@ -129,6 +129,7 @@ export interface ResourceCostSummary {
   averageCrayon: number; // 중급 크레파스 (610002)
   epicCrayon: number;    // 상급 크레파스 (610003)
   ultraCrayon: number;   // 최상급 크레파스 (610004)
+  wateringCan?: number;  // 만개 물뿌리개 (610005, 꽃잎 칸 해금용)
   gold: number;          // 골드
 }
 
@@ -171,6 +172,8 @@ export interface BoardProgress {
   boardIndex: number;
   boardStepLevel: number;
   unlocked: boolean;
+  masterNodes?: MasterBoardNode[]; // 해당 차수 마스터 노드 배열 원본 (경로 탐색용)
+  stepStr?: string;                // 유저 보드 색칠 상태 문자열 (예: "1101...")
   nodes: BoardNodeProgress[];
   bokr: {
     total: number;

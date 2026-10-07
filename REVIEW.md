@@ -10,28 +10,30 @@
 
 ### 1-1. 주요 데이터 구조 변경점 요약
 
-| 구분 | 10월 1일 이전 (`data_.json`) | 10월 1일 이후 (`data_10_05.json`) | v1.0.7 대응 및 영향 |
-|---|---|---|---|
-| **사도 수** | 132명 (총 노드 15,120개) | **135명** (총 노드 17,838개) | 신규 사도 3명 추가 정상 반영 |
-| **일반칸 (`nodeType: 3`)** | `stats: [{statType, statValue}]` (실수치 제공) | `stats: []` (빈 배열) 또는 누락<br>`displayStat: [statType, 0]` 제공 | **[대응 완료]** `NORMAL_STAT_UNIT_VALUES` 고정값 테이블로 수치 100% 복원 |
-| **신규 노드 `nodeType: 6`** | 없음 | **1,179개** 추가<br>(1차 258, 2차 393, 3차 528개) | `requireItems`에 610004(황크) 2개 포함되어 현재 **황크 노드로 자동 분류**됨 |
-| **신규 노드 `nodeType: 7`** | 없음 | **1,179개** 추가<br>(1차 258, 2차 393, 3차 528개) | `requireItems`에 610005('만개 물뿌리개') 1개 포함.<br>현재 보크/황크/일반칸이 아니므로 **무시(IGNORED)**됨 |
-| **신규 노드 링크 필드** | 없음 | `prevId`, `nextId` 필드 추가 | 6번 노드는 `prevId`, 7번 노드는 `nextId`를 가짐. 파서에서 정상 허용 |
-| **노드 체인 구조** | 보드 끝에 1번(관문)으로 종료 | 관문 뒤로 `7 -> 6 -> 7 -> 6` 체인 추가 | 보드당 40칸 -> 44칸 내외로 확장 |
-| **사도 `boardSteps` 길이** | 보드 노드 수와 거의 일치 | 기존에 칠해둔 사도는 노드 수보다 짧음<br>(예: 44칸 보드에 40자리 step 문자열) | **[안전]** 인덱스 범위 체크(`nodeIdx < stepStr.length`)로 NaN/오류 없이 방어 |
-| **관문 해금 판정** | `boardSteps.length` 단순 비교 | 실제 `nodeType: 1(GATE)` 칠함 여부 판정 | **[대응 완료]** 3차 미칠함 상태(steps=2)에서도 관문 활성 시 3차 정상 해금 |
-| **웹사이트 목록 렌더링** | 일반 DOM Grid | `react-virtuoso` 가상 그리드 도입 | **[대응 완료]** React Fiber Virtuoso 스트림 인터셉트 브리지 도입 |
+| 구분                        | 10월 1일 이전 (`data_.json`)                   | 10월 1일 이후 (`data_10_05.json`)                                             | v1.0.7 대응 및 영향                                                                                        |
+| --------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **사도 수**                 | 132명 (총 노드 15,120개)                       | **135명** (총 노드 17,838개)                                                  | 신규 사도 3명 추가 정상 반영                                                                               |
+| **일반칸 (`nodeType: 3`)**  | `stats: [{statType, statValue}]` (실수치 제공) | `stats: []` (빈 배열) 또는 누락<br>`displayStat: [statType, 0]` 제공          | **[대응 완료]** `NORMAL_STAT_UNIT_VALUES` 고정값 테이블로 수치 100% 복원                                   |
+| **신규 노드 `nodeType: 6`** | 없음                                           | **1,179개** 추가<br>(1차 258, 2차 393, 3차 528개)                             | `requireItems`에 610004(황크) 2개 포함되어 현재 **황크 노드로 자동 분류**됨                                |
+| **신규 노드 `nodeType: 7`** | 없음                                           | **1,179개** 추가<br>(1차 258, 2차 393, 3차 528개)                             | `requireItems`에 610005('만개 물뿌리개') 1개 포함.<br>현재 보크/황크/일반칸이 아니므로 **무시(IGNORED)**됨 |
+| **신규 노드 링크 필드**     | 없음                                           | `prevId`, `nextId` 필드 추가                                                  | 6번 노드는 `prevId`, 7번 노드는 `nextId`를 가짐. 파서에서 정상 허용                                        |
+| **노드 체인 구조**          | 보드 끝에 1번(관문)으로 종료                   | 관문 뒤로 `7 -> 6 -> 7 -> 6` 체인 추가                                        | 보드당 40칸 -> 44칸 내외로 확장                                                                            |
+| **사도 `boardSteps` 길이**  | 보드 노드 수와 거의 일치                       | 기존에 칠해둔 사도는 노드 수보다 짧음<br>(예: 44칸 보드에 40자리 step 문자열) | **[안전]** 인덱스 범위 체크(`nodeIdx < stepStr.length`)로 NaN/오류 없이 방어                               |
+| **관문 해금 판정**          | `boardSteps.length` 단순 비교                  | 실제 `nodeType: 1(GATE)` 칠함 여부 판정                                       | **[대응 완료]** 3차 미칠함 상태(steps=2)에서도 관문 활성 시 3차 정상 해금                                  |
+| **웹사이트 목록 렌더링**    | 일반 DOM Grid                                  | `react-virtuoso` 가상 그리드 도입                                             | **[대응 완료]** React Fiber Virtuoso 스트림 인터셉트 브리지 도입                                           |
 
 ---
 
 ### 1-2. 세부 기술 분석 및 검증 결과
 
 #### ① 일반칸(`nodeType: 3`) 고정값 복원 정합성 검증
+
 - **문제점:** 10월 1일 이후 API에서 일반칸의 `stats` 배열에 실제 수치(`statValue`)가 제공되지 않고, `displayStat: [statType, 0]` 형태로 스탯 종류만 제공되도록 변경되었습니다.
 - **v1.0.7 구현:** [src/domain/normalStatValues.ts](src/domain/normalStatValues.ts)에 태생 성급(1성, 2·3성) 및 칸 크기(기본 소형, 중급 크레파스 소모 강화 대형)별 9개 스탯 단위 수치 테이블(`NORMAL_STAT_UNIT_VALUES`)을 구축하고, `stats`가 없을 때 이를 참조하도록 구현되었습니다.
 - **실측 검증:** 실제 `stats` 수치가 온전히 보존되어 있던 구 데이터(`data_.json`, `data.json`)의 **54개 전체 조합**(태생 1~3성 × 9개 스탯 카테고리 × 소형/대형)을 전수 추출하여 `NORMAL_STAT_UNIT_VALUES`와 대조한 결과, **불일치(Mismatch)가 0건(100% 일치)**함을 확인했습니다. 따라서 새 데이터에서도 일반칸 수치가 정확히 산출됩니다.
 
 #### ② 신규 노드 `nodeType: 6` 및 `nodeType: 7` 분석
+
 - **`nodeType: 6` 상세:**
   - `requireItems`: `[{ item: 610004, value: 2 }]` (최상급 크레파스 2개 소모)
   - `requireGold`: `50,000`
@@ -46,11 +48,13 @@
   - **현재 판정:** 보크(610003), 황크(610004), 일반칸(nodeType: 3) 어디에도 해당하지 않아 계산에서 무시(IGNORED)됩니다.
 
 #### ③ 관문 해금 판정 (`unlockedBoardCount`)
+
 - [src/domain/boardProgress.ts:L272-L275](src/domain/boardProgress.ts#L272-L275)에서 이전 보드의 `nodeType: 1(GATE)` 타일이 활성화(`step[nodeIndex] === '1'`)되었는지를 기준으로 차수를 판정합니다.
 - `data_10_05.json` 분석 결과, 유저의 `boardSteps` 배열 길이가 2개이지만 2차 보드의 관문을 이미 칠해 3차가 해금된 사도가 **14명** 존재했습니다.
 - 기존 방식(`boardSteps.length`)이었다면 이 14명은 2차까지만 열린 것으로 오판되었으나, 1.0.7의 관문 기반 판정 로직으로 인해 3차 보드 해금 사도 105명이 오차 없이 정확히 분류되었습니다.
 
 #### ④ 파서 및 런타임 안정성
+
 - `data_10_05.json`을 `parseTrickcalApiPayload()`에 전달하여 파싱 및 진행도 계산을 실행한 결과:
   - 파싱 결과: `OK` (통과)
   - 사도 수: 135명 전원 계산 완료
@@ -74,37 +78,37 @@
 
 ### 🔴 우선순위 높음 (영향도 큼 / 즉시 개선 권장)
 
-| # | 관련 모듈 및 코드 위치 | 문제점 분석 | 제안하는 최적화 방안 |
-|---|---|---|---|
-| **1** | [src/content.ts:L192-L199](src/content.ts#L192-L199)<br>[src/ui/boardEnhancer.ts:L436-L459](src/ui/boardEnhancer.ts#L436-L459) | 사도별 탭이 아닌 화면(스탯별 탭 등)에 머무를 때, 클릭이나 DOM 변경이 일어날 때마다 `setBadgesVisible(false)`가 반복 실행됨. 이때 `applyBoardLevelVisibility(c, 'all')`가 호출되어 캐시를 지우고 모든 카드의 DOM 텍스트를 처음부터 다시 순회함. | 확장 프로그램 활성화 상태 플래그(`isApostleTabVisible`)를 두고, 상태가 `true -> false`로 전환되는 최초 1회에만 숨김/복원 처리를 수행하도록 가드 추가. |
-| **2** | [src/ui/boardEnhancer.ts:L96-L109](src/ui/boardEnhancer.ts#L96-L109)<br>[src/ui/boardEnhancer.ts:L270-L273](src/ui/boardEnhancer.ts#L270-L273) | 카드 내에서 `1차 보드`, `2차 보드` 텍스트를 찾기 위해 모든 `div, span`을 순회하며 `textContent`를 읽음. 상위 div는 자식 텍스트를 모두 병합하므로 O(n²) 비용 발생. 특히 검색 결과가 0명일 때 문서 전체를 대상으로 폴백 탐색이 매번 실행됨. | 보드 타이틀 클래스(`.bg-charaboard-*`)를 우선 탐색하고, 텍스트 탐색 시 `TreeWalker(NodeFilter.SHOW_TEXT)`를 사용하여 텍스트 리프 노드만 직간접 조회하도록 개선. |
-| **3** | [src/bridge/virtualGrid.ts:L135-L137](src/bridge/virtualGrid.ts#L135-L137) | 목록에 연결되기 전이나 보드 페이지가 아닐 때, DOM 변이가 일어날 때마다 `:has()` 쿼리 셀렉터로 전체 문서를 쿼리함. | `requestAnimationFrame` 또는 100ms 디바운스로 묶고, URL이 `/board`인 경우에만 탐색하도록 제한. |
-| **4** | [src/bridge/interceptor.ts:L59-L79](src/bridge/interceptor.ts#L59-L79) | 사이트의 **모든** fetch 요청에 대해 응답을 무조건 `.clone()`하고 `.json()` 파싱을 시도함. 이미지, HTML 등 비-JSON 대용량 응답도 버퍼에 복제됨. | `response.headers.get('content-type')?.includes('json')`을 먼저 확인하여 JSON이 확실한 응답만 선별 복제. |
-| **5** | [scripts/build.mjs:L24-L28](scripts/build.mjs#L24-L28) | 빌드 스크립트 실행 시 기존 `dist/` 디렉터리를 비우지 않음. 이로 인해 개발 모드에서 생성된 소스맵(`.map`) 파일들이 프로덕션 ZIP(`trickcal-board-extension.zip`)에 약 **290KB**가량 그대로 포함됨. | `npm run package` 및 `--prod` 빌드 시 `dist/` 디렉터리를 사전에 `rmSync`하여 배포 패키지 크기 대폭 감축. |
+| #     | 관련 모듈 및 코드 위치                                                                                                                         | 문제점 분석                                                                                                                                                                                                                                    | 제안하는 최적화 방안                                                                                                                                            |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1** | [src/content.ts:L192-L199](src/content.ts#L192-L199)<br>[src/ui/boardEnhancer.ts:L436-L459](src/ui/boardEnhancer.ts#L436-L459)                 | 사도별 탭이 아닌 화면(스탯별 탭 등)에 머무를 때, 클릭이나 DOM 변경이 일어날 때마다 `setBadgesVisible(false)`가 반복 실행됨. 이때 `applyBoardLevelVisibility(c, 'all')`가 호출되어 캐시를 지우고 모든 카드의 DOM 텍스트를 처음부터 다시 순회함. | 확장 프로그램 활성화 상태 플래그(`isApostleTabVisible`)를 두고, 상태가 `true -> false`로 전환되는 최초 1회에만 숨김/복원 처리를 수행하도록 가드 추가.           |
+| **2** | [src/ui/boardEnhancer.ts:L96-L109](src/ui/boardEnhancer.ts#L96-L109)<br>[src/ui/boardEnhancer.ts:L270-L273](src/ui/boardEnhancer.ts#L270-L273) | 카드 내에서 `1차 보드`, `2차 보드` 텍스트를 찾기 위해 모든 `div, span`을 순회하며 `textContent`를 읽음. 상위 div는 자식 텍스트를 모두 병합하므로 O(n²) 비용 발생. 특히 검색 결과가 0명일 때 문서 전체를 대상으로 폴백 탐색이 매번 실행됨.      | 보드 타이틀 클래스(`.bg-charaboard-*`)를 우선 탐색하고, 텍스트 탐색 시 `TreeWalker(NodeFilter.SHOW_TEXT)`를 사용하여 텍스트 리프 노드만 직간접 조회하도록 개선. |
+| **3** | [src/bridge/virtualGrid.ts:L135-L137](src/bridge/virtualGrid.ts#L135-L137)                                                                     | 목록에 연결되기 전이나 보드 페이지가 아닐 때, DOM 변이가 일어날 때마다 `:has()` 쿼리 셀렉터로 전체 문서를 쿼리함.                                                                                                                              | `requestAnimationFrame` 또는 100ms 디바운스로 묶고, URL이 `/board`인 경우에만 탐색하도록 제한.                                                                  |
+| **4** | [src/bridge/interceptor.ts:L59-L79](src/bridge/interceptor.ts#L59-L79)                                                                         | 사이트의 **모든** fetch 요청에 대해 응답을 무조건 `.clone()`하고 `.json()` 파싱을 시도함. 이미지, HTML 등 비-JSON 대용량 응답도 버퍼에 복제됨.                                                                                                 | `response.headers.get('content-type')?.includes('json')`을 먼저 확인하여 JSON이 확실한 응답만 선별 복제.                                                        |
+| **5** | [scripts/build.mjs:L24-L28](scripts/build.mjs#L24-L28)                                                                                         | 빌드 스크립트 실행 시 기존 `dist/` 디렉터리를 비우지 않음. 이로 인해 개발 모드에서 생성된 소스맵(`.map`) 파일들이 프로덕션 ZIP(`trickcal-board-extension.zip`)에 약 **290KB**가량 그대로 포함됨.                                               | `npm run package` 및 `--prod` 빌드 시 `dist/` 디렉터리를 사전에 `rmSync`하여 배포 패키지 크기 대폭 감축.                                                        |
 
 ---
 
 ### 🟡 우선순위 중간 (반복 연산 및 메모리 개선)
 
-| # | 관련 모듈 | 문제점 분석 | 제안하는 최적화 방안 |
-|---|---|---|---|
-| **6** | [src/ui/boardEnhancer.ts:L154-L163](src/ui/boardEnhancer.ts#L154-L163)<br>[src/domain/listSelection.ts:L5-L21](src/domain/listSelection.ts#L5-L21) | 매 갱신 시마다 `nameToProgress` 맵 재생성, `localeCompare` 한글 정렬, Set 생성, JSON.stringify 키 생성이 반복됨. | API 데이터가 새로 들어올 때만 사도 고유 목록과 한글 정렬 순서(`Intl.Collator('ko')`)를 1회 캐싱하여 재사용. |
-| **7** | [src/content.ts:L92-L136](src/content.ts#L92-L136) | `isApostleTabActive()`에서 문서 내 모든 버튼/링크를 수집하고 `.closest()`를 3번씩 호출하여 탐색 비용이 큼. | `.closest('#tcbe-filter-panel, .tcbe-badge-container, .tcbe-badge-row')`를 단일 셀렉터로 합치고 루프 1회로 통합. |
-| **8** | [src/content.ts:L207](src/content.ts#L207) | 사도별 탭이 활성화되어 있을 때 DOM 변경이 발생할 때마다 `setBadgesVisible(true)`가 호출되어 모든 뱃지의 클래스를 재조회함. | 뱃지가 이미 보이는 상태라면 `setBadgesVisible(true)` 호출을 건너뛰는 플래그 가드 적용. |
-| **9** | [src/ui/normalStat.ts:L390-L398](src/ui/normalStat.ts#L390-L398)<br>[src/content.ts:L307-L312](src/content.ts#L307-L312) | 전역 `click` 핸들러가 클릭마다 전체 일반칸 컨테이너를 순회하며 닫기를 처리하고, content.ts도 모든 클릭에 전체 갱신을 예약함. | 닫기 탐색 대상을 `.tcbe-open, .tcbe-pinned`를 가진 요소로 한정하고, MutationObserver가 감지하지 못하는 탭 전환 버튼 클릭만 선별 리프레시. |
-| **10** | [src/domain/dataParser.ts:L100-L108](src/domain/dataParser.ts#L100-L108)<br>[src/bridge/interceptor.ts:L43-L55](src/bridge/interceptor.ts#L43-L55) | `text` 딕셔너리가 약 6,523개 키(484KB)에 달하지만, 실제로 필요한 것은 사도 이름 135개임. 이를 MAIN 월드에서 검증하고 복제하여 postMessage로 전송하고 ISOLATED 월드에서 다시 파싱함. | 파서 단계에서 `heroInfo`에 존재하는 사도 이름 키만 `text`에서 추출하여 전송함으로써 postMessage 직렬화/역직렬화 비용 대폭 절감. |
-| **11** | [src/domain/boardProgress.ts:L353-L362](src/domain/boardProgress.ts#L353-L362) | 사도별 보드 노드 객체 17,838개(`BoardProgress.nodes`)를 생성하여 보관하지만, 실제 UI 및 단위 테스트에서 참조되지 않음. | 해당 배열 생성을 제거하여 메모리 할당 및 GC 부하 완화 (단, 외부 호환성 점검 필요). |
+| #      | 관련 모듈                                                                                                                                          | 문제점 분석                                                                                                                                                                         | 제안하는 최적화 방안                                                                                                                      |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **6**  | [src/ui/boardEnhancer.ts:L154-L163](src/ui/boardEnhancer.ts#L154-L163)<br>[src/domain/listSelection.ts:L5-L21](src/domain/listSelection.ts#L5-L21) | 매 갱신 시마다 `nameToProgress` 맵 재생성, `localeCompare` 한글 정렬, Set 생성, JSON.stringify 키 생성이 반복됨.                                                                    | API 데이터가 새로 들어올 때만 사도 고유 목록과 한글 정렬 순서(`Intl.Collator('ko')`)를 1회 캐싱하여 재사용.                               |
+| **7**  | [src/content.ts:L92-L136](src/content.ts#L92-L136)                                                                                                 | `isApostleTabActive()`에서 문서 내 모든 버튼/링크를 수집하고 `.closest()`를 3번씩 호출하여 탐색 비용이 큼.                                                                          | `.closest('#tcbe-filter-panel, .tcbe-badge-container, .tcbe-badge-row')`를 단일 셀렉터로 합치고 루프 1회로 통합.                          |
+| **8**  | [src/content.ts:L207](src/content.ts#L207)                                                                                                         | 사도별 탭이 활성화되어 있을 때 DOM 변경이 발생할 때마다 `setBadgesVisible(true)`가 호출되어 모든 뱃지의 클래스를 재조회함.                                                          | 뱃지가 이미 보이는 상태라면 `setBadgesVisible(true)` 호출을 건너뛰는 플래그 가드 적용.                                                    |
+| **9**  | [src/ui/normalStat.ts:L390-L398](src/ui/normalStat.ts#L390-L398)<br>[src/content.ts:L307-L312](src/content.ts#L307-L312)                           | 전역 `click` 핸들러가 클릭마다 전체 일반칸 컨테이너를 순회하며 닫기를 처리하고, content.ts도 모든 클릭에 전체 갱신을 예약함.                                                        | 닫기 탐색 대상을 `.tcbe-open, .tcbe-pinned`를 가진 요소로 한정하고, MutationObserver가 감지하지 못하는 탭 전환 버튼 클릭만 선별 리프레시. |
+| **10** | [src/domain/dataParser.ts:L100-L108](src/domain/dataParser.ts#L100-L108)<br>[src/bridge/interceptor.ts:L43-L55](src/bridge/interceptor.ts#L43-L55) | `text` 딕셔너리가 약 6,523개 키(484KB)에 달하지만, 실제로 필요한 것은 사도 이름 135개임. 이를 MAIN 월드에서 검증하고 복제하여 postMessage로 전송하고 ISOLATED 월드에서 다시 파싱함. | 파서 단계에서 `heroInfo`에 존재하는 사도 이름 키만 `text`에서 추출하여 전송함으로써 postMessage 직렬화/역직렬화 비용 대폭 절감.           |
+| **11** | [src/domain/boardProgress.ts:L353-L362](src/domain/boardProgress.ts#L353-L362)                                                                     | 사도별 보드 노드 객체 17,838개(`BoardProgress.nodes`)를 생성하여 보관하지만, 실제 UI 및 단위 테스트에서 참조되지 않음.                                                              | 해당 배열 생성을 제거하여 메모리 할당 및 GC 부하 완화 (단, 외부 호환성 점검 필요).                                                        |
 
 ---
 
 ### 🟢 우선순위 낮음 (미세 최적화 및 구조 정돈)
 
-| # | 관련 모듈 | 제안 내용 |
-|---|---|---|
-| **12** | [src/ui/badge.ts:L157](src/ui/badge.ts#L157) | 수백 개 뱃지마다 각각 mouseenter/mouseleave 리스너를 달지 않고 상위 컨테이너에서 이벤트 위임(Event Delegation) 처리 및 툴팁 HTML WeakMap 캐싱. |
-| **13** | [src/ui/filterPanel.ts:L608-L618](src/ui/filterPanel.ts#L608-L618) | `updateStatSummaryGrid`에서 9개 스탯 루프 내부마다 `prog.boards.find()`를 호출하는 대신 루프 외부에서 보드 객체를 1회만 조회. |
-| **14** | [src/content.ts:L281-L285](src/content.ts#L281-L285) | 동일한 API 데이터가 재전송되었을 때 `boardSteps` 내용이 같으면 전체 재계산 생략. |
-| **15** | [src/content.ts:L58-L78](src/content.ts#L58-L78) | JS에서 동적으로 CSS 변수를 주입하는 방식 대신 `styles.css`에 `chrome-extension://__MSG_@@extension_id__/webp/...` 형식으로 통일. |
+| #      | 관련 모듈                                                                  | 제안 내용                                                                                                                                                  |
+| ------ | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **12** | [src/ui/badge.ts:L157](src/ui/badge.ts#L157)                               | 수백 개 뱃지마다 각각 mouseenter/mouseleave 리스너를 달지 않고 상위 컨테이너에서 이벤트 위임(Event Delegation) 처리 및 툴팁 HTML WeakMap 캐싱.             |
+| **13** | [src/ui/filterPanel.ts:L608-L618](src/ui/filterPanel.ts#L608-L618)         | `updateStatSummaryGrid`에서 9개 스탯 루프 내부마다 `prog.boards.find()`를 호출하는 대신 루프 외부에서 보드 객체를 1회만 조회.                              |
+| **14** | [src/content.ts:L281-L285](src/content.ts#L281-L285)                       | 동일한 API 데이터가 재전송되었을 때 `boardSteps` 내용이 같으면 전체 재계산 생략.                                                                           |
+| **15** | [src/content.ts:L58-L78](src/content.ts#L58-L78)                           | JS에서 동적으로 CSS 변수를 주입하는 방식 대신 `styles.css`에 `chrome-extension://__MSG_@@extension_id__/webp/...` 형식으로 통일.                           |
 | **16** | [src/domain/updateChecker.ts:L15-L17](src/domain/updateChecker.ts#L15-L17) | `sessionStorage`는 탭마다 독립되어 GitHub API 호출 한도(시간당 60회)를 소모할 위험이 있으므로 `chrome.storage.local`로 이관하고 캐시 TTL을 1시간으로 확대. |
 
 ---
@@ -118,3 +122,135 @@
 - **초기 데이터 수신 경쟁 방지:** 콘텐츠 스크립트 로드 전에 수신된 메인 월드의 보드 응답을 재요청할 수 있도록 메모리 기반 재전달 메커니즘 구축.
 - **XHR 리스너 누적 방지:** 동일 XHR 인스턴스 재사용 시 리스너 누적을 WeakSet으로 차단.
 - **XSS 방어 및 HTML 보안:** 외부 텍스트의 HTML 이스케이프(`escapeHtml`) 처리 및 textContent 안전 렌더링.
+
+---
+
+## 🚨 4. 보크 타일 모달 및 경로 탐색 연동 현황 분석 및 후속 작업 가이드 (Codex 인수인계용)
+
+> **현재 이슈 요약:**
+>
+> 1. 사도 카드 내에서 마우스 **호버 시 반응하는 칸(커서, 확대)이 실제 보크(상급) 칸과 불일치**함.
+> 2. 타일 클릭 시 뜨는 **모달의 스탯 아이콘, 수치, 위치 좌표 및 경로 계산이 클릭한 칸과 불일치**함.
+> 3. 원본 사이트 내장 모달과의 중복 및 UI 레이아웃 완성도 보강 필요.
+
+---
+
+### 4-1. 기술적 원인 심층 분석 (Root Cause)
+
+#### 🔴 원인 1: DOM 엘리먼트 순서와 마스터 데이터 배열(`masterNodes`)의 불일치
+
+- **현재 코드 구현 ([src/ui/boardEnhancer.ts](src/ui/boardEnhancer.ts)):**
+  ```typescript
+  const tiles = getBoardTiles(col); // col.querySelectorAll('div[class*="--img-board-rect"]')
+  tiles.forEach((tile, tIdx) => {
+  	const nodeProg = boardProg.nodes[tIdx]; // ⚠️ 인덱스 1:1 매핑 가정
+  	if (nodeProg?.isBokr) tile.setAttribute("data-tcbe-is-bokr", "true");
+  });
+  ```
+- **문제점:**
+  - API에서 내려오는 `data.board[apostleId][boardIdx]` 배열의 인덱스 순서(`0, 1, 2, ...`)는 **노드 고유 `id` 순서이거나 DB 등록 순서**입니다.
+  - 반면 화면 DOM의 `div[class*="--img-board-rect"]`는 **지그재그 육각 그리드 좌표(`grid: {x, y}`)에 따라 화면 위에서 아래(행 순서), 좌에서 우(열 순서)**로 렌더링됩니다.
+  - 즉, **`tIdx`번째 DOM 타일 ≠ `masterNodes[tIdx]`** 입니다.
+  - 이로 인해 엉뚱한 일반칸이나 시작 타일에 `data-tcbe-is-bokr`가 붙어 호버 효과가 어긋나고, 클릭 시에도 완전히 다른 노드의 스탯과 경로가 계산되는 현상이 발생합니다.
+
+#### 🔴 원인 2: 빈 슬롯 / 미배치 노드 존재 가능성
+
+- 트릭컬 보드는 육각 그리드 특성상 특정 좌표에 노드가 없는 빈 공간이 있거나, 화면에 렌더링되지 않는 더미 노드(`grid.x === -1`)가 포함되어 있어 DOM 자식 요소 개수와 `nodes` 배열 길이가 정확히 일치하지 않을 수 있습니다.
+
+---
+
+### 4-2. Codex 후속 작업 해결 방안 (권장 순서)
+
+#### 🏆 해결 방안 1: React Fiber 인스턴스에서 원본 `node` 직접 추출 (가장 정확하고 견고함)
+
+트릭컬 노트는 React로 개발되어 있으므로, 각 타일 DOM 엘리먼트(`div`)의 React Fiber 프로퍼티에서 실제 바인딩된 `node` 객체를 즉시 읽어올 수 있습니다:
+
+```typescript
+/** 타일 DOM 요소에서 실제 React 노드 데이터 추출 */
+function getReactNodeFromElement(el: HTMLElement): MasterBoardNode | null {
+	const fiberKey = Object.keys(el).find((k) => k.startsWith("__reactFiber$") || k.startsWith("__reactInternalInstance$"));
+	if (!fiberKey) return null;
+
+	let fiber = (el as any)[fiberKey];
+	while (fiber) {
+		if (fiber.memoizedProps?.node) {
+			return fiber.memoizedProps.node;
+		}
+		fiber = fiber.return;
+	}
+	return null;
+}
+```
+
+- **장점:** DOM 순서 정렬이나 좌표 역계산 필요 없이, **클릭한 타일이 어떤 노드 ID인지 100% 정확하게 획득** 가능.
+- 획득한 `node.id`로 `findShortestPathToBokr(boardProg.masterNodes, boardProg.stepStr, node.id)`를 실행하면 스탯, 위치, 비용, 경로가 0의 오차도 없이 일치함.
+
+---
+
+#### 🥈 해결 방안 2: DOM 스프라이트 오프셋 기반 보크 타일 판별 ([src/ui/tileHighlight.ts](src/ui/tileHighlight.ts) 방식 활용)
+
+[src/ui/tileHighlight.ts](src/ui/tileHighlight.ts)에서 이미 검증된 `STAT_TO_POSITIONS` 매핑 로직을 활용합니다:
+
+- 타일 내부 `div[class*="--img-board-tile"]`의 `bg-position` 클래스 조사:
+  - 황크 테두리(33.3%, 66.6%) 제외
+  - 일반 테두리(0%, 16.6%) 제외
+  - 게이트(86.3%) 제외
+- 보크 타일의 활성/비활성 `bg-position`과 일치하는 타일만 `data-tcbe-is-bokr="true"` 마킹.
+- 해당 타일의 스탯 종류(물공, 마공 등)와 사도 카드의 노드 목록 중 해당 스탯을 가진 노드를 매칭.
+
+---
+
+#### 🥉 해결 방안 3: 그리드 좌표 기반 정렬 (`grid.y`, `grid.x`)
+
+DOM 타일의 배치 순서가 화면 상단부터라면, `masterNodes`를 `grid.y` 오름차순 -> `grid.x` 오름차순으로 정렬한 가상 배열을 생성하여 DOM 타일 인덱스와 1:1 대응시킬 수 있습니다:
+
+```typescript
+const sortedNodes = [...boardNodes].filter((n) => n.grid && n.grid.x !== -1).sort((a, b) => (a.grid!.y === b.grid!.y ? a.grid!.x - b.grid!.x : a.grid!.y - b.grid!.y));
+```
+
+---
+
+### 4-3. 원본 사이트 모달과의 관계 및 UI 권고
+
+1. **원본 사이트 내장 모달 분석 결과:**
+   - 원본 사이트(`note.trickcal.com`)에도 황크뿐 아니라 **보크 타일 및 10/01 추가된 꽃잎 칸(만개 물뿌리개 610005)을 클릭하면 육각 미니맵 노드 트리와 함께 소모 재화 모달이 뜨는 기능이 원래 내장**되어 있습니다.
+   - 단, 타일 히트박스가 좁아 클릭이 다소 불편하고, 이미 색칠된 타일에 인접한 경우 `추가 비용: 0개`로만 표기됩니다.
+2. **확장 프로그램 UI 방향성 제안:**
+   - **옵션 A (자체 모달 개선):** 위 [해결 방안 1]의 React Fiber 노드 추출을 적용하여 클릭한 보크 타일의 실제 스탯/좌표/경로를 완벽 동기화.
+   - **옵션 B (원본 모달 보조 + 미니 툴팁):** 원본 모달의 전체 트리 시각화가 훌륭하므로 원본 클릭을 가로막지 않고, 타일 **마우스 호버 시 가벼운 미니 툴팁(Cost Card)**으로 `"일반 3칸 (하급 9개, 중급 6개, 120k 골드)"`만 살짝 띄워주는 경량화 방식도 매우 높은 사용자 경험을 제공할 수 있습니다.
+
+---
+
+### 🌐 4-4. WebP 서버 에셋 연동 완료 현황
+
+- **서버 직접 참조로 전환 완료된 에셋:**
+  - `https://note.trickcal.com/UI/Stat.webp` (스탯 스프라이트)
+  - `https://note.trickcal.com/UI/Common_UnitPersonality.webp` (성격 스프라이트)
+  - `https://note.trickcal.com/UI/Gate.webp` (관문 아이콘)
+  - `https://note.trickcal.com/UI/Crayon_check.webp` (완료 체크)
+- **크레파스·골드 CDN 전환:**
+  - 로컬 파일은 보존하되, 화면에서 사용하는 크레파스 4종과 골드는 아래 CDN 주소를 직접 참조합니다.
+
+- `https://cdn.note.trickcal.com/Materials/aekAKPsosli3qEanhqzUxly-2E_PXu1kV.webp` (ultra_pastel)
+- `https://cdn.note.trickcal.com/Materials/a1QwfDWjjHCxQv7K-KJLBtxDFxWM1CERq.webp` (epic_pastel)
+- `https://cdn.note.trickcal.com/Materials/aXi__OXRlprdJ2aKDSV7RDndcgNnTjV4o.webp` (average_pastel)
+- `https://cdn.note.trickcal.com/Materials/aSidEcauOucIZOMZV_ilvVhKEpMIog9hK.webp` (basic_pastel)
+
+- `https://note.trickcal.com/UI/BoardRect.webp` (보드칸 타일 배경)
+- `https://note.trickcal.com/UI/BoardTile.webp` (보드칸 아이콘)
+
+- `https://note.trickcal.com/UI/FloweringGate_HeroClose.webp` (꽃잎 칸 닫힘)
+- `https://note.trickcal.com/UI/FloweringGate_HeroOpen.webp` (꽃잎 칸 열림)
+
+- `https://cdn.note.trickcal.com/Materials/a6iBdIQUa2Z8GrR0S05hucxq7qjTIFhCl.webp` (만개 물뿌리개)
+- `https://cdn.note.trickcal.com/Materials/aJ3ElQvrIrOM6vPr2fJb_v79A_RC2YX6_.webp` (골드)
+
+- **빌드 설정 ([scripts/build.mjs](scripts/build.mjs)):**
+  - esbuild `external`에 `['chrome-extension://*', '/UI/*', 'https://*']` 반영 완료되어 빌드 에러 없이 정상 작동합니다.
+
+
+### 보크 모달 작업 중단
+
+- 사용자 요청에 따라 보크 타일의 호버·클릭 연결과 MAIN 타일 식별 브리지를 실행 경로에서 제외했습니다.
+- 모달·경로 탐색 코드는 보존하며, 모달 CSS는 `src/ui/bokrModal.css`에 분리해 현재 빌드에 포함하지 않습니다.
+- 현재 적용 대상은 기존 UI의 WebP 서버/CDN 주소입니다. 일반 관문은 `UI/Gate.webp`를 사용합니다.

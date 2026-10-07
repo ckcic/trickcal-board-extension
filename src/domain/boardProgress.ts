@@ -34,12 +34,18 @@ export const BOKR_ITEM_ID = 610003;
 /** 최상급 크레파스 (황금 크레파스 / 황크) 아이템 ID */
 export const HWANG_ITEM_ID = 610004;
 
+/** 만개 물뿌리개 (꽃잎 칸 해금용 전용 재화) 아이템 ID */
+export const WATERING_CAN_ITEM_ID = 610005;
+
 /** 보드 노드 타입 상수 */
 export const NODE_TYPE = {
   GATE: 1,
+  START: 2,
   NORMAL: 3,
   BOKR: 4,
   HWANG: 5,
+  HWANG_EXT: 6, // 10/01 확장 황크 노드
+  PETAL: 7,     // 10/01 만개 물뿌리개로 여는 꽃잎 칸
 } as const;
 
 /** 스탯 카테고리 정의 목록 */
@@ -177,6 +183,7 @@ export function createEmptyCostSummary(): ResourceCostSummary {
     averageCrayon: 0,
     epicCrayon: 0,
     ultraCrayon: 0,
+    wateringCan: 0,
     gold: 0,
   };
 }
@@ -194,6 +201,9 @@ export function addNodeCost(target: ResourceCostSummary, node: MasterBoardNode):
       else if (it.item === MID_CRAYON_ITEM_ID) target.averageCrayon += (it.value || 0);
       else if (it.item === BOKR_ITEM_ID) target.epicCrayon += (it.value || 0);
       else if (it.item === HWANG_ITEM_ID) target.ultraCrayon += (it.value || 0);
+      else if (it.item === WATERING_CAN_ITEM_ID) {
+        target.wateringCan = (target.wateringCan || 0) + (it.value || 0);
+      }
     }
   }
 }
@@ -521,6 +531,8 @@ export function calculateApostleProgress(
       boardIndex: boardIndexNum,
       boardStepLevel: stepIndex + 1,
       unlocked: isUnlocked,
+      masterNodes: nodes,
+      stepStr,
       nodes: boardNodes,
       bokr: {
         total: bTotalBokr,

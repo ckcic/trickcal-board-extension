@@ -1,7 +1,7 @@
 /** 확장 프로그램이 소유한 하위 DOM만 제외하고 원본 카드의 변경은 감지한다. */
 function isExtensionNode(node: Node): boolean {
   const element = node.nodeType === 1 ? node as Element : node.parentElement;
-  return Boolean(element?.closest('#tcbe-filter-panel, .tcbe-badge-row, .tcbe-badge-container, .tcbe-normal-badge-container, .tcbe-portal-tooltip'));
+  return Boolean(element?.closest('#tcbe-filter-panel, .tcbe-badge-row, .tcbe-badge-container, .tcbe-normal-badge-container, .tcbe-portal-tooltip, #tcbe-bokr-modal-container'));
 }
 
 /** 하이라이트와 필터 클래스 변경으로 observer가 자기 자신을 반복 호출하지 않도록 한다. */

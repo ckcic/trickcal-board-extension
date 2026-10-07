@@ -1,18 +1,22 @@
 import { matchesApostleFilter } from '../domain/filters.ts';
 /**
  * @file boardEnhancer.ts
- * @description 트릭컬 노트의 사도 카드 DOM을 감지하여 뱃지/하이라이트/필터/정렬을 오케스트레이션하는 진입점 모듈
+ * @description 트릭컬 노트의 사도 카드 DOM을 감지하여 뱃지/하이라이트/필터/정렬 및 보크 타일 경로 탐색을 오케스트레이션하는 진입점 모듈
  */
 
+import { findApostlePathToBokr } from '../domain/boardPathfinder.ts';
+import { TILE_APOSTLE_ID, TILE_BOARD_LEVEL, TILE_NODE_ID } from '../bridge/tileIdentity.ts';
 import type { ApostleProgress, FilterState } from '../domain/types.ts';
 import { createBadgeElement } from './badge.ts';
+import { closeBokrModal, showBokrModal } from './bokrModal.ts';
 import { findCardContainer, findProgressByName } from './cardDetector.ts';
 import { createNormalStatElement } from './normalStat.ts';
 import { updateBoardTileHighlights } from './tileHighlight.ts';
 
 // --- 하위 모듈 재-export (외부 모듈의 기존 import 경로 호환) ---
 export { createBadgeElement } from './badge.ts';
-export { findProgressByName } from './cardDetector.ts';
+export { closeBokrModal, showBokrModal } from './bokrModal.ts';
+export { findCardContainer, findProgressByName } from './cardDetector.ts';
 export { createNormalStatElement } from './normalStat.ts';
 export { STAT_TO_POSITIONS, updateBoardTileHighlights } from './tileHighlight.ts';
 
@@ -77,6 +81,174 @@ export function createApostleEnhanceRow(
   return row;
 }
 
+/** 카드와 사도 진행도 데이터 간의 매핑 캐시 */
+const cardToProgress = new WeakMap<HTMLElement, ApostleProgress>();
+
+/** 현재 경로 강조 하이라이트가 적용된 타일 엘리먼트 집합 */
+const activePathHighlightedTiles = new Set<HTMLElement>();
+
+/**
+ * 현재 적용된 보크 경로 하이라이트(.tcbe-path-highlight)를 모두 제거
+ */
+export function clearPathHighlights(): void {
+  activePathHighlightedTiles.forEach((el) => {
+    el.classList.remove('tcbe-path-highlight');
+  });
+  activePathHighlightedTiles.clear();
+}
+
+/**
+ * 사도 카드 내부의 1, 2, 3차 보드 열 엘리먼트 추출
+ */
+export function getBoardCols(card: HTMLElement): {
+  b1Col: HTMLElement | null;
+  b2Col: HTMLElement | null;
+  b3Col: HTMLElement | null;
+} {
+  let b1Col: HTMLElement | null = null;
+  let b2Col: HTMLElement | null = null;
+  let b3Col: HTMLElement | null = null;
+
+  if (!card || typeof card.querySelectorAll !== 'function') {
+    return { b1Col, b2Col, b3Col };
+  }
+
+  const titleElements = Array.from(
+    card.querySelectorAll<HTMLElement>(
+      '.bg-charaboard-active-title-background, .bg-charaboard-inactive-title-background'
+    )
+  );
+
+  for (const el of titleElements) {
+    const text = el.textContent?.replace(/\s/g, '');
+    if (!text) continue;
+
+    // 타이틀의 부모 요소(bg-emerald-100/60 p-2 등)가 해당 보드의 타일들을 감싸는 컨테이너
+    const colContainer = (el.parentElement?.classList.contains('flex-auto')
+      ? el.parentElement
+      : el.closest('.flex-auto')) || el.parentElement;
+
+    if (!colContainer) continue;
+
+    if (text === '1차보드' && !b1Col) {
+      b1Col = colContainer as HTMLElement;
+    } else if (text === '2차보드' && !b2Col) {
+      b2Col = colContainer as HTMLElement;
+    } else if (text === '3차보드' && !b3Col) {
+      b3Col = colContainer as HTMLElement;
+    }
+  }
+
+  return { b1Col, b2Col, b3Col };
+}
+
+/**
+ * 특정 보드 열 내부의 타일(div[class*="--img-board-rect"]) 엘리먼트 배열 반환
+ */
+export function getBoardTiles(col: HTMLElement | null): HTMLElement[] {
+  if (!col) return [];
+  const tiles = Array.from(col.querySelectorAll<HTMLElement>('div[class*="--img-board-rect"]'));
+  if (tiles.length > 0) return tiles;
+  const fallbackTiles = Array.from(col.querySelectorAll<HTMLElement>('div[class*="board-rect"]'));
+  if (fallbackTiles.length > 0) return fallbackTiles;
+  return [];
+}
+
+/** 브리지 식별자를 현재 사도의 마스터 데이터와 대조하며 순서 기반 추정은 하지 않는다. */
+export function resolveBokrTile(tile: HTMLElement, progress: ApostleProgress) {
+  if (tile.getAttribute(TILE_APOSTLE_ID) !== String(progress.apostleId)) return null;
+  const boardLevel = Number(tile.getAttribute(TILE_BOARD_LEVEL));
+  const rawNodeId = tile.getAttribute(TILE_NODE_ID);
+  if (rawNodeId === null || !Number.isInteger(boardLevel) || boardLevel < 1 || boardLevel > 3) return null;
+  const boardIndex = boardLevel - 1;
+  const board = progress.boards[boardIndex];
+  const nodeId = Number(rawNodeId);
+  const nodeProgress = board?.nodes.find(node => node.nodeId === nodeId);
+  if (!nodeProgress?.isBokr) return null;
+  const nodeIndex = board?.masterNodes?.findIndex(node => node.id === nodeId) ?? -1;
+  const targetNode = board?.masterNodes?.[nodeIndex];
+  return targetNode && board ? { board, boardIndex, nodeIndex, targetNode } : null;
+}
+
+/**
+ * 사도 카드 내부의 보크 타일에 마우스 커서 및 클릭 이벤트 위임 리스너 등록
+ */
+export function attachBokrTileClickListener(card: HTMLElement, progress: ApostleProgress): void {
+  if (!card || typeof card.getAttribute !== 'function' || typeof card.addEventListener !== 'function') {
+    return;
+  }
+  cardToProgress.set(card, progress);
+
+  // 카드 재사용이나 데이터 갱신 때 기존의 잘못된 표시도 제거한다.
+  getBoardTiles(card).forEach(tile => {
+    if (resolveBokrTile(tile, progress)) tile.setAttribute('data-tcbe-is-bokr', 'true');
+    else tile.removeAttribute('data-tcbe-is-bokr');
+  });
+
+  // 카드가 이미 클릭 바인딩되어 있다면 중복 등록 방지
+  if (card.getAttribute('data-tcbe-bokr-click-bound') === 'true') {
+    return;
+  }
+  card.setAttribute('data-tcbe-bokr-click-bound', 'true');
+
+  // 캡처링 단계에서 인터셉트하여 원본 React 라우터의 사도 상세 페이지 이동 방지
+  card.addEventListener(
+    'click',
+    (e) => {
+      const target = e.target instanceof HTMLElement ? e.target : null;
+      if (!target) return;
+
+      const rectEl = target.closest<HTMLElement>('div[class*="--img-board-rect"]');
+      if (!rectEl) return;
+
+      // 보크 타일 여부 확인
+      if (rectEl.getAttribute('data-tcbe-is-bokr') !== 'true') return;
+
+      const curProgress = cardToProgress.get(card) || progress;
+      const matched = resolveBokrTile(rectEl, curProgress);
+      if (!matched?.board.masterNodes) return;
+      const { boardIndex, targetNode, nodeIndex } = matched;
+
+      // 식별자 대조와 경로 계산에 성공한 경우에만 원본 클릭을 차단한다.
+      const pathResult = findApostlePathToBokr(curProgress, boardIndex, targetNode.id);
+      if (!pathResult) return;
+
+      // 원본 링크 클릭 차단
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      // 경로 하이라이트 토글 함수
+      const applyHighlight = (enabled: boolean) => {
+        clearPathHighlights();
+        if (!enabled) return;
+        const pathTiles = new Set(pathResult.pathSteps?.map(step => `${step.boardIndex + 1}:${step.nodeId}`));
+        getBoardTiles(card).forEach(tileEl => {
+          if (tileEl.getAttribute(TILE_APOSTLE_ID) === String(curProgress.apostleId) &&
+              pathTiles.has(`${tileEl.getAttribute(TILE_BOARD_LEVEL)}:${tileEl.getAttribute(TILE_NODE_ID)}`)) {
+            tileEl.classList.add('tcbe-path-highlight');
+            activePathHighlightedTiles.add(tileEl);
+          }
+        });
+      };
+
+      // 보크 상세 및 경로 모달 노출
+      showBokrModal({
+        progress: curProgress,
+        boardIndex,
+        targetNode,
+        nodeIndex,
+        pathResult,
+        onToggleHighlight: applyHighlight,
+        onClose: () => {
+          clearPathHighlights();
+        },
+      });
+    },
+    true
+  );
+}
+
 /**
  * 보드 기준 필터에 따라 사도 카드 내부의 1, 2, 3차 보드 열 및 묶음 row 표시/숨김 (캐시 적용)
  */
@@ -89,24 +261,7 @@ export function applyBoardLevelVisibility(card: HTMLElement, boardLevel: FilterS
   }
   card.setAttribute('data-tcbe-visible-level', boardLevel);
 
-  let b1Col: HTMLElement | null = null;
-  let b2Col: HTMLElement | null = null;
-  let b3Col: HTMLElement | null = null;
-
-  const titleElements = Array.from(
-    card.querySelectorAll<HTMLElement>('.bg-charaboard-active-title-background, .bg-charaboard-inactive-title-background, div, span')
-  );
-
-  for (const el of titleElements) {
-    const text = el.textContent?.trim();
-    if (text === '1차 보드' && !b1Col) {
-      b1Col = (el.parentElement?.classList.contains('flex-auto') ? el.parentElement : el.closest('.flex-auto')) as HTMLElement;
-    } else if (text === '2차 보드' && !b2Col) {
-      b2Col = (el.parentElement?.classList.contains('flex-auto') ? el.parentElement : el.closest('.flex-auto')) as HTMLElement;
-    } else if (text === '3차 보드' && !b3Col) {
-      b3Col = (el.parentElement?.classList.contains('flex-auto') ? el.parentElement : el.closest('.flex-auto')) as HTMLElement;
-    }
-  }
+  const { b1Col, b2Col, b3Col } = getBoardCols(card);
 
   // 1, 2차 보드를 묶는 부모 row (b1Col 또는 b2Col의 부모)
   const row12 = (b1Col?.parentElement || b2Col?.parentElement) as HTMLElement | null;
@@ -261,6 +416,8 @@ export function enhanceApostleCards(
     // 보드 타일 하이라이트 갱신
     updateBoardTileHighlights(card, progress, activeFilter);
 
+    // 보크 타일 클릭 리스너 및 마킹 적용
+
     card.setAttribute(ATTR_ENHANCED, 'true');
     processedCards.add(card);
     enhancedCount++;
@@ -307,7 +464,7 @@ export function enhanceApostleCards(
         applyBoardLevelVisibility(card, activeFilter.boardLevel);
       }
       updateBoardTileHighlights(card, progress, activeFilter);
-      card.setAttribute(ATTR_ENHANCED, 'true');
+        card.setAttribute(ATTR_ENHANCED, 'true');
       processedCards.add(card);
       enhancedCount++;
     });
@@ -434,6 +591,8 @@ export function setBadgesVisible(visible: boolean) {
   });
 
   if (!visible) {
+    closeBokrModal();
+    document.querySelectorAll('[data-tcbe-is-bokr]').forEach(tile => tile.removeAttribute('data-tcbe-is-bokr'));
     // 1. 타일 하이라이트 해제
     const highlights = document.querySelectorAll('.tcbe-tile-highlight-rem, .tcbe-tile-highlight-done');
     highlights.forEach((h) => {
