@@ -16,6 +16,28 @@ const progress = { boards: [
   ], stepStr: '' },
 ] };
 
+test('시작 칸과 관문은 색칠 기록과 별개로 원본의 고정 스프라이트를 표시한다', () => {
+  const nodes = [
+    { id: 1, nodeType: 2, grid: { x: 1, y: 1 }, displayStat: [1, 0] },
+    { id: 2, nodeType: 1, grid: { x: 1, y: 2 }, requireGold: 500000 },
+  ];
+  const board = { masterNodes: nodes, stepStr: '00' };
+  const options = { progress: { boards: [board] }, boardIndex: 0, targetNode: nodes[0], pathResult: {} };
+  const html = renderBokrBoard(options);
+  const start = html.split('data-node="1"')[1].split('</div>')[0];
+  const gate = html.split('data-node="2"')[1].split('</div>')[0];
+  assert.match(start, /background-position:0% 0/);
+  assert.doesNotMatch(start, /background-position:16\.6667%|background-position:4\.5455%/);
+  assert.match(gate, /background-position:50% 0/);
+  assert.match(gate, /tcbe-map-icon.*background-position:86\.3636% 0/);
+  assert.doesNotMatch(html, /tcbe-map-gate|색칠 완료/);
+  board.stepStr = '11';
+  const pickedGate = renderBokrBoard(options).split('data-node="2"')[1].split('</div>')[0];
+  assert.match(pickedGate, /background-position:50% 0/);
+  assert.match(pickedGate, /background-position:86\.3636% 0/);
+  assert.equal(board.stepStr, '11');
+});
+
 test('위치 보드는 좌표와 차수로 선택 칸을 하나만 표시하고 빈칸과 숨긴 꽃잎을 제외한다', () => {
   const targetNode = progress.boards[1].masterNodes[1];
   const pathResult = findApostlePathToBokr(progress, 1, 2);

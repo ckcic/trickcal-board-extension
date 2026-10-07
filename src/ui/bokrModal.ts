@@ -78,17 +78,21 @@ export function renderBokrBoard(options: BokrModalOptions): string {
     const petalIndex = petal ? board.masterNodes!.indexOf(petal) : -1;
     const petalOpen = petal && board.unlocked !== false && board.stepStr?.[petalIndex] === '1';
     const flowering = node.nodeType === NODE_TYPE.HWANG_EXT;
-    const frame = isBokrNode(node) ? (entry.picked ? '83.3333%' : '100%')
+    // 시작 칸과 관문은 원본의 고정 테두리를 사용하며 색칠 기록을 변경하지 않는다.
+    const frame = node.nodeType === NODE_TYPE.START ? '0%'
+      : node.nodeType === NODE_TYPE.GATE ? '50%'
+      : isBokrNode(node) ? (entry.picked ? '83.3333%' : '100%')
       : isHwangNode(node) ? (entry.picked ? '33.3333%' : '66.6667%')
       : (entry.picked ? '0%' : '16.6667%');
     const kind = node.nodeType === NODE_TYPE.GATE ? '관문' : node.nodeType === NODE_TYPE.START ? '시작 칸'
       : isBokrNode(node) ? '보크' : isHwangNode(node) ? '황크' : '일반칸';
     const label = `${entry.boardIndex + 1}차 ${statName || kind} ${kind}${flowering ? ` · 꽃잎 ${petal ? petalOpen ? '열림' : '닫힘' : '상태 미확인'}` : ''}${selected ? ' · 선택한 칸' : ''}${entry.picked ? ' · 색칠 완료' : ''}`;
-    const position = combinedAttack ? (entry.picked ? '100%' : '95.4545%')
+    const position = node.nodeType === NODE_TYPE.START ? '0%'
+      : node.nodeType === NODE_TYPE.GATE ? '86.3636%'
+      : combinedAttack ? (entry.picked ? '100%' : '95.4545%')
       : combinedDefense ? (entry.picked ? '90.9091%' : '86.3636%')
       : key ? STAT_TO_POSITIONS[key][entry.picked ? 'active' : 'inactive'][0] : '0%';
-    const icon = node.nodeType === NODE_TYPE.GATE ? '<span class="tcbe-map-gate"></span>'
-      : `<span class="tcbe-map-icon${isHwangNode(node) && !entry.picked ? ' tcbe-map-hwang-inactive' : ''}" style="background-position:${position} 0"></span>`;
+    const icon = `<span class="tcbe-map-icon${isHwangNode(node) && !entry.picked ? ' tcbe-map-hwang-inactive' : ''}" style="background-position:${position} 0"></span>`;
     const contents = flowering ? `<span class="tcbe-map-flower-frame" style="background-position:${frame} 0">${icon}</span>` : icon;
     return `<div class="tcbe-map-tile ${selected ? 'tcbe-map-selected' : ''} ${onPath ? 'tcbe-map-path' : ''}${flowering ? ` tcbe-map-flower tcbe-map-flower-${petalOpen ? 'open' : 'closed'}` : ''}" data-board="${entry.boardIndex + 1}" data-node="${node.id}" style="grid-column:${maxX - entry.x + 1 + columnOffset};grid-row:${maxY - entry.y + 1};background-position:${flowering ? 'center' : frame} 0" title="${escapeHtml(label)}" role="img" aria-label="${escapeHtml(label)}">${contents}</div>`;
   }).join('');
