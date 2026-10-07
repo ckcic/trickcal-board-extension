@@ -13,7 +13,8 @@
 #tcbe-bokr-modal-container h2 { font-size: 18px; font-weight: 400; text-align: center; }
 #tcbe-bokr-modal-container button { font-family: inherit; cursor: pointer; font-weight: 400; }
 #tcbe-bokr-modal-container button:focus-visible { outline: 3px solid #357ee7; outline-offset: 2px; }
-#tcbe-bokr-modal-container .tcbe-bokr-close-btn { position: absolute; right: 10px; top: 4px; font-size: 20px; border: 0; background: transparent; color: white; }
+#tcbe-bokr-modal-container .tcbe-bokr-close-btn { position: absolute; right: 14px; top: 10px; width: 26px; height: 26px; display: flex; padding: 0; border: 0; border-radius: 2px; background: transparent; color: white; }
+#tcbe-bokr-modal-container .tcbe-bokr-close-btn svg { width: 26px; height: 26px; flex-shrink: 0; pointer-events: none; }
 #tcbe-bokr-modal-container .tcbe-bokr-body { padding: 16px 22px 22px; display: flex; flex-direction: column; gap: 10px; }
 #tcbe-bokr-modal-container .tcbe-bokr-profile { display: flex; align-items: center; gap: 10px; }
 #tcbe-bokr-modal-container .tcbe-bokr-portrait { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #c0de89; object-fit: cover; }

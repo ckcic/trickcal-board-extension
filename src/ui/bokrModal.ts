@@ -112,7 +112,7 @@ export function showBokrModal(options: BokrModalOptions): void {
   container.className = 'tcbe-modal-root';
   container.innerHTML = `<div class="tcbe-modal-backdrop"></div>
     <section class="tcbe-bokr-dialog" role="dialog" aria-modal="true" aria-labelledby="tcbe-bokr-title" tabindex="-1">
-      <header class="tcbe-bokr-header"><h2 id="tcbe-bokr-title">선택한 칸의 정보</h2><button type="button" class="tcbe-bokr-close-btn" aria-label="닫기">✕</button></header>
+      <header class="tcbe-bokr-header"><h2 id="tcbe-bokr-title">선택한 칸의 정보</h2><button type="button" class="tcbe-bokr-close-btn" aria-label="닫기"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></header>
       <div class="tcbe-bokr-body">
         <div class="tcbe-bokr-profile">${portraitUrl && /^https:\/\/(cdn\.)?note\.trickcal\.com\//.test(portraitUrl) ? `<img class="tcbe-bokr-portrait" src="${escapeHtml(portraitUrl)}" alt="${escapeHtml(progress.name)}">` : ''}<div class="tcbe-bokr-profile-info"><div class="tcbe-bokr-hero-sub">${progress.unlockedBoardCount}차 보드 열림 · ${boardIndex + 1}차 보드</div><div class="tcbe-bokr-hero-name"><span class="tcbe-sprite-pers tcbe-sprite-pers-${personality?.spriteIndex ?? 0}" aria-label="${escapeHtml(personality?.nameKo || '')}"></span><strong>${escapeHtml(progress.name)}</strong></div></div></div>
         <div class="tcbe-bokr-layout">
