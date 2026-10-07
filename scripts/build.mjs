@@ -27,6 +27,12 @@ function ensureDistDir() {
   }
   // 서버/CDN 이미지를 사용하므로 이전 빌드에서 남은 로컬 WebP 산출물도 제거한다.
   fs.rmSync(path.join(distDir, 'webp'), { recursive: true, force: true });
+  // 개발 빌드의 소스맵이 배포 ZIP에 남지 않도록 알려진 산출물만 정리한다.
+  if (isProd) {
+    for (const file of ['content.js.map', 'interceptor.js.map', 'popup.js.map', 'styles.css.map']) {
+      fs.rmSync(path.join(distDir, file), { force: true });
+    }
+  }
 }
 
 /**

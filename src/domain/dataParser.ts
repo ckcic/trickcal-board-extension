@@ -12,14 +12,24 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
+function isInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value);
+}
+function isNonNegativeNumber(value: unknown): value is number {
+  return isNumber(value) && value >= 0;
+}
 function isNode(value: unknown): boolean {
-  if (!isRecord(value) || !isNumber(value.id) || !isNumber(value.nodeType)) return false;
+  if (!isRecord(value) || !isInteger(value.id) || !isInteger(value.nodeType)) return false;
+  // 숨김 노드의 음수 좌표는 유지하되 경로 계산에 사용할 수 없는 좌표와 연결은 거부한다.
+  if (value.grid !== undefined && (!isRecord(value.grid) || !isInteger(value.grid.x) || !isInteger(value.grid.y))) return false;
+  if (value.prevId !== undefined && !isInteger(value.prevId)) return false;
+  if (value.nextId !== undefined && !isInteger(value.nextId)) return false;
   if (value.displayStat !== undefined && (!Array.isArray(value.displayStat) || !value.displayStat.every(isNumber))) return false;
-  if (value.requireGold !== undefined && !isNumber(value.requireGold)) return false;
+  if (value.requireGold !== undefined && !isNonNegativeNumber(value.requireGold)) return false;
   if (value.stats !== undefined && (!Array.isArray(value.stats) || !value.stats.every(
     stat => isRecord(stat) && isNumber(stat.statType) && isNumber(stat.statValue)))) return false;
   return value.requireItems === undefined || (Array.isArray(value.requireItems) && value.requireItems.every(
-    item => isRecord(item) && isNumber(item.item) && isNumber(item.value)));
+    item => isRecord(item) && isInteger(item.item) && isNonNegativeNumber(item.value)));
 }
 
 /**

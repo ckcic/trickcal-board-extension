@@ -1,6 +1,6 @@
 # 🎨 트릭컬 노트 보드 확장 프로그램 (Trickcal Board Extension)
 
-[![Version](https://img.shields.io/badge/version-1.0.7-blue.svg)](manifest.json)
+[![Version](https://img.shields.io/badge/version-1.0.8-blue.svg)](manifest.json)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Manifest V3](https://img.shields.io/badge/manifest-v3-orange.svg)](manifest.json)
 [![Platform](https://img.shields.io/badge/platform-Chrome%20%7C%20Edge%20%7C%20Whale-lightgrey.svg)](https://note.trickcal.com/board)
@@ -50,6 +50,12 @@
 - 사용자의 API 토큰, 인증 정보, 계정 식별자는 일체 저장하거나 외부 서버로 전송하지 않습니다.
 - 모든 데이터 파싱 및 연산은 **브라우저 로컬 메모리(Client-side)** 내에서만 순수 함수로 안전하게 처리됩니다.
 
+### 8. 🖍️ 보크 칸 클릭 및 경로 안내
+- 보크 칸을 클릭하면 선택한 차수의 위치 보드, 선택 칸의 비용과 색칠 경로의 추가 비용을 표시합니다.
+- 이미 칠한 칸과 열린 관문의 비용은 다시 더하지 않으며, 닫힌 선행 꽃잎의 물뿌리개·골드를 반영합니다.
+- 황크·만개 칸은 원본 모달을 유지합니다. 작은 창에서도 카드와 팝업이 원본 고정 메뉴를 가리지 않습니다.
+- 자세한 변경 사항은 [1.0.8 릴리스 노트](RELEASE_NOTES.md)를 참고하세요.
+
 ---
 
 ## 📥 설치 방법
@@ -72,10 +78,10 @@
 # 1. 의존성 패키지 설치
 npm install
 
-# 2. TypeScript 타입 검사 및 단위 테스트 실행 (25개 테스트)
+# 2. 단위 테스트 실행
 npm test
 
-# 3. 개발용 빌드 (dist/ 생성)
+# 3. TypeScript 타입 검사 및 개발용 빌드 (dist/ 생성)
 npm run build
 
 # 4. 소스코드 변경 감지 및 자동 빌드 (Watch 모드)

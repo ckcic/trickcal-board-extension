@@ -61,6 +61,13 @@ declare global {
   window.fetch = async function (...args: Parameters<typeof fetch>) {
     const response = await originalFetch.apply(this, args);
     try {
+      // 명확한 비 JSON 응답은 복제하지 않아 이미지와 스트리밍 응답의 메모리 비용을 줄인다.
+      // 헤더 누락이나 text/plain 등 모호한 형식은 기존 JSON 분석을 유지한다.
+      const mediaType = response.headers?.get('content-type')?.split(';')[0]?.trim().toLowerCase();
+      if (mediaType && (/^(image|audio|video|font)\//.test(mediaType) ||
+          /^(text\/(html|css|javascript|event-stream)|application\/(pdf|wasm|javascript))$/.test(mediaType))) {
+        return response;
+      }
       // 응답 스트림을 소비하지 않도록 복제(clone)하여 분석
       const cloned = response.clone();
       cloned

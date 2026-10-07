@@ -20,10 +20,29 @@ test('파서는 잘못된 중첩 데이터와 숫자 대신 들어온 문자열�
     p => p.heroInfo['10001'] = null,
     p => p.text.KEY_A_NAME = {},
     p => p.board = [],
+    p => p.board['10001']['0'][0].grid = { x: '1', y: 0 },
+    p => p.board['10001']['0'][0].grid = { x: 0, y: NaN },
+    p => p.board['10001']['0'][0].grid = { x: 0.5, y: 0 },
+    p => p.board['10001']['0'][0].grid = null,
+    p => p.board['10001']['0'][0].prevId = '2',
+    p => p.board['10001']['0'][0].nextId = Infinity,
+    p => p.board['10001']['0'][0].requireGold = -1,
+    p => p.board['10001']['0'][0].requireItems = [{ item: 610003, value: -3 }],
   ]) {
     const p = payload(); corrupt(p);
     assert.equal(parseTrickcalApiPayload(p), null);
   }
+});
+
+test('파서는 좌표 없는 꽃잎과 음수 숨김 좌표 및 숫자 연결 필드를 허용한다', () => {
+  const p = payload();
+  const node = p.board['10001']['0'][0];
+  delete node.grid;
+  node.prevId = 2;
+  node.nextId = 3;
+  assert.ok(parseTrickcalApiPayload(p));
+  node.grid = { x: -1, y: -1 };
+  assert.ok(parseTrickcalApiPayload(p));
 });
 
 test('파서는 보드 진행도에 필요한 유저 필드만 추출하며 래퍼와 빈 보유 목록을 지원한다', () => {
@@ -144,6 +163,37 @@ test('인터셉터는 초기 응답을 재전달하고 XHR 재사용 시 중복 
   await new Promise(resolve => setImmediate(resolve));
   assert.ok(response.clone);
   assert.equal(messages.length, 4);
+});
+
+test('fetch는 명시적인 비 JSON 응답을 복제하지 않고 JSON 및 헤더 없는 응답을 처리한다', async () => {
+  const bundled = await build({ entryPoints: ['src/bridge/interceptor.ts'], bundle: true, write: false, format: 'iife' });
+  const messages = [];
+  let clones = 0;
+  let contentType;
+  const response = {
+    headers: { get: () => contentType },
+    clone() { clones++; return { json: async () => payload() }; },
+  };
+  class FakeXHR { send() {} }
+  const win = {
+    location: { origin: 'https://note.trickcal.com' },
+    addEventListener() {},
+    postMessage: message => messages.push(message),
+    fetch: async () => response,
+  };
+  vm.runInNewContext(bundled.outputFiles[0].text, { window: win, XMLHttpRequest: FakeXHR, console });
+  for (contentType of ['image/webp', 'text/html; charset=utf-8', 'text/event-stream', 'application/pdf']) {
+    assert.equal(await win.fetch(), response);
+  }
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(clones, 0);
+  assert.equal(messages.length, 0);
+  for (contentType of ['application/json; charset=utf-8', 'Application/Problem+JSON', null, 'text/plain', 'application/octet-stream']) {
+    assert.equal(await win.fetch(), response);
+    await new Promise(resolve => setImmediate(resolve));
+  }
+  assert.equal(clones, 5);
+  assert.equal(messages.length, 5);
 });
 
 test('배열로 전달되는 보드 차수도 객체 차수와 동일하게 계산한다', () => {

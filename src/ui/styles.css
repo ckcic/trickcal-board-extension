@@ -99,25 +99,27 @@
   display: none !important;
 }
 
-/* --- 핀 고정된 사도 카드는 다른 모든 호버 카드보다 최상위 레이어에 위치 --- */
-[data-slot="card"]:has(.tcbe-normal-badge-container.tcbe-pinned),
-div.bg-dialog-background[data-tcbe-enhanced]:has(.tcbe-normal-badge-container.tcbe-pinned) {
-  z-index: 10000 !important;
-  position: relative !important;
+/* 카드 내부 배지와 강조 타일을 격리해 원본 고정 메뉴(z-20)를 덮지 않게 한다. */
+[data-slot="card"][data-tcbe-enhanced],
+div.bg-dialog-background[data-tcbe-enhanced]:not([role="dialog"]):not([data-slot="dialog-content"]):not([data-slot="dialog-overlay"]) {
+  position: relative;
+  z-index: 0;
 }
 
-/* --- 호버된 사도 카드를 위 레이어로 올려 툴팁이 다른 카드에 가려지는 문제 방지 --- */
-/* ★ 핀 고정된 카드가 없을 때만 다른 카드의 호버 z-index를 올려 깜빡임/레이어 충돌 완벽 방지 */
-body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) [data-slot="card"][data-tcbe-enhanced]:hover,
+/* 고정 팝업은 다른 카드보다 앞에 두되 원본 메뉴와 모달 아래에 유지한다. */
+[data-slot="card"]:has(.tcbe-normal-badge-container.tcbe-pinned),
+div.bg-dialog-background[data-tcbe-enhanced]:not([role="dialog"]):not([data-slot="dialog-content"]):not([data-slot="dialog-overlay"]):has(.tcbe-normal-badge-container.tcbe-pinned) {
+  z-index: 15;
+  position: relative;
+}
+
+/* 일반칸 팝업을 사용할 때만 카드를 올리고 카드 본체의 단순 호버는 유지한다. */
 body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) [data-slot="card"]:has(.tcbe-normal-badge-container:hover),
 body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) [data-slot="card"]:has(.tcbe-normal-badge-container.tcbe-open),
-body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) [data-slot="card"]:has(.tcbe-badge-container:hover),
-body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-background[data-tcbe-enhanced]:not([role="dialog"]):not([data-slot="dialog-content"]):not([data-slot="dialog-overlay"]):hover,
-body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-background[data-tcbe-enhanced]:has(.tcbe-normal-badge-container:hover),
-body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-background[data-tcbe-enhanced]:has(.tcbe-normal-badge-container.tcbe-open),
-body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-background[data-tcbe-enhanced]:has(.tcbe-badge-container:hover) {
-  z-index: 40 !important;
-  position: relative !important;
+body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-background[data-tcbe-enhanced]:not([role="dialog"]):not([data-slot="dialog-content"]):not([data-slot="dialog-overlay"]):has(.tcbe-normal-badge-container:hover),
+body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-background[data-tcbe-enhanced]:not([role="dialog"]):not([data-slot="dialog-content"]):not([data-slot="dialog-overlay"]):has(.tcbe-normal-badge-container.tcbe-open) {
+  z-index: 10;
+  position: relative;
 }
 
 /* --- 스프라이트 아이콘 기본 스타일 --- */
@@ -364,7 +366,8 @@ html[data-tcbe-board-level="2"] .virtuoso-grid-item > :is([data-slot="card"], .b
   background: transparent;
   border: none;
   box-shadow: none;
-  z-index: 2147483647 !important;
+  /* 원본 고정 메뉴보다 아래, 일반칸 팝업과 카드보다 위에 표시한다. */
+  z-index: 18;
   pointer-events: auto !important;
   cursor: default;
   box-sizing: border-box;
