@@ -38,39 +38,75 @@ export function findTileIdentity(element: Element): TileIdentity | null {
   return null;
 }
 
-export function installTileIdentityBridge(): void {
-  let queued = false;
-  const scan = () => {
-    queued = false;
-    const tiles = document.querySelectorAll<HTMLElement>('[data-slot="card"] div[class*="--img-board-rect"]');
-    for (const tile of tiles) {
-      if (tile.closest('[role="dialog"], .tcbe-badge-row, .tcbe-normal-popup')) continue;
-      const identity = findTileIdentity(tile);
-      const entries = [
-        [TILE_NODE_ID, identity?.nodeId],
-        [TILE_BOARD_LEVEL, identity?.boardLevel],
-        [TILE_APOSTLE_ID, identity?.apostleId],
-      ] as const;
-      for (const [attribute, value] of entries) {
-        if (value === undefined) {
-          if (tile.hasAttribute(attribute)) tile.removeAttribute(attribute);
-        } else if (tile.getAttribute(attribute) !== String(value)) {
-          tile.setAttribute(attribute, String(value));
-        }
+export function installTileIdentityBridge(): () => void {
+  let frame: number | null = null;
+  let observer: MutationObserver | null = null;
+  const identify = (tile: HTMLElement) => {
+    if (tile.closest('[role="dialog"], .tcbe-badge-row, .tcbe-normal-popup, #tcbe-bokr-modal-container')) return;
+    const identity = findTileIdentity(tile);
+    const entries = [
+      [TILE_NODE_ID, identity?.nodeId],
+      [TILE_BOARD_LEVEL, identity?.boardLevel],
+      [TILE_APOSTLE_ID, identity?.apostleId],
+    ] as const;
+    for (const [attribute, value] of entries) {
+      if (value === undefined) {
+        if (tile.hasAttribute(attribute)) tile.removeAttribute(attribute);
+      } else if (tile.getAttribute(attribute) !== String(value)) {
+        tile.setAttribute(attribute, String(value));
       }
     }
   };
+  const scan = () => {
+    frame = null;
+    const tiles = document.querySelectorAll<HTMLElement>('[data-slot="card"] div[class*="--img-board-rect"]');
+    tiles.forEach(identify);
+  };
   const schedule = () => {
-    if (queued) return;
-    queued = true;
-    requestAnimationFrame(scan);
+    if (frame !== null) return;
+    frame = requestAnimationFrame(scan);
   };
   const observe = () => {
-    new MutationObserver(schedule).observe(document.documentElement, {
+    observer = new MutationObserver(mutations => {
+      // 확장 표시 클래스만 바뀐 경우에는 다시 탐색하지 않는다.
+      const siteClasses = (value: string | null) => (value || '').split(/\s+/)
+        .filter(name => name && !name.startsWith('tcbe-')).sort().join(' ');
+      if (mutations.some(mutation => {
+        const element = mutation.target.nodeType === 1 ? mutation.target as Element : mutation.target.parentElement;
+        if (element?.closest('#tcbe-filter-panel, .tcbe-badge-row, #tcbe-bokr-modal-container')) return false;
+        return mutation.type !== 'attributes' || siteClasses(mutation.oldValue) !== siteClasses(element?.getAttribute('class') ?? null);
+      })) schedule();
+    });
+    observer.observe(document.documentElement, {
       childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'],
+      attributeOldValue: true,
     });
     scan();
   };
+  // 클릭 직전에도 갱신하여 React의 DOM 재사용과 프레임 예약 사이의 경쟁을 방지한다.
+  const onClick = (event: MouseEvent) => {
+    const tile = event.target instanceof Element
+      ? event.target.closest<HTMLElement>('[data-slot="card"] div[class*="--img-board-rect"]') : null;
+    if (tile) identify(tile);
+  };
+  document.addEventListener('click', onClick, true);
+  const pause = () => {
+    observer?.disconnect();
+    if (frame !== null) cancelAnimationFrame(frame);
+    frame = null;
+  };
+  const resume = (event: PageTransitionEvent) => {
+    if (event.persisted) observe();
+  };
+  window.addEventListener('pagehide', pause);
+  window.addEventListener('pageshow', resume);
   if (document.documentElement) observe();
   else document.addEventListener('DOMContentLoaded', observe, { once: true });
+  return () => {
+    pause();
+    document.removeEventListener('DOMContentLoaded', observe);
+    document.removeEventListener('click', onClick, true);
+    window.removeEventListener('pagehide', pause);
+    window.removeEventListener('pageshow', resume);
+  };
 }

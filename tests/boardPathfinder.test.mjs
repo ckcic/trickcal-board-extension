@@ -171,3 +171,52 @@ test('비어 있는 후속 보드는 앞 보드의 활성 관문에서 이어지
   assert.equal(locked.totalCost.gold, 1035000);
   assert.deepEqual(locked.gateRequirements, [{ boardLevel: 2, items: [{ item: 310000, value: 5 }] }]);
 });
+
+test('차수마다 같은 노드 ID가 있어도 목표 차수의 비용과 위치를 선택한다', () => {
+  const progress = { boards: [
+    { masterNodes: [
+      { id: 1, nodeType: 2, grid: { x: 1, y: 1 } },
+      { id: 2, nodeType: 1, grid: { x: 1, y: 2 }, requireGold: 100 },
+    ], stepStr: '11', unlocked: true },
+    { masterNodes: [
+      { id: 1, nodeType: 3, grid: { x: 1, y: 1 }, requireGold: 10 },
+      { id: 2, nodeType: 4, grid: { x: 1, y: 2 }, requireItems: [{ item: 610003, value: 3 }], requireGold: 20 },
+    ], stepStr: '', unlocked: true },
+  ] };
+  const result = findApostlePathToBokr(progress, 1, 2);
+  assert.equal(result.targetNode, progress.boards[1].masterNodes[1]);
+  assert.equal(result.totalCost.gold, 30);
+  assert.equal(result.totalCost.epicCrayon, 3);
+  assert.deepEqual(result.pathSteps, [
+    { boardIndex: 0, nodeIndex: 1, nodeId: 2 },
+    { boardIndex: 1, nodeIndex: 0, nodeId: 1 },
+    { boardIndex: 1, nodeIndex: 1, nodeId: 2 },
+  ]);
+  assert.equal(result.unpickedPathNodes[0], progress.boards[1].masterNodes[0]);
+});
+
+test('잠긴 후속 보드의 시작 칸과 모순된 칠함 기록을 무료 출발점으로 사용하지 않는다', () => {
+  const progress = { boards: [
+    { masterNodes: [
+      { id: 1, nodeType: 2, grid: { x: 1, y: 1 } },
+      { id: 2, nodeType: 1, grid: { x: 1, y: 2 }, requireGold: 100 },
+    ], stepStr: '10', unlocked: true },
+    { masterNodes: [
+      { id: 3, nodeType: 2, grid: { x: 1, y: 1 } },
+      { id: 4, nodeType: 4, grid: { x: 1, y: 2 }, requireGold: 20 },
+    ], stepStr: '11', unlocked: false },
+  ] };
+  const result = findApostlePathToBokr(progress, 1, 4);
+  assert.equal(result.isTargetPicked, false);
+  assert.equal(result.totalCost.gold, 120);
+  assert.equal(result.unpickedNormalCount, 0);
+  assert.equal(result.gateRequirements.length, 1);
+});
+
+test('미래 차수의 칠한 노드를 이전 차수 목표의 출발점으로 사용하지 않는다', () => {
+  const progress = { boards: [
+    { masterNodes: [{ id: 1, nodeType: 4, grid: { x: 1, y: 1 } }], stepStr: '' },
+    { masterNodes: [{ id: 2, nodeType: 3, grid: { x: 1, y: 0 } }], stepStr: '1' },
+  ] };
+  assert.equal(findApostlePathToBokr(progress, 0, 1), null);
+});

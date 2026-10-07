@@ -3,6 +3,8 @@
  * @description 트릭컬 노트 확장 프로그램용 UI 스타일 정의
  */
 
+@import './bokrModal.css';
+
 :root {
   /* ── 에셋 URL (서버 원본 및 CDN 에셋 참조) ── */
   --tcbe-stat-sprite: url('https://note.trickcal.com/UI/Stat.webp');

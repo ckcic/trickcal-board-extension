@@ -47,31 +47,52 @@ export interface BokrPathResult {
   totalCost: ResourceCostSummary;
 }
 
-/** 원본 사이트처럼 차수별 Y 좌표를 누적하여 앞 보드 관문과 다음 보드 첫 줄을 연결한다. */
+/** 위치 보드와 경로 탐색이 동일한 차수별 좌표를 사용한다. */
+export function getApostleBoardLayout(progress: ApostleProgress, lastBoardIndex = progress.boards.length - 1) {
+  const layout: Array<{ boardIndex: number; nodeIndex: number; nodeId: number; node: MasterBoardNode; x: number; y: number; picked: boolean }> = [];
+  let offsetY = 0;
+  progress.boards.slice(0, lastBoardIndex + 1).forEach((board, boardIndex) => {
+    const validNodes = (board.masterNodes || []).map((node, nodeIndex) => ({ node, nodeIndex }))
+      .filter(({ node }) => node.nodeType !== 0 && node.grid &&
+        Number.isSafeInteger(node.grid.x) && Number.isSafeInteger(node.grid.y) && node.grid.x >= 0 && node.grid.y >= 0);
+    for (const { node, nodeIndex } of validNodes) {
+      layout.push({ boardIndex, nodeIndex, nodeId: node.id, node, x: node.grid!.x, y: node.grid!.y + offsetY,
+        picked: board.unlocked !== false && board.stepStr?.[nodeIndex] === '1' });
+    }
+    if (validNodes.length) {
+      const ys = validNodes.map(({ node }) => node.grid!.y);
+      offsetY += Math.max(...ys) + (Math.min(...ys) === 0 ? 1 : 0);
+    }
+  });
+  return layout;
+}
+
+/** 앞 보드 관문을 거쳐 목표 차수에 진입하며 노드 ID가 차수마다 같아도 구분한다. */
 export function findApostlePathToBokr(progress: ApostleProgress, boardIndex: number, nodeId: number): BokrPathResult | null {
+  if (!Number.isInteger(boardIndex) || boardIndex < 0 || boardIndex >= progress.boards.length) return null;
   const target = progress.boards[boardIndex]?.masterNodes?.find(node => node.id === nodeId);
   if (!target) return null;
-  const nodes: MasterBoardNode[] = [];
-  const steps: string[] = [];
-  const locations: Array<{ boardIndex: number; nodeIndex: number; nodeId: number }> = [];
-  let offsetY = 0;
-  progress.boards.forEach((board, index) => {
-    let height = 0;
-    board.masterNodes?.forEach((node, nodeIndex) => {
-      const validGrid = node.grid && node.grid.x >= 0 && node.grid.y >= 0;
-      if (validGrid) height = Math.max(height, node.grid!.y);
-      nodes.push({ ...node, grid: validGrid ? { x: node.grid!.x, y: node.grid!.y + offsetY } : node.grid });
-      steps.push(board.stepStr?.[nodeIndex] === '1' ? '1' : '0');
-      locations.push({ boardIndex: index, nodeIndex, nodeId: node.id });
-    });
-    offsetY += height;
-  });
-  const result = findShortestPathToBokr(nodes, steps.join(''), nodeId);
+  const layout = getApostleBoardLayout(progress, boardIndex);
+  const targetIndex = layout.findIndex(entry => entry.boardIndex === boardIndex && entry.nodeId === nodeId);
+  if (targetIndex < 0) return null;
+  // 탐색 내부에서만 고유 인덱스를 사용하고 결과에는 원본 식별자를 돌려준다.
+  const nodes = layout.map((entry, index) => ({ ...entry.node, id: index,
+    nodeType: entry.boardIndex > 0 && entry.node.nodeType === NODE_TYPE.START ? NODE_TYPE.NORMAL : entry.node.nodeType,
+    grid: { x: entry.x, y: entry.y } }));
+  const result = findShortestPathToBokr(nodes, layout.map(entry => entry.picked ? '1' : '0').join(''), targetIndex);
   if (!result) return null;
-  const pathSteps = result.pathNodeIndices.map(index => locations[index]!);
-  const gateRequirements = result.pathNodeIndices.filter(index => steps[index] !== '1' && nodes[index]?.nodeType === NODE_TYPE.GATE)
-    .map(index => ({ boardLevel: locations[index]!.boardIndex + 1, items: nodes[index]!.requireItems || [] }));
-  return { ...result, targetNode: target, pathSteps, gateRequirements };
+  const pathSteps = result.pathNodeIndices.map(index => {
+    const { boardIndex: level, nodeIndex, nodeId: id } = layout[index]!;
+    return { boardIndex: level, nodeIndex, nodeId: id };
+  });
+  const gateRequirements = result.pathNodeIndices.filter(index => !layout[index]!.picked && nodes[index]?.nodeType === NODE_TYPE.GATE)
+    .map(index => ({ boardLevel: layout[index]!.boardIndex + 1, items: layout[index]!.node.requireItems || [] }));
+  const unpickedPathNodes = result.pathNodeIndices.slice(0, -1)
+    .filter(index => !layout[index]!.picked && nodes[index]?.nodeType !== NODE_TYPE.START)
+    .map(index => layout[index]!.node);
+  return { ...result, targetNode: target, pathSteps, gateRequirements,
+    pathNodeIds: pathSteps.map(step => step.nodeId), pathNodeIndices: pathSteps.map(step => step.nodeIndex),
+    unpickedPathNodes, unpickedNormalCount: unpickedPathNodes.filter(node => node.nodeType === NODE_TYPE.NORMAL).length };
 }
 
 /** 원본 보드와 동일하게 상하좌우로만 연결한다. */

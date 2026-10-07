@@ -160,9 +160,11 @@ export function resolveBokrTile(tile: HTMLElement, progress: ApostleProgress) {
   const boardLevel = Number(tile.getAttribute(TILE_BOARD_LEVEL));
   const rawNodeId = tile.getAttribute(TILE_NODE_ID);
   if (rawNodeId === null || !Number.isInteger(boardLevel) || boardLevel < 1 || boardLevel > 3) return null;
-  const boardIndex = boardLevel - 1;
+  const matchedIndex = progress.boards.findIndex(entry => entry.boardStepLevel === boardLevel);
+  const boardIndex = matchedIndex >= 0 ? matchedIndex : boardLevel - 1;
   const board = progress.boards[boardIndex];
   const nodeId = Number(rawNodeId);
+  if (!Number.isSafeInteger(nodeId) || rawNodeId.trim() === '') return null;
   const nodeProgress = board?.nodes.find(node => node.nodeId === nodeId);
   if (!nodeProgress?.isBokr) return null;
   const nodeIndex = board?.masterNodes?.findIndex(node => node.id === nodeId) ?? -1;
@@ -201,9 +203,6 @@ export function attachBokrTileClickListener(card: HTMLElement, progress: Apostle
       const rectEl = target.closest<HTMLElement>('div[class*="--img-board-rect"]');
       if (!rectEl) return;
 
-      // 보크 타일 여부 확인
-      if (rectEl.getAttribute('data-tcbe-is-bokr') !== 'true') return;
-
       const curProgress = cardToProgress.get(card) || progress;
       const matched = resolveBokrTile(rectEl, curProgress);
       if (!matched?.board.masterNodes) return;
@@ -239,6 +238,8 @@ export function attachBokrTileClickListener(card: HTMLElement, progress: Apostle
         targetNode,
         nodeIndex,
         pathResult,
+        portraitUrl: card.querySelector<HTMLImageElement>('img[alt]')?.src,
+        returnFocus: rectEl,
         onToggleHighlight: applyHighlight,
         onClose: () => {
           clearPathHighlights();
@@ -417,7 +418,7 @@ export function enhanceApostleCards(
     updateBoardTileHighlights(card, progress, activeFilter);
 
     // 보크 타일 클릭 리스너 및 마킹 적용
-
+    attachBokrTileClickListener(card, progress);
     card.setAttribute(ATTR_ENHANCED, 'true');
     processedCards.add(card);
     enhancedCount++;
@@ -464,7 +465,8 @@ export function enhanceApostleCards(
         applyBoardLevelVisibility(card, activeFilter.boardLevel);
       }
       updateBoardTileHighlights(card, progress, activeFilter);
-        card.setAttribute(ATTR_ENHANCED, 'true');
+      attachBokrTileClickListener(card, progress);
+      card.setAttribute(ATTR_ENHANCED, 'true');
       processedCards.add(card);
       enhancedCount++;
     });

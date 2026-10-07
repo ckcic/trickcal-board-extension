@@ -91,3 +91,68 @@ test('보드 열은 원본 제목만 조회하고 열린 차수 문구나 확장
   assert.equal(result.b2Col, titles[1].parentElement);
   assert.equal(result.b3Col, titles[2].parentElement);
 });
+
+test('브리지는 클릭 직전에 식별자를 갱신하고 페이지 복원 및 해제 때 감시를 정리한다', async () => {
+  const { installTileIdentityBridge } = await import('../src/bridge/tileIdentity.ts');
+  const original = new Map(['document', 'window', 'Element', 'MutationObserver', 'requestAnimationFrame', 'cancelAnimationFrame'].map(key => [key, globalThis[key]]));
+  const docListeners = new Map();
+  const winListeners = new Map();
+  const observers = [];
+  const frames = new Map();
+  let nextFrame = 0;
+  class FakeElement {
+    nodeType = 1;
+    attrs = new Map();
+    __reactFiber$test = { memoizedProps: { node: { id: 20 }, heroUid: 123, nth: 1 } };
+    closest(selector) { return selector.startsWith('[data-slot') ? this : null; }
+    hasAttribute(key) { return this.attrs.has(key); }
+    getAttribute(key) { return this.attrs.get(key) ?? null; }
+    setAttribute(key, value) { this.attrs.set(key, value); }
+    removeAttribute(key) { this.attrs.delete(key); }
+  }
+  const element = new FakeElement();
+  globalThis.Element = FakeElement;
+  globalThis.document = {
+    documentElement: {}, querySelectorAll: () => [element],
+    addEventListener: (key, listener) => docListeners.set(key, listener),
+    removeEventListener: key => docListeners.delete(key),
+  };
+  globalThis.window = {
+    addEventListener: (key, listener) => winListeners.set(key, listener),
+    removeEventListener: key => winListeners.delete(key),
+  };
+  globalThis.MutationObserver = class {
+    constructor(callback) { this.callback = callback; observers.push(this); }
+    observe() { this.connected = true; }
+    disconnect() { this.connected = false; }
+  };
+  globalThis.requestAnimationFrame = callback => { frames.set(++nextFrame, callback); return nextFrame; };
+  globalThis.cancelAnimationFrame = id => frames.delete(id);
+  try {
+    const dispose = installTileIdentityBridge();
+    assert.equal(element.getAttribute(TILE_NODE_ID), '20');
+    observers[0].callback([{ type: 'childList', target: element }]);
+    assert.equal(frames.size, 1);
+    element.__reactFiber$test.memoizedProps = { node: { id: 50 }, heroUid: 456, nth: 2 };
+    docListeners.get('click')({ target: element });
+    assert.equal(element.getAttribute(TILE_NODE_ID), '50');
+    assert.equal(element.getAttribute(TILE_APOSTLE_ID), '456');
+    winListeners.get('pagehide')();
+    assert.equal(frames.size, 0);
+    assert.equal(observers[0].connected, false);
+    winListeners.get('pageshow')({ persisted: true });
+    assert.equal(observers[1].connected, true);
+    element.__reactFiber$test.memoizedProps = {};
+    docListeners.get('click')({ target: element });
+    assert.equal(element.getAttribute(TILE_NODE_ID), null);
+    dispose();
+    assert.equal(observers[1].connected, false);
+    assert.equal(docListeners.size, 0);
+    assert.equal(winListeners.size, 0);
+  } finally {
+    for (const [key, value] of original) {
+      if (value === undefined) delete globalThis[key];
+      else globalThis[key] = value;
+    }
+  }
+});

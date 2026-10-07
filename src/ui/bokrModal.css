@@ -1,450 +1,52 @@
-/* ==========================================================================
-   보크(상급 크레파스) 타일 인터랙션, 경로 하이라이트 및 안내 모달 스타일
-   ========================================================================== */
-
-/* 보크 타일 마우스 오버 커서 및 반응 */
-[data-tcbe-apostle-name] div[data-tcbe-is-bokr="true"] {
-  cursor: pointer !important;
-  transition: transform 0.15s ease, filter 0.15s ease !important;
-}
-
-[data-tcbe-apostle-name] div[data-tcbe-is-bokr="true"]:hover {
-  transform: scale(1.08) !important;
-  filter: brightness(1.12) drop-shadow(0 0 4px rgba(34, 197, 94, 0.7)) !important;
-  z-index: 18 !important;
-}
-
-/* 보크 최단 경로 하이라이트 테두리 (원본 황크 스타일의 푸른 발광) */
-.tcbe-path-highlight {
-  position: relative !important;
-  outline: 3px solid #3b82f6 !important;
-  outline-offset: -1px !important;
-  border-radius: 8px !important;
-  box-shadow: 0 0 12px rgba(59, 130, 246, 0.95), inset 0 0 6px rgba(59, 130, 246, 0.6) !important;
-  z-index: 25 !important;
-  animation: tcbe-path-pulse 1.8s infinite ease-in-out !important;
-}
-
-@keyframes tcbe-path-pulse {
-  0%, 100% {
-    box-shadow: 0 0 10px rgba(59, 130, 246, 0.9), inset 0 0 5px rgba(59, 130, 246, 0.5);
-  }
-  50% {
-    box-shadow: 0 0 16px rgba(96, 165, 250, 1), inset 0 0 8px rgba(96, 165, 250, 0.8);
-    outline-color: #60a5fa !important;
-  }
-}
-
-/* ── 모달 루트 및 백드롭 오버레이 ── */
-.tcbe-modal-root {
-  position: fixed;
-  inset: 0;
-  z-index: 99999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  box-sizing: border-box;
-}
-
-.tcbe-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  animation: tcbe-fade-in 0.15s ease-out;
-}
-
-/* ── 모달 다이얼로그 본체 ── */
-.tcbe-bokr-dialog {
-  position: relative;
-  z-index: 100000;
-  width: 100%;
-  max-width: 440px;
-  background: #ffffff;
-  border-radius: 18px;
-  box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-  font-family: inherit;
-  animation: tcbe-dialog-pop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  box-sizing: border-box;
-}
-
-@keyframes tcbe-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes tcbe-dialog-pop {
-  from {
-    opacity: 0;
-    transform: scale(0.92) translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-/* ── 모달 헤더 ── */
-.tcbe-bokr-header {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-  padding: 12px 18px;
-  color: #ffffff;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-}
-
-.tcbe-bokr-header-title {
-  font-size: 16px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.tcbe-bokr-close-btn {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  color: #ffffff;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s ease, transform 0.15s ease;
-}
-
-.tcbe-bokr-close-btn:hover {
-  background: rgba(255, 255, 255, 0.35);
-  transform: rotate(90deg);
-}
-
-/* ── 모달 바디 ── */
-.tcbe-bokr-body {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  background: #ffffff;
-  box-sizing: border-box;
-}
-
-/* 사도 요약 헤더 */
-.tcbe-bokr-hero-summary {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 2px 4px;
-}
-
-.tcbe-bokr-hero-sub {
-  font-size: 11px;
-  color: #64748b;
-  font-weight: 600;
-}
-
-.tcbe-bokr-hero-name {
-  font-size: 16px;
-  color: #0f172a;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.tcbe-bokr-pers-badge {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 9999px;
-  background: #f1f5f9;
-  color: #334155;
-  border: 1px solid #cbd5e1;
-}
-
-/* 선택된 보크 스탯 배너 */
-.tcbe-bokr-stat-banner {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.tcbe-bokr-stat-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.tcbe-bokr-stat-name {
-  font-size: 14px;
-  font-weight: 800;
-  color: #1e293b;
-}
-
-.tcbe-bokr-stat-val {
-  color: #16a34a;
-  font-weight: 900;
-  margin-left: 4px;
-}
-
-.tcbe-bokr-stat-loc {
-  font-size: 11px;
-  color: #64748b;
-  font-weight: 500;
-}
-
-/* 2열 비용 그리드 */
-.tcbe-bokr-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.tcbe-bokr-card {
-  background: #f4f6ea;
-  border: 1px solid #e2e8d5;
-  border-radius: 12px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-
-.tcbe-bokr-card-title {
-  font-size: 12px;
-  font-weight: 800;
-  color: #4b5563;
-  text-align: center;
-  margin-bottom: 8px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.tcbe-bokr-cost-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 12px;
-}
-
-.tcbe-cost-path-desc {
-  font-size: 11px;
-  font-weight: 700;
-  color: #2563eb;
-  margin-bottom: 2px;
-  text-align: center;
-}
-
-.tcbe-cost-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #374151;
-}
-
-.tcbe-cost-text {
-  font-size: 12px;
-}
-
-.tcbe-bokr-already-picked {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #16a34a;
-  padding: 16px 0;
-  text-align: center;
-}
-
-.tcbe-check-icon {
-  font-size: 15px;
-  color: #22c55e;
-}
-
-/* 총 필요 재화 서머리 박스 */
-.tcbe-bokr-total-box {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: 12px;
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.tcbe-bokr-total-label {
-  font-size: 11px;
-  font-weight: 800;
-  color: #166534;
-}
-
-.tcbe-bokr-total-items {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.tcbe-total-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: #ffffff;
-  border: 1px solid #86efac;
-  border-radius: 6px;
-  padding: 3px 8px;
-  font-size: 11px;
-  font-weight: 800;
-  color: #15803d;
-}
-
-/* ── 모달 하단 푸터 및 토글 ── */
-.tcbe-bokr-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 4px;
-  padding-top: 8px;
-  border-top: 1px solid #f1f5f9;
-}
-
-.tcbe-bokr-toggle-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.tcbe-bokr-toggle-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: #475569;
-}
-
-.tcbe-bokr-toggle-group {
-  display: inline-flex;
-  background: #e2e8f0;
-  border-radius: 8px;
-  padding: 2px;
-  border: 1px solid #cbd5e1;
-}
-
-.tcbe-toggle-btn {
-  border: none;
-  background: transparent;
-  color: #64748b;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.tcbe-toggle-btn.active {
-  background: #eab308;
-  color: #713f12;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-}
-
-.tcbe-bokr-bottom-close-btn {
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  color: #475569;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 6px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.tcbe-bokr-bottom-close-btn:hover {
-  background: #e2e8f0;
-  color: #1e293b;
-}
-
-/* ── 크레파스 및 재화 아이콘 (모달 및 배지 공통) ── */
-.tcbe-cost-icon,
-.tcbe-pastel-icon {
-  display: inline-block;
-  width: 18px;
-  height: 18px;
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  vertical-align: middle;
-  flex-shrink: 0;
-}
-
-.tcbe-cost-icon.pastel-basic,
-.tcbe-pastel-basic {
-  background-image: var(--tcbe-pastel-basic);
-}
-
-.tcbe-cost-icon.pastel-average,
-.tcbe-pastel-average {
-  background-image: var(--tcbe-pastel-average);
-}
-
-.tcbe-cost-icon.pastel-epic,
-.tcbe-pastel-epic {
-  background-image: var(--tcbe-pastel-epic);
-}
-
-.tcbe-cost-icon.pastel-ultra,
-.tcbe-pastel-ultra {
-  background-image: var(--tcbe-pastel-ultra);
-}
-
-.tcbe-cost-icon.icon-gold,
-.tcbe-gold-icon {
-  background-image: var(--tcbe-gold-icon);
-}
-
-/* ── 스탯 아이콘 스프라이트 (모달 배너용) ── */
-.tcbe-stat-icon-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: #ffffff;
-  border-radius: 10px;
-  border: 1px solid #cbd5e1;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  flex-shrink: 0;
-}
-
-.tcbe-stat-icon {
-  display: inline-block;
-  width: 26px;
-  height: 26px;
-  background-image: var(--tcbe-stat-sprite);
-  background-size: 598px 26px;
-  background-repeat: no-repeat;
-}
-
-.tcbe-stat-icon.stat-hp { background-position: 0 0; }
-.tcbe-stat-icon.stat-atk_phys { background-position: -26px 0; }
-.tcbe-stat-icon.stat-atk_mag { background-position: -52px 0; }
-.tcbe-stat-icon.stat-def_phys { background-position: -78px 0; }
-.tcbe-stat-icon.stat-def_mag { background-position: -104px 0; }
-.tcbe-stat-icon.stat-crit { background-position: -130px 0; }
-.tcbe-stat-icon.stat-crit_dmg { background-position: -156px 0; }
-.tcbe-stat-icon.stat-crit_res { background-position: -182px 0; }
-.tcbe-stat-icon.stat-crit_dmg_res { background-position: -208px 0; }
-
+/* 원본 황크·만개 모달의 크기, 게임 글꼴과 재화 표시를 따른다. */
+[data-tcbe-apostle-name] [data-tcbe-is-bokr="true"] { cursor: pointer; }
+[data-tcbe-apostle-name] [data-tcbe-is-bokr="true"]:hover { filter: brightness(1.12); outline: 2px solid #8e63ba; border-radius: 5px; }
+[data-tcbe-apostle-name] .tcbe-path-highlight { outline: 2px solid #348c4e; outline-offset: -1px; }
+#tcbe-bokr-modal-container { position: fixed; inset: 0; z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box; color: #273921; }
+#tcbe-bokr-modal-container * { box-sizing: border-box; }
+#tcbe-bokr-modal-container .tcbe-modal-backdrop { position: absolute; inset: 0; background: #243b1e88; }
+#tcbe-bokr-modal-container .tcbe-bokr-dialog { position: relative; width: 512px; max-width: 100%; max-height: calc(100dvh - 32px); overflow-y: auto; background: #fafbf5; border: 2px solid #fff; border-radius: 15px; box-shadow: 0 12px 42px #0004; font-family: 'ONE-Mobile-POP', sans-serif; font-weight: 400; }
+#tcbe-bokr-modal-container h2, #tcbe-bokr-modal-container h3, #tcbe-bokr-modal-container p { margin: 0; }
+#tcbe-bokr-modal-container strong { font-weight: 400; }
+#tcbe-bokr-modal-container h3 { background: #e3efcb; border-radius: 10px; text-align: center; padding: 3px 4px; font-size: 16px; font-weight: 400; margin-bottom: 10px; }
+#tcbe-bokr-modal-container .tcbe-bokr-header { display: flex; align-items: center; justify-content: center; height: 42px; background: linear-gradient(to right,#64b42b,#32a63c); padding: 8px 12px; color: white; }
+#tcbe-bokr-modal-container h2 { font-size: 18px; font-weight: 400; text-align: center; }
+#tcbe-bokr-modal-container button { font-family: inherit; cursor: pointer; font-weight: 400; }
+#tcbe-bokr-modal-container button:focus-visible { outline: 3px solid #357ee7; outline-offset: 2px; }
+#tcbe-bokr-modal-container .tcbe-bokr-close-btn { position: absolute; right: 10px; top: 4px; font-size: 20px; border: 0; background: transparent; color: white; }
+#tcbe-bokr-modal-container .tcbe-bokr-body { padding: 16px 22px 22px; display: flex; flex-direction: column; gap: 10px; }
+#tcbe-bokr-modal-container .tcbe-bokr-profile { display: flex; align-items: center; gap: 10px; }
+#tcbe-bokr-modal-container .tcbe-bokr-portrait { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #c0de89; object-fit: cover; }
+#tcbe-bokr-modal-container .tcbe-bokr-profile-info { flex: 1; min-width: 0; }
+#tcbe-bokr-modal-container .tcbe-bokr-hero-sub { font-size: 14px; color: #a4c75c; border-bottom: 2px solid #e3efcb; padding-bottom: 2px; }
+#tcbe-bokr-modal-container .tcbe-bokr-hero-name { display: flex; align-items: center; gap: 6px; font-size: 18px; }
+#tcbe-bokr-modal-container .tcbe-bokr-stat-banner { display: flex; align-items: center; gap: 8px; padding-bottom: 6px; font-size: 13px; }
+#tcbe-bokr-modal-container .tcbe-bokr-layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 8px; }
+#tcbe-bokr-modal-container .tcbe-bokr-map-scroll { width: 224px; max-width: 100%; margin: 16px auto; }
+#tcbe-bokr-modal-container .tcbe-bokr-map { display: grid; width: 100%; gap: 0; }
+#tcbe-bokr-modal-container .tcbe-map-tile { position: relative; aspect-ratio: 1; min-width: 0; background-image: url('https://note.trickcal.com/UI/BoardRect.webp'); background-size: 700% 100%; border-radius: 5px; }
+#tcbe-bokr-modal-container .tcbe-map-check { position: absolute; right: -1px; bottom: -1px; width: 45%; height: 45%; background: url('https://note.trickcal.com/UI/Crayon_check.webp') center / contain no-repeat; }
+#tcbe-bokr-modal-container .tcbe-map-icon { display: block; width: 100%; height: 100%; background-image: url('https://note.trickcal.com/UI/BoardTile.webp'); background-size: 2300% 100%; }
+#tcbe-bokr-modal-container .tcbe-map-gate { display: block; width: 100%; height: 100%; background-image: var(--tcbe-gate-icon); background-size: contain; background-position: center; background-repeat: no-repeat; }
+#tcbe-bokr-modal-container .tcbe-map-path-only .tcbe-map-tile:not(.tcbe-map-path):not(.tcbe-map-selected) { opacity: .4; }
+#tcbe-bokr-modal-container .tcbe-map-selected { outline: 2px solid #466ee8; outline-offset: -2px; }
+#tcbe-bokr-modal-container .tcbe-map-path-only .tcbe-map-path { outline: 2px solid #466ee8; outline-offset: -2px; }
+#tcbe-bokr-modal-container .tcbe-bokr-toggle-group { display: flex; align-items: center; gap: 5px; justify-content: center; }
+#tcbe-bokr-modal-container .tcbe-bokr-toggle-group button { width: 44%; min-height: 28px; font-size: 14px; border: 1px solid #b4c68e; border-radius: 7px; background: #f7fbe9; padding: 3px 8px; }
+#tcbe-bokr-modal-container .tcbe-bokr-toggle-group button::before { content: ''; display: inline-block; vertical-align: middle; width: 18px; height: 18px; background: #c1dc87; border-radius: 3px; margin-right: 8px; }
+#tcbe-bokr-modal-container .tcbe-bokr-toggle-group button[aria-pressed="true"] { background: #ffdc64; border-color: #e1c35d; }
+#tcbe-bokr-modal-container .tcbe-bokr-toggle-group button[aria-pressed="true"]::before { background: url('https://note.trickcal.com/UI/Crayon_check.webp') center / contain no-repeat; }
+#tcbe-bokr-modal-container .tcbe-bokr-costs { display: flex; flex-direction: column; gap: 14px; }
+#tcbe-bokr-modal-container .tcbe-cost-item { display: flex; align-items: center; gap: 6px; border: 0; border-radius: 0; background: transparent; box-shadow: none; font-family: inherit; font-size: 16px; padding: 2px 6px; }
+#tcbe-bokr-modal-container .tcbe-cost-icon { width: 24px; height: 24px; flex-shrink: 0; background-size: contain; background-repeat: no-repeat; background-position: center; }
+#tcbe-bokr-modal-container .pastel-basic { background-image: var(--tcbe-pastel-basic); }
+#tcbe-bokr-modal-container .pastel-average { background-image: var(--tcbe-pastel-average); }
+#tcbe-bokr-modal-container .pastel-epic { background-image: var(--tcbe-pastel-epic); }
+#tcbe-bokr-modal-container .pastel-ultra { background-image: var(--tcbe-pastel-ultra); }
+#tcbe-bokr-modal-container .icon-gold { background-image: var(--tcbe-gold-icon); }
+#tcbe-bokr-modal-container .tcbe-cost-gate { background-image: var(--tcbe-gate-icon); }
+#tcbe-bokr-modal-container .watering-can { background-image: url('https://cdn.note.trickcal.com/Materials/a6iBdIQUa2Z8GrR0S05hucxq7qjTIFhCl.webp'); }
+#tcbe-bokr-modal-container .tcbe-cost-text, #tcbe-bokr-modal-container .tcbe-bokr-card p { font-size: 14px; line-height: 1.6; margin-bottom: 5px; }
+#tcbe-bokr-modal-container .tcbe-bokr-total-box { border-top: 1px solid #cdd8b9; padding-top: 10px; }
+#tcbe-bokr-modal-container summary { cursor: pointer; font-size: 14px; margin-bottom: 6px; }
+@media (max-width: 480px) { #tcbe-bokr-modal-container .tcbe-bokr-layout { grid-template-columns: 1fr; } }

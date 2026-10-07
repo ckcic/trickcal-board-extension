@@ -8,6 +8,7 @@ import { selectApostleIds } from './domain/listSelection.ts';
  */
 
 import { listenForBoardData } from './bridge/contentBridge.ts';
+import { TILE_APOSTLE_ID, TILE_BOARD_LEVEL, TILE_NODE_ID } from './bridge/tileIdentity.ts';
 import {
   calculateAllApostlesProgress,
   PERSONALITY_META_LIST,
@@ -292,13 +293,13 @@ import { FilterPanelController } from './ui/filterPanel.ts';
     characterData: true,
     attributes: true,
     attributeOldValue: true,
-    attributeFilter: ['class', 'alt'],
+    attributeFilter: ['class', 'alt', TILE_APOSTLE_ID, TILE_BOARD_LEVEL, TILE_NODE_ID],
   });
 
   // 탭 전환 버튼 등 클릭 시 신속하게 재판별
   document.addEventListener('click', (e) => {
     const target = e.target instanceof Element ? e.target : null;
-    if (target && !target.closest('#tcbe-filter-panel')) {
+    if (target && !target.closest('#tcbe-filter-panel, #tcbe-bokr-modal-container')) {
       scheduleRefresh(50);
     }
   });
