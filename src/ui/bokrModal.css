@@ -6,6 +6,19 @@
 #tcbe-bokr-modal-container * { box-sizing: border-box; }
 #tcbe-bokr-modal-container .tcbe-modal-backdrop { position: absolute; inset: 0; background: #243b1e88; }
 #tcbe-bokr-modal-container .tcbe-bokr-dialog { position: relative; width: 512px; max-width: 100%; max-height: calc(100dvh - 32px); overflow-y: auto; background: #fafbf5; border: 2px solid #fff; border-radius: 15px; box-shadow: 0 12px 42px #0004; font-family: 'ONE-Mobile-POP', sans-serif; font-weight: 400; }
+/* 원본 황크 모달의 배경 150ms, 대화상자 200ms 페이드·95% 확대를 따른다. */
+#tcbe-bokr-modal-container[data-state="open"] .tcbe-modal-backdrop { animation: tcbe-backdrop-enter 150ms ease; }
+#tcbe-bokr-modal-container[data-state="closed"] .tcbe-modal-backdrop { animation: tcbe-backdrop-exit 150ms ease forwards; }
+#tcbe-bokr-modal-container[data-state="open"] .tcbe-bokr-dialog { animation: tcbe-dialog-enter 200ms ease; }
+#tcbe-bokr-modal-container[data-state="closed"] .tcbe-bokr-dialog { animation: tcbe-dialog-exit 200ms ease forwards; pointer-events: none; }
+@keyframes tcbe-backdrop-enter { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tcbe-backdrop-exit { from { opacity: 1; } to { opacity: 0; } }
+@keyframes tcbe-dialog-enter { from { opacity: 0; transform: scale(.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes tcbe-dialog-exit { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(.95); } }
+@media (prefers-reduced-motion: reduce) {
+  #tcbe-bokr-modal-container[data-state] .tcbe-modal-backdrop,
+  #tcbe-bokr-modal-container[data-state] .tcbe-bokr-dialog { animation: none; }
+}
 #tcbe-bokr-modal-container h2, #tcbe-bokr-modal-container h3, #tcbe-bokr-modal-container p { margin: 0; }
 #tcbe-bokr-modal-container strong { font-weight: 400; }
 #tcbe-bokr-modal-container h3 { background: #e3efcb; border-radius: 10px; text-align: center; padding: 3px 4px; font-size: 16px; font-weight: 400; margin-bottom: 10px; }

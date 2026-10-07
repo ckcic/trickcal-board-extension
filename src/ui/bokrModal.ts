@@ -4,6 +4,7 @@ import { getNodeStatCategories, getStatCategoryFromStatType, isBokrNode, isHwang
 import type { ApostleProgress, MasterBoardNode, ResourceCostSummary } from '../domain/types.ts';
 import { STAT_TO_POSITIONS } from './tileHighlight.ts';
 import { escapeHtml } from './html.ts';
+import { lockPageScroll } from './scrollLock.ts';
 
 export interface BokrModalOptions {
   progress: ApostleProgress;
@@ -19,12 +20,27 @@ export interface BokrModalOptions {
 
 let activeModal: HTMLElement | null = null;
 let disposeModal: (() => void) | null = null;
+let closeTimer: ReturnType<typeof setTimeout> | null = null;
 
-export function closeBokrModal(): void {
+function removeBokrModal(): void {
+  if (closeTimer !== null) clearTimeout(closeTimer);
+  closeTimer = null;
   disposeModal?.();
   disposeModal = null;
   activeModal?.remove();
   activeModal = null;
+}
+
+/** 닫힘 애니메이션 동안 스크롤 잠금을 유지하고 교체·경로 전환 시에는 즉시 정리한다. */
+export function closeBokrModal(immediate = false): void {
+  if (!activeModal) return;
+  if (immediate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    removeBokrModal();
+    return;
+  }
+  if (activeModal.dataset.state === 'closed') return;
+  activeModal.dataset.state = 'closed';
+  closeTimer = setTimeout(removeBokrModal, 200);
 }
 
 /** 목표 재화와 경로 재화를 같은 아이콘 및 단위로 표시한다. */
@@ -100,7 +116,7 @@ export function renderBokrBoard(options: BokrModalOptions): string {
 }
 
 export function showBokrModal(options: BokrModalOptions): void {
-  closeBokrModal();
+  closeBokrModal(true);
   const { progress, boardIndex, targetNode, pathResult, portraitUrl, onToggleHighlight, onClose, returnFocus } = options;
   const personality = PERSONALITY_META_LIST.find(meta => meta.id === progress.personality);
   const key = getNodeStatCategories(targetNode)[0];
@@ -110,6 +126,7 @@ export function showBokrModal(options: BokrModalOptions): void {
   const container = document.createElement('div');
   container.id = 'tcbe-bokr-modal-container';
   container.className = 'tcbe-modal-root';
+  container.dataset.state = 'open';
   container.innerHTML = `<div class="tcbe-modal-backdrop"></div>
     <section class="tcbe-bokr-dialog" role="dialog" aria-modal="true" aria-labelledby="tcbe-bokr-title" tabindex="-1">
       <header class="tcbe-bokr-header"><h2 id="tcbe-bokr-title">선택한 칸의 정보</h2><button type="button" class="tcbe-bokr-close-btn" aria-label="닫기"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></header>
@@ -129,8 +146,7 @@ export function showBokrModal(options: BokrModalOptions): void {
   activeModal = container;
   const dialog = container.querySelector<HTMLElement>('.tcbe-bokr-dialog')!;
   const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-  const previousOverflow = document.body.style.overflow;
-  document.body.style.overflow = 'hidden';
+  const releaseScroll = lockPageScroll();
   let highlight = true;
   const onKeydown = (event: KeyboardEvent) => {
     if (event.key === 'Escape') { event.preventDefault(); closeBokrModal(); }
@@ -142,6 +158,7 @@ export function showBokrModal(options: BokrModalOptions): void {
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
   };
   const onClick = (event: MouseEvent) => {
+    if (container.dataset.state === 'closed') return;
     const target = event.target instanceof Element ? event.target : null;
     if (target?.closest('.tcbe-modal-backdrop, .tcbe-bokr-close-btn, .tcbe-bokr-bottom-close-btn')) { closeBokrModal(); return; }
     const action = target?.closest<HTMLButtonElement>('[data-highlight]');
@@ -151,7 +168,7 @@ export function showBokrModal(options: BokrModalOptions): void {
     dialog.querySelectorAll<HTMLButtonElement>('[data-highlight]').forEach(button => button.setAttribute('aria-pressed', String((button.dataset.highlight === 'on') === highlight)));
     onToggleHighlight?.(highlight);
   };
-  const onRouteChange = () => closeBokrModal();
+  const onRouteChange = () => closeBokrModal(true);
   container.addEventListener('click', onClick);
   document.addEventListener('keydown', onKeydown);
   window.addEventListener('popstate', onRouteChange);
@@ -161,7 +178,7 @@ export function showBokrModal(options: BokrModalOptions): void {
     document.removeEventListener('keydown', onKeydown);
     window.removeEventListener('popstate', onRouteChange);
     window.removeEventListener('hashchange', onRouteChange);
-    document.body.style.overflow = previousOverflow;
+    releaseScroll();
     onClose?.();
     if (returnFocus?.isConnected) returnFocus.focus({ preventScroll: true });
     else if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
