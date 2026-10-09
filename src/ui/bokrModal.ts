@@ -1,8 +1,8 @@
 /** 보크 클릭 모달에서 실제 위치, 목표 비용, 경로 비용을 안내한다. */
-import { findLinkedPetalNode, getApostleBoardLayout, type BokrPathResult } from '../domain/boardPathfinder.ts';
-import { getNodeStatCategories, getStatCategoryFromStatType, isBokrNode, isHwangNode, NODE_TYPE, PERSONALITY_META_LIST, STAT_META_LIST } from '../domain/boardProgress.ts';
+import { getApostleBoardLayout, type BokrPathResult } from '../domain/boardPathfinder.ts';
+import { getNodeStatCategories, getStatCategoryFromStatType, PERSONALITY_META_LIST, STAT_META_LIST } from '../domain/boardProgress.ts';
 import type { ApostleProgress, MasterBoardNode, ResourceCostSummary } from '../domain/types.ts';
-import { STAT_TO_POSITIONS } from './tileHighlight.ts';
+import { getBoardNodeVisual } from './boardNode.ts';
 import { escapeHtml } from './html.ts';
 import { lockPageScroll } from './scrollLock.ts';
 
@@ -81,36 +81,11 @@ export function renderBokrBoard(options: BokrModalOptions): string {
   const path = new Set(pathResult.pathSteps?.map(step => `${step.boardIndex}:${step.nodeId}`));
   const tiles = layout.map(entry => {
     const node = entry.node;
-    const categories = getNodeStatCategories(node);
-    const key = categories[0];
-    const meta = STAT_META_LIST.find(stat => stat.key === key);
-    const combinedAttack = categories.includes('atk_phys') && categories.includes('atk_mag');
-    const combinedDefense = categories.includes('def_phys') && categories.includes('def_mag');
-    const statName = combinedAttack ? '물마공' : combinedDefense ? '물마방' : meta?.nameKo;
     const selected = entry.boardIndex === boardIndex && node.id === targetNode.id;
     const onPath = path.has(`${entry.boardIndex}:${node.id}`);
-    const board = progress.boards[boardIndex]!;
-    const petal = findLinkedPetalNode(board.masterNodes || [], node);
-    const petalIndex = petal ? board.masterNodes!.indexOf(petal) : -1;
-    const petalOpen = petal && board.unlocked !== false && board.stepStr?.[petalIndex] === '1';
-    const flowering = node.nodeType === NODE_TYPE.HWANG_EXT;
-    // 시작 칸과 관문은 원본의 고정 테두리를 사용하며 색칠 기록을 변경하지 않는다.
-    const frame = node.nodeType === NODE_TYPE.START ? '0%'
-      : node.nodeType === NODE_TYPE.GATE ? '50%'
-      : isBokrNode(node) ? (entry.picked ? '83.3333%' : '100%')
-      : isHwangNode(node) ? (entry.picked ? '33.3333%' : '66.6667%')
-      : (entry.picked ? '0%' : '16.6667%');
-    const kind = node.nodeType === NODE_TYPE.GATE ? '관문' : node.nodeType === NODE_TYPE.START ? '시작 칸'
-      : isBokrNode(node) ? '보크' : isHwangNode(node) ? '황크' : '일반칸';
-    const label = `${entry.boardIndex + 1}차 ${statName || kind} ${kind}${flowering ? ` · 꽃잎 ${petal ? petalOpen ? '열림' : '닫힘' : '상태 미확인'}` : ''}${selected ? ' · 선택한 칸' : ''}${entry.picked ? ' · 색칠 완료' : ''}`;
-    const position = node.nodeType === NODE_TYPE.START ? '0%'
-      : node.nodeType === NODE_TYPE.GATE ? '86.3636%'
-      : combinedAttack ? (entry.picked ? '100%' : '95.4545%')
-      : combinedDefense ? (entry.picked ? '90.9091%' : '86.3636%')
-      : key ? STAT_TO_POSITIONS[key][entry.picked ? 'active' : 'inactive'][0] : '0%';
-    const icon = `<span class="tcbe-map-icon${isHwangNode(node) && !entry.picked ? ' tcbe-map-hwang-inactive' : ''}" style="background-position:${position} 0"></span>`;
-    const contents = flowering ? `<span class="tcbe-map-flower-frame" style="background-position:${frame} 0">${icon}</span>` : icon;
-    return `<div class="tcbe-map-tile ${selected ? 'tcbe-map-selected' : ''} ${onPath ? 'tcbe-map-path' : ''}${flowering ? ` tcbe-map-flower tcbe-map-flower-${petalOpen ? 'open' : 'closed'}` : ''}" data-board="${entry.boardIndex + 1}" data-node="${node.id}" style="grid-column:${maxX - entry.x + 1 + columnOffset};grid-row:${maxY - entry.y + 1};background-position:${flowering ? 'center' : frame} 0" title="${escapeHtml(label)}" role="img" aria-label="${escapeHtml(label)}">${contents}</div>`;
+    const visual = getBoardNodeVisual(progress.boards[boardIndex]!, node, entry.picked);
+    const label = `${entry.boardIndex + 1}차 ${visual.statName || visual.kind} ${visual.kind}${visual.flowering ? ` · 꽃잎 ${visual.petalState}` : ''}${selected ? ' · 선택한 칸' : ''}${entry.picked ? ' · 색칠 완료' : ''}`;
+    return `<div class="tcbe-map-tile ${selected ? 'tcbe-map-selected' : ''} ${onPath ? 'tcbe-map-path' : ''}${visual.classes}" data-board="${entry.boardIndex + 1}" data-node="${node.id}" style="grid-column:${maxX - entry.x + 1 + columnOffset};grid-row:${maxY - entry.y + 1};background-position:${visual.background} 0" title="${escapeHtml(label)}" role="img" aria-label="${escapeHtml(label)}">${visual.contents}</div>`;
   }).join('');
   return `<div class="tcbe-bokr-map" style="width:${columns * 32}px;aspect-ratio:${columns}/${maxY - minY + 1};grid-template-columns:repeat(${columns},1fr);grid-template-rows:repeat(${maxY - minY + 1},1fr)">${tiles}</div>`;
 }
