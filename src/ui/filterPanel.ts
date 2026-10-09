@@ -5,6 +5,7 @@
 
 import { PERSONALITY_META_LIST, STAT_META_LIST } from '../domain/boardProgress.ts';
 import { checkForUpdate } from '../domain/updateChecker.ts';
+import { openHwangRedistribution } from './hwangRedistribution.ts';
 import type {
   ApostleProgress,
   BoardFilterLevel,
@@ -155,6 +156,15 @@ export class FilterPanelController {
 
     panel.appendChild(header);
     panel.appendChild(content);
+
+    const redistributionButton = document.createElement('button');
+    redistributionButton.type = 'button';
+    redistributionButton.className = 'tcbe-btn';
+    redistributionButton.textContent = '만개·황크 재분배 (베타)';
+    redistributionButton.addEventListener('click', () => {
+      if (this.summaryProgressMap) openHwangRedistribution(this.summaryProgressMap);
+    });
+    content.appendChild(redistributionButton);
 
     // ----------------------------------------------------
     // Row 1: 사도 기본 속성 (성격, 초기 성급)

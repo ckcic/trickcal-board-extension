@@ -4,6 +4,7 @@
  */
 
 @import './bokrModal.css';
+@import './hwangRedistribution.css';
 
 :root {
   /* ── 에셋 URL (서버 원본 및 CDN 에셋 참조) ── */
