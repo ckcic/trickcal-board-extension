@@ -1,4 +1,5 @@
 import { redistributionResourceIcon as resourceIcon } from './redistributionResource.ts';
+import { loadRedistributionSettings, saveRedistributionSettings } from './redistributionSettings.ts';
 /** 만개·황크 재분배 베타의 입력, 계산 결과와 사도별 변경 지도를 표시한다. */
 import { STAT_META_LIST, NODE_TYPE } from '../domain/boardProgress.ts';
 import { getSpentHwangCrayons, getSpentBokrCrayons, getAttackPathAvailability, getHwangTargetValue, createRedistributionGoalPreview, readBokrValues, createExampleRedistributionStages, iterateHwangRedistribution, type RedistributionNode, type RedistributionStat, type RedistributionPlan, type RedistributionOptions } from '../domain/hwangRedistribution.ts';
@@ -136,9 +137,10 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
   let calculationController: AbortController | null = null;
   dialog.id = 'tcbe-redistribution-dialog';
   dialog.setAttribute('aria-labelledby', 'tcbe-rd-title');
-  let stages = createExampleRedistributionStages();
+  const savedSettings = loadRedistributionSettings();
+  let stages = savedSettings?.stages ?? createExampleRedistributionStages();
   dialog.innerHTML = `<header><h2 id="tcbe-rd-title">만개·황크 재분배 <small>베타</small></h2><button type="button" data-close aria-label="재분배 창 닫기">닫기</button></header>
-    <p>현재 필터와 관계없이 보유 사도 전체를 계산합니다. 게임이나 노트의 데이터를 변경하지 않으며, 입력과 결과는 이 창의 메모리에서만 처리합니다.</p>
+    <p>현재 필터와 관계없이 보유 사도 전체를 계산합니다. 게임이나 노트의 데이터를 변경하지 않습니다. 설정은 이 브라우저에 자동 저장되며, 계산 결과는 창을 닫으면 사라집니다.</p>
     <p class="tcbe-rd-notice">초기화해도 열린 관문·꽃잎과 기본 색칠된 1차 시작 칸은 유지됩니다. 지워지는 칸에서 사용한 크레파스 4종·골드만 돌려받으며 물뿌리개는 반환되지 않습니다. 미개방 꽃잎은 개방 비용을 포함합니다. 관문 개방은 단계별 체크로 선택하며, 필요한 골드와 전용 재화를 결과에 표시합니다.</p>
     <form><div class="tcbe-rd-budget-overview">${(['hwang','bokr'] as const).map(resource => `<div>${resourceIcon(resource)} <span>이미 사용 <strong>${format(resource === 'hwang' ? spentCrayons : spentBokr)}개</strong></span><span>+ 미사용 보유 = 총 <output ${resource === 'hwang' ? 'data-total' : 'data-total-bokr'} aria-live="polite">${format(resource === 'hwang' ? spentCrayons : spentBokr)}개</output></span></div>`).join('')}</div><div class="tcbe-rd-inputs"><label>${resourceIcon('hwang')} 추가 보유 (미사용) <input aria-label="추가 보유 황크 (미사용)" name="owned" type="number" min="0" max="1000000" step="1" value="0" required></label><label>${resourceIcon('bokr')} 추가 보유 (미사용) <input aria-label="추가 보유 보크 (미사용)" name="bokr" type="number" min="0" max="1000000" step="1" value="0" required></label><label>초기화 인원 상한 <input name="reset" type="number" min="0" max="${ownedCount}" step="1" value="0" required></label></div>
     <p>황크·보크는 추가 보유량과 초기화 환급분 안에서 사용합니다. 보크 0이면 환급분 외 새 보크를 쓰지 않습니다. 중급·하급·골드는 필요한 준비 재화로 표시합니다.</p>
@@ -151,7 +153,21 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
     <section class="tcbe-rd-curve-preview"><h3>초기화 인원별 스탯 미리 계산</h3><p>추천안을 먼저 계산할 필요 없이 현재 예산·목표로 0명부터 전체 인원을 비교합니다. 그래프를 확인한 뒤 초기화 인원 상한을 정하고 추천안을 계산하세요.</p><button type="button" data-curve>인원별 그래프 계산</button><span data-curve-status role="status" aria-live="polite"></span><div data-curve-result></div></section>
     <button type="submit" class="tcbe-btn tcbe-active">추천안 계산</button><button type="button" data-cancel-calculation hidden>추천 계산 취소</button><span data-status role="status" aria-live="polite"></span></form><section data-result aria-label="재분배 계산 결과"></section>`;
   const targetList = dialog.querySelector<HTMLElement>('[data-targets]')!;
+  if (savedSettings) {
+    for (const name of ['owned', 'bokr', 'reset'] as const) {
+      dialog.querySelector<HTMLInputElement>(`[name=${name}]`)!.value = String(name === 'reset' ? Math.min(savedSettings.reset, ownedCount) : savedSettings[name]);
+    }
+    dialog.querySelector<HTMLSelectElement>('[name=search-mode]')!.value = savedSettings.searchMode;
+  }
+  const saveSettings = () => saveRedistributionSettings({
+    owned: dialog.querySelector<HTMLInputElement>('[name=owned]')!.valueAsNumber,
+    bokr: dialog.querySelector<HTMLInputElement>('[name=bokr]')!.valueAsNumber,
+    reset: dialog.querySelector<HTMLInputElement>('[name=reset]')!.valueAsNumber,
+    searchMode: dialog.querySelector<HTMLSelectElement>('[name=search-mode]')!.value as 'fast' | 'thorough',
+    stages: readRedistributionStages(targetList),
+  });
   const invalidateResult = (event?: Event) => {
+    saveSettings();
     const resetOnly = event?.target instanceof HTMLInputElement && event.target.name === 'reset';
     if (!resetOnly) {
     curveController?.abort();
@@ -175,6 +191,8 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
   };
   const readTargets = () => { stages = readRedistributionStages(targetList); };
   renderTargets();
+  invalidateResult();
+  dialog.querySelector('[data-status]')!.textContent = '';
   const settingsTabs = [...dialog.querySelectorAll<HTMLButtonElement>('[data-settings-tab]')];
   const selectTab = (button: HTMLButtonElement) => {
     for (const item of settingsTabs) {
@@ -251,6 +269,7 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
   let timer: ReturnType<typeof setTimeout> | null = null;
   const form = dialog.querySelector('form')!;
   form.addEventListener('input', invalidateResult);
+  form.addEventListener('change', invalidateResult);
   const cancelCalculation = dialog.querySelector<HTMLButtonElement>('[data-cancel-calculation]')!;
   cancelCalculation.addEventListener('click', () => { calculationController?.abort(); dialog.querySelector('[data-status]')!.textContent = ' 계산을 취소했습니다.'; });
   form.addEventListener('submit', event => {
