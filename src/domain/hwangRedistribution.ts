@@ -56,6 +56,14 @@ export interface RedistributionOptions {
   maxReset: number;
   priorities?: Array<{ stat: RedistributionStat; target: number }>;
   stages?: RedistributionStage[];
+  /** 기존 일반칸 강제 복구 여부. 생략 시 false (최적화 모드: 목표 연결에 필요한 최소 일반칸만 색칠). */
+  restoreNormal?: boolean;
+  /** 소지 골드 (생략 시 소지량 고려 없이 필요량만 계산). */
+  ownedGold?: number;
+  /** 소지 만개 물뿌리개 (생략 시 0). */
+  ownedWateringCan?: number;
+  /** 소지 햇살구름 (10개당 만개 물뿌리개 1개 환산, 생략 시 0). */
+  ownedClouds?: number;
 }
 export interface RedistributionNode {
   key: string;
@@ -83,6 +91,8 @@ export interface RedistributionPlan {
   after: HwangStats;
   remaining: number;
   remainingBokr?: number;
+  remainingGold?: number;
+  remainingWateringCan?: number;
   refund: ResourceCostSummary;
   spend: ResourceCostSummary;
   resetCount: number;
@@ -302,6 +312,9 @@ export function* iterateHwangRedistribution(progressMap: Map<string, ApostleProg
   if (!Number.isSafeInteger(options.ownedCrayons) || options.ownedCrayons < 0 ||
       (options.searchMode !== undefined && !['fast', 'thorough'].includes(options.searchMode)) ||
       (options.ownedBokr !== undefined && (!Number.isSafeInteger(options.ownedBokr) || options.ownedBokr < 0)) ||
+      (options.ownedGold !== undefined && (!Number.isSafeInteger(options.ownedGold) || options.ownedGold < 0)) ||
+      (options.ownedWateringCan !== undefined && (!Number.isSafeInteger(options.ownedWateringCan) || options.ownedWateringCan < 0)) ||
+      (options.ownedClouds !== undefined && (!Number.isSafeInteger(options.ownedClouds) || options.ownedClouds < 0)) ||
       !Number.isSafeInteger(options.maxReset) || options.maxReset < 0 ||
       !stages.length || stages.length > 30 ||
       (!options.stages && new Set(options.priorities?.map(item => item.stat)).size !== options.priorities?.length) ||
@@ -324,8 +337,17 @@ export function* iterateHwangRedistribution(progressMap: Map<string, ApostleProg
   const pathCache = new Map<string, Map<string, string[][]>>();
   type Move = { path: string[]; cost: ResourceCostSummary; gain: HwangStats; score: number[] };
   const groupById = new Map(groups.filter(group => group.length).map(group => [group[0]!.apostleId, group]));
-  // 기존 일반칸 복구 경로는 초기화 조합과 무관하므로 사도별로 재사용한다.
-  const restoreCache = new Map<number, Map<string, string[]>>();
+  // 후보 평가(run)마다 반복되던 전체 노드 스캔을 피하기 위한 사전 계산 값들
+  const refundByApostle = new Map<number, ResourceCostSummary>();
+  for (const [apostleId, group] of groupById) refundByApostle.set(apostleId, group.filter(entry => entry.picked && !retained(entry.node))
+    .reduce((total, entry) => sumCosts(total, refundCost(entry)), createEmptyCostSummary()));
+  const originalSelected = new Set(nodes.filter(entry => (entry.node.nodeType === NODE_TYPE.START && entry.boardIndex === 0) || entry.picked).map(entry => entry.key));
+  const originalStageStats = stages.map((stage, stageIndex) => {
+    const original = emptyStats();
+    for (const entry of nodes) if (entry.picked && scopes[stageIndex]!.keys.has(entry.key)) for (const stat of STAT_CATEGORIES)
+      original[stat] += (stage.resource === 'bokr' ? entry.bokrStats : entry.stats)[stat];
+    return original;
+  });
   const moveCache = new Map<string, Move[]>();
   let cachedMoveCount = 0;
   const stagePathsFor = (group: RedistributionNode[], reset: boolean, selected: Set<string>, allowBlocked: boolean, allowGates = false) => {
@@ -344,23 +366,31 @@ export function* iterateHwangRedistribution(progressMap: Map<string, ApostleProg
 
   function run(resetIds: Set<number>, choices: number[] = [], branches?: number[][]): RedistributionPlan | null {
     const trace: number[] = [];
-    const selected = new Set(nodes.filter(entry => (entry.node.nodeType === NODE_TYPE.START && entry.boardIndex === 0) ||
-      (entry.picked && (!resetIds.has(entry.apostleId) || retained(entry.node)))).map(entry => entry.key));
+    // 원본 색칠 집합을 복사한 뒤 초기화 대상 사도의 지워지는 칸만 제거한다.
+    const selected = new Set(originalSelected);
+    let refund = createEmptyCostSummary();
+    for (const apostleId of resetIds) {
+      for (const entry of groupById.get(apostleId) || []) if (entry.picked && !retained(entry.node) &&
+        !(entry.node.nodeType === NODE_TYPE.START && entry.boardIndex === 0)) selected.delete(entry.key);
+      const apostleRefund = refundByApostle.get(apostleId);
+      if (apostleRefund) refund = sumCosts(refund, apostleRefund);
+    }
     const initial = new Set(selected);
-    const refund = nodes.filter(entry => entry.picked && resetIds.has(entry.apostleId) && !retained(entry.node))
-      .reduce((total, entry) => sumCosts(total, refundCost(entry)), createEmptyCostSummary());
     const paintOrder: string[] = [];
     const addPath = (path: string[]) => { for (const key of path) if (!selected.has(key)) { selected.add(key); paintOrder.push(key); } };
-    for (const group of groups) {
-      const reset = resetIds.has(group[0]?.apostleId ?? -1);
-      if (reset) {
-        const id = group[0]!.apostleId;
-        if (!restoreCache.has(id)) restoreCache.set(id, boardPaths(group, true, true));
-        const restore = restoreCache.get(id)!;
-        for (const entry of group.filter(item => item.picked && item.node.nodeType === NODE_TYPE.NORMAL)) {
-          const path = restore.get(entry.key);
-          if (!path) return null;
-          addPath(path);
+    // 초기화된 사도는 클린 슬레이트 상태(시작칸 + 해금 관문/꽃잎)에서 출발하며,
+    // 목표 달성에 필요한 최소 연결 경로만 단계별로 새로 색칠한다.
+    // 사용자가 명시적으로 restoreNormal을 요청한 경우에만 기존 일반칸을 강제 복구한다.
+    if (options.restoreNormal) {
+      for (const group of groups) {
+        const reset = resetIds.has(group[0]?.apostleId ?? -1);
+        if (reset) {
+          const restore = boardPaths(group, true, true);
+          for (const entry of group.filter(item => item.picked && item.node.nodeType === NODE_TYPE.NORMAL)) {
+            const path = restore.get(entry.key);
+            if (!path) return null;
+            addPath(path);
+          }
         }
       }
     }
@@ -427,34 +457,59 @@ export function* iterateHwangRedistribution(progressMap: Map<string, ApostleProg
       for (const id of new Set(candidates.map(entry => entry.apostleId))) refreshMoves(id);
       while (true) {
         const moves: Move[] = [];
+        // 선택 직후에만 바뀌는 현재 값·충족률은 이동 후보마다 다시 계산하지 않는다.
+        const currentValues = stage.targets.map(target => getHwangTargetValue(scopedStats, target.stat));
+        const currentRatios = currentValues.map((value, index) => goals[index]! > 0 ? value / goals[index]! : 1);
+        const gains: number[] = new Array(stage.targets.length);
+        // 분기 탐색이 없는 일반 경로(대형 계정)는 전체 정렬 없이 최고 점수 후보만 선형으로 고른다.
+        const linear = !branches && choices[trace.length] === undefined;
+        let top: Move | undefined;
         for (const entries of movesByApostle.values()) {
           for (const move of entries) {
-            const { path, cost, gain } = move;
+            const { cost, gain } = move;
             const targetCost = bokr ? cost.epicCrayon : cost.ultraCrayon;
             if (targetCost <= 0 || cost.ultraCrayon > remaining || cost.epicCrayon > remainingBokr) continue;
-            const improved = { ...scopedStats };
-            for (const stat of STAT_CATEGORIES) improved[stat] += gain[stat];
-            const useful = stage.targets.map((target, index) => {
-              const value = getHwangTargetValue(scopedStats, target.stat);
-              const increase = getHwangTargetValue(improved, target.stat) - value;
-              return { ratio: goals[index]! > 0 ? value / goals[index]! : 1,
-                gain: Math.min(Math.max(0, goals[index]! - value), increase) };
-            }).filter(item => item.gain > 1e-8);
-            if (!useful.length) continue;
+            // 임시 객체 할당 없이 목표별 유효 증가량을 계산한다.
+            let ratio = Infinity, usefulCount = 0;
+            for (let index = 0; index < stage.targets.length; index++) {
+              const stat = stage.targets[index]!.stat;
+              const value = currentValues[index]!;
+              const improvedValue = stat === 'attack'
+                ? Math.min(scopedStats.atk_phys + gain.atk_phys, scopedStats.atk_mag + gain.atk_mag)
+                : scopedStats[stat] + gain[stat];
+              const effective = Math.min(Math.max(0, goals[index]! - value), improvedValue - value);
+              gains[index] = effective;
+              if (effective > 1e-8) { usefulCount++; if (currentRatios[index]! < ratio) ratio = currentRatios[index]!; }
+            }
+            if (!usefulCount) continue;
             // 같은 단계에서는 목표 대비 가장 덜 찬 스탯을 먼저 채운다.
-            const ratio = Math.min(...useful.map(item => item.ratio));
-            const efficiency = useful.filter(item => Math.abs(item.ratio - ratio) < 1e-8).reduce((sum, item) => sum + item.gain, 0) / targetCost;
-            const score = [-ratio, efficiency, -cost.epicCrayon, -cost.ultraCrayon];
+            let efficiencyGain = 0;
+            for (let index = 0; index < stage.targets.length; index++) {
+              if (gains[index]! > 1e-8 && Math.abs(currentRatios[index]! - ratio) < 1e-8) efficiencyGain += gains[index]!;
+            }
+            const efficiency = efficiencyGain / targetCost;
+            // 황크 단계에서는 보크 소모를 최대한 배제(-cost.epicCrayon 우선)하고, 보크 단계에서는 보크 효율을 우선한다.
+            const score = bokr
+              ? [-ratio, efficiency, -cost.ultraCrayon, -cost.epicCrayon]
+              : [-ratio, -cost.epicCrayon, efficiency, -cost.ultraCrayon];
             move.score = score;
-            if (nodes.length <= 24) moves.push(move);
-            else if (!moves.length || compare(move.score, moves[0]!.score) > 0) moves[0] = move;
+            // 안정 정렬의 첫 원소와 같도록, 동점이면 먼저 등장한 후보를 유지한다.
+            if (linear) { if (!top || compare(score, top.score) > 0) top = move; }
+            else moves.push(move);
           }
         }
-        if (nodes.length <= 24) moves.sort((a, b) => -compare(a.score, b.score));
-        const unique = moves;
-        if (!unique.length) break;
+        let best: Move | undefined;
+        let unique: Move[] = moves;
+        if (linear) {
+          if (!top) break;
+          best = top;
+        } else {
+          moves.sort((a, b) => -compare(a.score, b.score));
+          unique = moves;
+          if (!unique.length) break;
+          best = unique[choices[trace.length] ?? 0];
+        }
         const choice = choices[trace.length] ?? 0;
-        const best = unique[choice];
         if (!best) return null;
         // Branch on early decisions, then finish each alternative to compare final outcomes.
         if (branches && trace.length >= choices.length && trace.length < 8) {
@@ -462,7 +517,7 @@ export function* iterateHwangRedistribution(progressMap: Map<string, ApostleProg
         }
         trace.push(choice);
         addPath(best.path);
-        const affected = groups.find(group => group[0]?.apostleId === byKey.get(best.path.at(-1)!)!.apostleId)!;
+        const affected = groupById.get(byKey.get(best.path.at(-1)!)!.apostleId)!;
         for (const [key, path] of stagePathsFor(affected, resetIds.has(affected[0]!.apostleId), selected, stage.allowBlocked, stage.allowGates)) stagePaths.set(key, path);
         refreshMoves(affected[0]!.apostleId);
         remaining -= best.cost.ultraCrayon; remainingBokr -= best.cost.epicCrayon;
@@ -474,30 +529,46 @@ export function* iterateHwangRedistribution(progressMap: Map<string, ApostleProg
     }
     const stageResults = stages.map((stage, stageIndex) => {
       const { keys, goals } = scopes[stageIndex]!;
-      const original = emptyStats(), final = emptyStats();
-      for (const entry of nodes) if (keys.has(entry.key)) for (const stat of STAT_CATEGORIES) {
+      // 원본 합계는 사전 계산값을 쓰고, 최종 합계는 전체 노드 대신 선택 집합만 순회한다.
+      const original = originalStageStats[stageIndex]!, final = emptyStats();
+      for (const key of selected) if (keys.has(key)) {
+        const entry = byKey.get(key)!;
         const metric = stage.resource === 'bokr' ? entry.bokrStats : entry.stats;
-        if (entry.picked) original[stat] += metric[stat];
-        if (selected.has(entry.key)) final[stat] += metric[stat];
+        for (const stat of STAT_CATEGORIES) final[stat] += metric[stat];
       }
       return { resource: stage.resource, boardIndex: stage.boardIndex, boardThrough: stage.boardThrough, allowBlocked: stage.allowBlocked, allowGates: stage.allowGates, targets: stage.targets.map((target, index) => ({ stat: target.stat,
         target: goals[index]!, all: target.target === null, before: getHwangTargetValue(original, target.stat), after: getHwangTargetValue(final, target.stat) })) };
     });
     const actions: RedistributionAction[] = [];
+    // paintOrder를 한 번만 순회해 사도별로 묶는다 (기존: 사도 수 × paintOrder 반복).
+    const paintByApostle = new Map<number, RedistributionNode[]>();
+    for (const key of paintOrder) {
+      if (initial.has(key)) continue;
+      const entry = byKey.get(key)!;
+      const list = paintByApostle.get(entry.apostleId);
+      if (list) list.push(entry); else paintByApostle.set(entry.apostleId, [entry]);
+    }
     for (const apostle of apostles) {
-      const paint = paintOrder.map(key => byKey.get(key)!).filter(entry => entry.apostleId === apostle.apostleId && !initial.has(entry.key));
+      const paint = paintByApostle.get(apostle.apostleId) || [];
       const reset = resetIds.has(apostle.apostleId);
       if (!reset && !paint.length) continue;
       actions.push({ apostle, reset, paint, balance: 0,
-        refund: reset ? nodes.filter(entry => entry.apostleId === apostle.apostleId && entry.picked && !retained(entry.node))
-          .reduce((total, entry) => sumCosts(total, refundCost(entry)), createEmptyCostSummary()) : createEmptyCostSummary(),
+        refund: reset ? { ...(refundByApostle.get(apostle.apostleId) || createEmptyCostSummary()) } : createEmptyCostSummary(),
         spend: paint.reduce((total, entry) => sumCosts(total, entry.cost), createEmptyCostSummary()) });
     }
     // 초기화를 모두 먼저 진행하면 도중의 황크 잔고 부족을 피할 수 있다.
     actions.sort((a, b) => (b.refund.ultraCrayon - b.spend.ultraCrayon) - (a.refund.ultraCrayon - a.spend.ultraCrayon) || a.apostle.apostleId - b.apostle.apostleId);
     let balance = options.ownedCrayons + refund.ultraCrayon;
     for (const action of actions) { balance -= action.spend.ultraCrayon; action.balance = balance; }
-    return { before, after, remaining, remainingBokr, refund, spend: actions.reduce((total, action) => sumCosts(total, action.spend), createEmptyCostSummary()),
+    const totalSpend = actions.reduce((total, action) => sumCosts(total, action.spend), createEmptyCostSummary());
+    const remainingGold = options.ownedGold !== undefined
+      ? options.ownedGold + refund.gold - totalSpend.gold
+      : undefined;
+    const totalOwnedCans = (options.ownedWateringCan ?? 0) + Math.floor((options.ownedClouds ?? 0) / 10);
+    const remainingWateringCan = (options.ownedWateringCan !== undefined || options.ownedClouds !== undefined)
+      ? totalOwnedCans - (totalSpend.wateringCan || 0)
+      : undefined;
+    return { before, after, remaining, remainingBokr, remainingGold, remainingWateringCan, refund, spend: totalSpend,
       resetCount: resetIds.size, actions, nodes, selected, notes: [], stageResults };
   }
   const objective = (plan: RedistributionPlan) => [...plan.stageResults!.flatMap(stage =>

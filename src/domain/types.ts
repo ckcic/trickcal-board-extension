@@ -80,6 +80,15 @@ export interface HeroInfo {
   title?: string;
 }
 
+/** 사도 스킨(사복) 마스터 정보 */
+export interface SkinInfo {
+  unitType?: number;
+  unitUid?: number;
+  active?: boolean;
+  skinKey?: string;
+  sortingOrder?: number;
+}
+
 /** 유저 사도 데이터 내의 스텝 정보 */
 export interface UserBoardStep {
   step: string;
@@ -89,6 +98,7 @@ export interface UserBoardStep {
 export interface UserApostle {
   apostleId?: number;
   id?: number;
+  skinId?: number; // 착용한 사복(스킨) ID
   level?: number;
   rank?: number;
   grade?: number;
@@ -101,6 +111,7 @@ export interface ExtractedApiData {
   apostles: UserApostle[];
   board: Record<string, Record<string, MasterBoardNode[]>>;
   heroInfo: Record<string, HeroInfo>;
+  skinInfo?: Record<string, SkinInfo>;
   text: Record<string, string>;
 }
 
@@ -203,6 +214,7 @@ export interface ApostleProgress {
   name: string;
   personality: PersonalityType;
   gradeDefault: number; // 태생 성급 (1, 2, 3)
+  icon?: string; // 사도 아이콘 해시 (HeroIcons CDN 연동용)
   isOwned?: boolean; // 유저 보유 여부 (미보유 시 false)
   unlockedBoardCount: number;
   boards: BoardProgress[];

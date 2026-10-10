@@ -164,7 +164,7 @@ test('황크를 재분배하면서 일반칸을 복구하고 불필요한 보크
   const gate = { id: 5, nodeType: 1, grid: { x: 0, y: 1 }, requireGold: 50 };
   const a = apostle(1, [start(), normal, bokr, yellow(4, 3, 0, 99), gate], '11111');
   const b = apostle(2, [start(), yellow(2, 1, 0)], '10');
-  const plan = recommendHwangRedistribution(mapFor(a, b), options({ maxReset: 1 }));
+  const plan = recommendHwangRedistribution(mapFor(a, b), options({ maxReset: 1, restoreNormal: true }));
   assert.equal(plan.resetCount, 1); assert.equal(plan.after.atk_phys, 6); assert.equal(plan.after.crit_res, 0);
   assert.equal(plan.refund.ultraCrayon, 2); assert.equal(plan.refund.basicCrayon, 3);
   assert.equal(plan.refund.epicCrayon, 4); assert.equal(plan.refund.gold, 10);
@@ -178,7 +178,7 @@ test('일반칸 복구에 필수인 황크는 지우지 않고 더 나쁘거나 
   const normal = { id: 3, nodeType: 3, grid: { x: 2, y: 0 }, requireItems: [{ item: 610001, value: 3 }] };
   const a = apostle(1, [start(), yellow(2, 1, 0, 99), normal], '111');
   const b = apostle(2, [start(), yellow(2, 1, 0)], '10');
-  const plan = recommendHwangRedistribution(mapFor(a, b), options({ maxReset: 1 }));
+  const plan = recommendHwangRedistribution(mapFor(a, b), options({ maxReset: 1, restoreNormal: true }));
   assert.equal(plan.resetCount, 0); assert.equal(plan.after.atk_phys, 0);
   assert.equal(plan.after.crit_res, 6); assert.ok(plan.selected.has('1:0:2'));
 });
@@ -230,7 +230,7 @@ test('다양한 가명 보드에서 일반칸 복구·황크 잔고·환급 합�
       return apostle(index + 1, nodes, '1'.repeat(1 + (seed + index) % 9).padEnd(10, '0'));
     });
     const input = options({ ownedCrayons: seed % 5, maxReset: seed % 4,
-      priorities: [{ stat: 'atk_phys', target: 50 }, { stat: 'hp', target: 30 }] });
+      priorities: [{ stat: 'atk_phys', target: 50 }, { stat: 'hp', target: 30 }], restoreNormal: true });
     const plan = recommendHwangRedistribution(mapFor(...items), input);
     assert.ok(plan.resetCount <= input.maxReset);
     assert.ok(plan.remaining >= 0);
@@ -250,5 +250,7 @@ test('결과 화면은 이름을 이스케이프하고 초기화 순서·부족�
   const html = renderRedistributionResult(recommendHwangRedistribution(mapFor(a), input), input);
   assert.doesNotMatch(html, /<img/); assert.match(html, /&lt;img/);
   assert.match(html, /목표 부족/); assert.match(html, /최적해나 최소 초기화 인원은 보장하지/);
+  assert.match(html, /data-copy-orders/);
+  assert.match(html, /클린 슬레이트 최적화/);
   assert.match(html, /칠할 칸 순서/); assert.match(html, /환급 외 준비 재화/);
 });

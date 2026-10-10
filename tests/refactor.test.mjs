@@ -48,7 +48,7 @@ test('파서는 좌표 없는 꽃잎과 음수 숨김 좌표 및 숫자 연결 �
 test('파서는 보드 진행도에 필요한 유저 필드만 추출하며 래퍼와 빈 보유 목록을 지원한다', () => {
   const p = payload(); p.apostles[0].accountToken = '테스트용가짜값';
   const parsed = parseTrickcalApiPayload({ payload: p });
-  assert.deepEqual(Object.keys(parsed.apostles[0]).sort(), ['apostleId', 'boardSteps']);
+  assert.deepEqual(Object.keys(parsed.apostles[0]).sort(), ['apostleId', 'boardSteps', 'skinId']);
   p.apostles = [];
   assert.equal(parseTrickcalApiPayload(p).apostles.length, 0);
 });
@@ -151,7 +151,7 @@ test('인터셉터는 초기 응답을 재전달하고 XHR 재사용 시 중복 
   const xhr = new FakeXHR(); xhr.send(); xhr.send();
   assert.equal(messages.length, 2);
   assert.equal(messages[0].origin, win.location.origin);
-  assert.deepEqual(Object.keys(messages[0].message.payload).sort(), ['apostles', 'board', 'heroInfo', 'text']);
+  assert.deepEqual(Object.keys(messages[0].message.payload).sort(), ['apostles', 'board', 'heroInfo', 'skinInfo', 'text']);
   const parsed = parseTrickcalApiPayload(messages[0].message.payload);
   assert.equal(calculateAllApostlesProgress(parsed).get('10001').unlockedBoardCount, 3);
   const request = { source: win, origin: win.location.origin, data: { type: 'TCBE_BOARD_DATA_REQUEST', source: 'tcbe-content-bridge' } };
@@ -389,4 +389,16 @@ test('요약 DOM은 동일 조건에서 재사용하고 데이터·필터·컨�
   controller.clearCache();
   controller.updateStatSummaryGrid(map, filter);
   assert.notEqual(summary.children[1], beforeClear);
+});
+
+test('유저가 사복 스킨을 착용한 경우 해당 스킨 아이콘 키가 진행도 객체에 우선 적용된다', () => {
+  const p = payload();
+  p.apostles[0].skinId = 1007403;
+  p.skinInfo = {
+    '1007403': { skinId: 1007403, skinKey: 'test_swimsuit_hash', heroId: 10001 },
+  };
+  const parsed = parseTrickcalApiPayload(p);
+  const progressMap = calculateAllApostlesProgress(parsed);
+  const apostleProgress = progressMap.get(String(p.apostles[0].apostleId));
+  assert.equal(apostleProgress.icon, 'test_swimsuit_hash');
 });

@@ -3,7 +3,7 @@
  * @description API 응답으로부터 필요한 사도/보드/마스터 데이터를 추출 및 검증하는 파서
  */
 
-import type { ExtractedApiData, HeroInfo, MasterBoardNode, UserApostle } from './types.ts';
+import type { ExtractedApiData, HeroInfo, MasterBoardNode, SkinInfo, UserApostle } from './types.ts';
 
 /** 외부 응답의 배열과 객체, 숫자를 구분하여 계산 중 예외를 차단한다. */
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -83,6 +83,12 @@ export function parseTrickcalApiPayload(data: unknown): ExtractedApiData | null 
     dig(root, 'text')
   ) as Record<string, string> | undefined;
 
+  // 5. 스킨 마스터 정보(skinInfo) 탐색 (선택적)
+  const skinInfo = (
+    dig(root, 'data', 'data', 'skinInfo') ||
+    dig(root, 'skinInfo')
+  ) as Record<string, SkinInfo> | undefined;
+
   // 필수 요소 존재 확인
   if (
     !Array.isArray(apostles) ||
@@ -110,10 +116,12 @@ export function parseTrickcalApiPayload(data: unknown): ExtractedApiData | null 
     // 계정 부가 필드는 월드 간 메시지나 마지막 응답 캐시에 보관하지 않는다.
     apostles: apostles.map(apostle => ({
       apostleId: apostle.apostleId ?? apostle.id,
+      skinId: isNumber(apostle.skinId) ? apostle.skinId : undefined,
       boardSteps: apostle.boardSteps?.map(({ step }) => ({ step })),
     })),
     board,
     heroInfo,
+    skinInfo: skinInfo && isRecord(skinInfo) ? skinInfo : undefined,
     text,
   };
 }

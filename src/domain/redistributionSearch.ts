@@ -5,7 +5,10 @@ export function* searchResetSets<T>(ids: number[], maxSize: number,
   const baseline = evaluate(new Set());
   if (!baseline) throw new Error('현재 보드에서 계산할 수 없습니다.');
   let best = baseline;
-  let frontier: Array<{ ids: number[]; value: T | null }> = [{ ids: [], value: baseline }];
+  // 목적함수 점수는 후보당 한 번만 계산해 비교·정렬에 재사용한다.
+  let bestScore = score(baseline);
+  type Scored = { ids: number[]; value: T | null; score: number[] | null };
+  let frontier: Scored[] = [{ ids: [], value: baseline, score: bestScore }];
   const exact = ids.length <= 8;
   for (let limit = 0; limit <= maxSize; limit++) {
     if (limit > 0 && limit <= ids.length) {
@@ -22,14 +25,15 @@ export function* searchResetSets<T>(ids: number[], maxSize: number,
         for (const parent of frontier) if (!parent.ids.includes(id)) add([...parent.ids, id]);
         if (!exact && (fast ? proposals.size >= 3 : limit > 1 && proposals.size >= 24)) break;
       }
-      const evaluated: Array<{ ids: number[]; value: T | null }> = [];
+      const evaluated: Scored[] = [];
       for (const set of proposals.values()) {
         const value = evaluate(new Set(set));
-        evaluated.push({ ids: set, value });
-        if (value && compare(score(value), score(best)) > 0) best = value;
+        const valueScore = value ? score(value) : null;
+        evaluated.push({ ids: set, value, score: valueScore });
+        if (value && valueScore && compare(valueScore, bestScore) > 0) { best = value; bestScore = valueScore; }
         if (checkpoints) yield { limit, best, pending: true };
       }
-      evaluated.sort((a, b) => a.value === null ? (b.value === null ? 0 : 1) : b.value === null ? -1 : -compare(score(a.value), score(b.value)));
+      evaluated.sort((a, b) => a.score === null ? (b.score === null ? 0 : 1) : b.score === null ? -1 : -compare(a.score, b.score));
       // Infeasible partial sets can become feasible after another refund; retain them too.
       frontier = exact ? evaluated : evaluated.slice(0, 3);
     }

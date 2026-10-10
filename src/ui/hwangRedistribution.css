@@ -1,14 +1,76 @@
-/* 베타 재분배 창은 원본 스타일과 분리하고 작은 화면에서는 내부 스크롤을 사용한다. */
-#tcbe-redistribution-dialog { box-sizing: border-box; width: min(1100px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); margin: auto; padding: 24px; border: 1px solid #cbd5e1; border-radius: 16px; background: #fff; color: #1e293b; font: 14px/1.6 system-ui, sans-serif; overflow: auto; }
+/* 베타 재분배 창은 원본 스타일과 분리하고 좌우 2열 분할 레이아웃을 사용한다. */
+#tcbe-redistribution-dialog { box-sizing: border-box; width: min(1280px, calc(100vw - 32px)); height: min(92dvh, 880px); max-height: calc(100dvh - 32px); margin: auto; padding: 20px 24px; border: 1px solid #cbd5e1; border-radius: 16px; background: #fff; color: #1e293b; font: 14px/1.6 system-ui, sans-serif; overflow: hidden; display: flex; flex-direction: column; }
 #tcbe-redistribution-dialog::backdrop { background: rgb(15 23 42 / 55%); }
-#tcbe-redistribution-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+#tcbe-redistribution-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; }
 #tcbe-redistribution-dialog h2 { font-size: 22px; margin: 0; }
 #tcbe-redistribution-dialog h2 small { font-size: 12px; background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 12px; }
 #tcbe-redistribution-dialog button { padding: 7px 12px; border: 1px solid #cbd5e1; border-radius: 7px; background: #f8fafc; color: #1e293b; cursor: pointer; }
 #tcbe-redistribution-dialog button:disabled { opacity: .5; cursor: wait; }
-#tcbe-redistribution-dialog button[type=submit] { margin: 16px 8px 16px 0; background: #15803d; color: #fff; }
+#tcbe-redistribution-dialog button[type=submit] { margin: 0; background: #15803d; color: #fff; font-weight: 600; }
+.tcbe-rd-main-tabs { display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; padding: 4px 0 10px; margin-top: 10px; flex-shrink: 0; }
+.tcbe-rd-main-tabs button { padding: 8px 16px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; color: #475569; font-weight: 600; font-size: 14px; cursor: pointer; transition: all .15s ease-in-out; display: inline-flex; align-items: center; gap: 6px; }
+.tcbe-rd-main-tabs button:hover { background: #f1f5f9; color: #1e293b; border-color: #94a3b8; }
+.tcbe-rd-main-tabs button[aria-selected="true"] { background: #15803d; border-color: #15803d; color: #fff; font-weight: 700; box-shadow: 0 2px 4px rgba(21, 128, 61, 0.25); }
+.tcbe-rd-tab-badge { background: #22c55e; color: #fff; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 10px; line-height: 1; box-shadow: 0 1px 2px rgba(0,0,0,0.15); }
+.tcbe-rd-main-tabs button[aria-selected="true"] .tcbe-rd-tab-badge { background: #fff; color: #15803d; }
+.tcbe-rd-panels { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; margin-top: 12px; }
+.tcbe-rd-panel { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding: 4px 6px 12px 2px; }
+#tcbe-panel-result { overflow: hidden; height: 100%; min-height: 0; padding-bottom: 0; }
+.tcbe-rd-settings-view { max-width: 900px; display: flex; flex-direction: column; gap: 12px; }
+.tcbe-rd-settings-view form { display: flex; flex-direction: column; gap: 12px; }
+.tcbe-rd-result-container { display: flex; gap: 20px; flex: 1; min-height: 0; height: 100%; max-height: 100%; overflow: hidden; position: relative; }
+.tcbe-rd-result-content { flex: 1; min-width: 0; overflow-y: auto; padding-right: 14px; }
+.tcbe-rd-toc { width: 230px; flex-shrink: 0; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px 10px; display: flex; flex-direction: column; gap: 8px; height: 100%; max-height: 100%; min-height: 0; box-sizing: border-box; overflow: hidden; font-size: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+.tcbe-rd-toc-header { font-weight: 700; color: #0f172a; font-size: 13px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.tcbe-rd-toc-section { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+.tcbe-rd-toc-section[data-toc-apostles-section] { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+.tcbe-rd-toc-category { display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 2px; padding-left: 4px; }
+#tcbe-redistribution-dialog input.tcbe-rd-toc-search { width: 100% !important; box-sizing: border-box; padding: 6px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; background: #fff; font-size: 12px; color: #0f172a; transition: all 0.15s ease; }
+#tcbe-redistribution-dialog input.tcbe-rd-toc-search:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
+#tcbe-redistribution-dialog input.tcbe-rd-toc-search::-webkit-search-cancel-button { cursor: pointer; padding-right: 2px; }
+.tcbe-rd-toc-item { display: flex; align-items: center; justify-content: space-between; width: 100%; text-align: left; padding: 5px 8px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: #334155; cursor: pointer; font-size: 12px; transition: all 0.12s ease; gap: 6px; }
+.tcbe-rd-toc-item:hover { background: #e2e8f0; color: #0f172a; }
+.tcbe-rd-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1.5px solid #cbd5e1; background-color: #f1f5f9; box-shadow: 0 1px 3px rgba(0,0,0,0.08); vertical-align: middle; }
+.tcbe-rd-toc-apostles { flex: 1; min-height: 0; max-height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; padding-right: 4px; scrollbar-width: thin; scrollbar-color: #cbd5e1 #f1f5f9; }
+.tcbe-rd-toc-apostles::-webkit-scrollbar { width: 6px; }
+.tcbe-rd-toc-apostles::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+.tcbe-rd-toc-apostles::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.tcbe-rd-toc-apostles::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.tcbe-rd-toc-apostle-item { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 8px; }
+.tcbe-rd-toc-apostle-item .tcbe-rd-avatar { width: 28px; height: 28px; }
+.tcbe-rd-toc-name { font-size: 12px; font-weight: 600; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.tcbe-rd-toc-badge { flex-shrink: 0; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 5px; line-height: 1.2; }
+.tcbe-rd-toc-badge-reset { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+.tcbe-rd-toc-badge-add { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.tcbe-rd-toc-footer { margin-top: auto; padding-top: 6px; border-top: 1px solid #e2e8f0; flex-shrink: 0; }
+.tcbe-rd-toc-top { width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #475569; font-size: 11px; font-weight: 600; cursor: pointer; text-align: center; }
+.tcbe-rd-toc-top:hover { background: #f1f5f9; color: #0f172a; }
+.tcbe-rd-stage-order { padding: 3px 6px; border: 1px solid #94a3b8; border-radius: 5px; background: #fff; font-size: 13px; font-weight: 700; color: #0f172a; cursor: pointer; margin-right: 6px; }
+.tcbe-rd-stage-order:hover { border-color: #3b82f6; }
+.tcbe-rd-sticky-bar { position: sticky; bottom: 0; background: linear-gradient(180deg, rgba(255,255,255,0.85) 0%, #fff 40%); padding: 12px 0 4px; backdrop-filter: blur(4px); z-index: 10; border-top: 1px solid #e2e8f0; margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.tcbe-rd-drag-handle { display: inline-flex; align-items: center; justify-content: center; cursor: grab; color: #64748b; font-size: 16px; line-height: 1; padding: 2px 6px; margin-right: 4px; border-radius: 4px; user-select: none; }
+.tcbe-rd-drag-handle:hover { background: #e2e8f0; color: #1e293b; }
+.tcbe-rd-drag-handle:active { cursor: grabbing; }
+.tcbe-rd-stage { transition: background-color .15s, border-color .15s, opacity .15s; }
+.tcbe-rd-stage.dragging { opacity: .45; border-style: dashed !important; border-color: #3b82f6 !important; background: #eff6ff !important; }
+.tcbe-rd-stage.drag-over-top { border-top: 3px solid #2563eb !important; }
+.tcbe-rd-stage.drag-over-bottom { border-bottom: 3px solid #2563eb !important; }
+.tcbe-rd-empty-placeholder { padding: 48px 24px; text-align: center; color: #64748b; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; margin: 12px 0; }
+.tcbe-rd-curve-preview h3 { margin-top: 0; }
+.tcbe-rd-curve-controls { display: flex; align-items: center; gap: 12px; margin: 10px 0; }
+@media (max-width: 960px) {
+  #tcbe-redistribution-dialog { overflow: auto; max-height: 95dvh; }
+  .tcbe-rd-result-container { flex-direction: column; overflow: visible; }
+  .tcbe-rd-toc { width: 100%; max-height: 160px; }
+  .tcbe-rd-result-content { overflow: visible; max-height: none; padding-right: 0; }
+  .tcbe-rd-panel { overflow: visible; max-height: none; }
+}
 #tcbe-redistribution-dialog input { width: 100px; padding: 6px; border: 1px solid #94a3b8; border-radius: 6px; background: #fff; color: #0f172a; }
+#tcbe-redistribution-dialog input[name=gold] { width: 125px; }
+#tcbe-redistribution-dialog input[name=watering-can] { width: 90px; }
+#tcbe-redistribution-dialog input[name=clouds] { width: 110px; }
 #tcbe-redistribution-dialog .tcbe-rd-inputs { display: flex; flex-wrap: wrap; gap: 20px; margin: 20px 0; }
+#tcbe-redistribution-dialog .tcbe-rd-optional-inputs { margin: 8px 0 20px; }
 #tcbe-redistribution-dialog .tcbe-rd-inputs label { display: flex; gap: 10px; align-items: center; }
 #tcbe-redistribution-dialog .tcbe-rd-target { display: flex; justify-content: space-between; align-items: center; max-width: 400px; margin: 6px 0; }
 #tcbe-redistribution-dialog .tcbe-rd-target label { display: flex; align-items: center; gap: 8px; }
@@ -40,9 +102,11 @@
 #tcbe-redistribution-dialog h3 { margin: 26px 0 12px; padding-bottom: 8px; border-bottom: 2px solid #65a30d; font-size: 17px; }
 #tcbe-redistribution-dialog .tcbe-rd-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
 #tcbe-redistribution-dialog .tcbe-rd-cards > div { padding: 16px; border: 1px solid #d9e3ce; border-radius: 10px; background: #fafcf7; }
+#tcbe-redistribution-dialog .tcbe-rd-cards small { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: #475569; }
 #tcbe-redistribution-dialog .tcbe-rd-cards strong { display: block; font-size: 23px; margin-top: 4px; }
 #tcbe-redistribution-dialog .tcbe-rd-resources { padding: 8px 14px; margin: 12px 0; background: #f1f6e9; border-radius: 8px; }
 #tcbe-redistribution-dialog .tcbe-rd-resources p { margin: 6px 0; }
+#tcbe-redistribution-dialog .tcbe-rd-balance-summary { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #cbd5e1; font-size: 13px; }
 #tcbe-redistribution-dialog .tcbe-rd-caption, #tcbe-redistribution-dialog .tcbe-rd-method { color: #64748b; font-size: 12px; }
 #tcbe-redistribution-dialog .tcbe-rd-line { min-height: 24px; }
 #tcbe-redistribution-dialog .tcbe-rd-stage-summary small { display: block; color: #64748b; font-weight: 400; }
@@ -53,7 +117,8 @@
 #tcbe-redistribution-dialog .tcbe-rd-badge { background: #ecf3e0; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
 #tcbe-redistribution-dialog .tcbe-rd-actions td { white-space: normal; min-width: 80px; }
 #tcbe-redistribution-dialog .tcbe-rd-actions td:nth-child(4) { min-width: 180px; }
-#tcbe-redistribution-dialog .tcbe-rd-actions button { background: transparent; border: 0; padding: 0; font-weight: 700; color: #365314; }
+#tcbe-redistribution-dialog .tcbe-rd-actions button { background: transparent; border: 0; padding: 0; font-weight: 700; color: #365314; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+#tcbe-redistribution-dialog .tcbe-rd-actions button .tcbe-rd-avatar { width: 26px; height: 26px; }
 #tcbe-redistribution-dialog .tcbe-rd-stage-options { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin: 8px 0; }
 #tcbe-redistribution-dialog .tcbe-rd-stage-options label { display: inline-flex; align-items: center; gap: 6px; }
 #tcbe-redistribution-dialog .tcbe-rd-chart { margin: 16px 0; border-bottom: 1px solid #e2e8f0; }
@@ -64,6 +129,8 @@
 #tcbe-redistribution-dialog table { border-collapse: collapse; width: 100%; white-space: nowrap; text-align: left; }
 #tcbe-redistribution-dialog td, #tcbe-redistribution-dialog th { padding: 9px; border-bottom: 1px solid #e2e8f0; }
 #tcbe-redistribution-dialog summary { cursor: pointer; font-weight: 600; }
+#tcbe-redistribution-dialog .tcbe-rd-apostle summary { display: flex; align-items: center; gap: 10px; }
+#tcbe-redistribution-dialog .tcbe-rd-apostle summary .tcbe-rd-avatar { width: 32px; height: 32px; }
 #tcbe-redistribution-dialog .tcbe-rd-apostle { border: 1px solid #cbd5e1; padding: 12px; margin: 10px 0; border-radius: 8px; }
 #tcbe-redistribution-dialog .tcbe-rd-maps { display: flex; flex-wrap: wrap; gap: 24px; overflow: auto; }
 #tcbe-redistribution-dialog .tcbe-rd-map { display: grid; gap: 0; width: max-content; padding: 4px 4px 8px; }
@@ -90,10 +157,18 @@
 #tcbe-redistribution-dialog .pastel-ultra { background-image: var(--tcbe-pastel-ultra); }
 #tcbe-redistribution-dialog .icon-gold { background-image: var(--tcbe-gold-icon); }
 #tcbe-redistribution-dialog .watering-can { background-image: url('https://cdn.note.trickcal.com/Materials/a6iBdIQUa2Z8GrR0S05hucxq7qjTIFhCl.webp'); }
+#tcbe-redistribution-dialog .sunshine-cloud { background-image: url('https://note.trickcal.com/UI/SunnyRain_001.webp'); }
+#tcbe-redistribution-dialog .tcbe-rd-resource-icon.tcbe-rd-sm { width: 16px; height: 16px; vertical-align: -3px; }
 #tcbe-redistribution-dialog .tcbe-rd-paint-cost { display: block; font-size: 12px; margin-bottom: 6px; }
 #tcbe-redistribution-dialog .tcbe-rd-legend { display: flex; gap: 8px; flex-wrap: wrap; }
 #tcbe-redistribution-dialog .tcbe-rd-legend span { padding: 3px 8px; border-radius: 4px; }
 #tcbe-redistribution-dialog .tcbe-rd-bar { display: flex; flex-direction: column; width: 120px; gap: 3px; }
 #tcbe-redistribution-dialog .tcbe-rd-bar i, #tcbe-redistribution-dialog .tcbe-rd-bar b { display: block; height: 6px; background: #94a3b8; border-radius: 3px; }
 #tcbe-redistribution-dialog .tcbe-rd-bar b { background: #2563eb; }
+#tcbe-redistribution-dialog .tcbe-rd-stale-banner { margin: 0 0 16px; padding: 10px 14px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; color: #92400e; font-size: 13px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#tcbe-redistribution-dialog .tcbe-rd-stale-content { opacity: 0.65; transition: opacity .2s ease; }
+#tcbe-redistribution-dialog .tcbe-rd-orders-tools { display: flex; align-items: center; gap: 10px; margin: 8px 0 12px; }
+#tcbe-redistribution-dialog .tcbe-rd-copy-btn { padding: 6px 12px; font-size: 13px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; color: #334155; cursor: pointer; font-weight: 500; transition: all .15s ease; }
+#tcbe-redistribution-dialog .tcbe-rd-copy-btn:hover { background: #f8fafc; border-color: #94a3b8; }
+#tcbe-redistribution-dialog .tcbe-rd-copy-status { font-size: 12px; color: #166534; font-weight: 600; }
 @media (max-width: 600px) { #tcbe-redistribution-dialog { padding: 14px; } #tcbe-redistribution-dialog h2 { font-size: 18px; } }

@@ -9,6 +9,7 @@ import type {
   BoardNodeProgress,
   BoardProgress,
   ExtractedApiData,
+  HeroInfo,
   MasterBoardNode,
   NodeStat,
   NormalBoardProgress,
@@ -16,6 +17,7 @@ import type {
   PersonalityMeta,
   PersonalityType,
   ResourceCostSummary,
+  SkinInfo,
   StatCategory,
   StatCountSummary,
   StatMeta,
@@ -265,13 +267,24 @@ export function calculateApostleProgress(
   masterBoardMap: ExtractedApiData['board'],
   heroInfoMap: ExtractedApiData['heroInfo'],
   textMap: ExtractedApiData['text'],
-  isOwned: boolean = true
+  isOwned: boolean = true,
+  skinInfoMap?: Record<string, SkinInfo>
 ): ApostleProgress {
   const apostleId = Number(userApostle.apostleId ?? userApostle.id);
   const apostleName = resolveApostleName(apostleId, heroInfoMap, textMap);
-  const heroMaster = heroInfoMap[apostleId] || heroInfoMap[String(apostleId)] || { personality: 0, gradeDefault: 3 };
+  const heroMaster: Partial<HeroInfo> = heroInfoMap[apostleId] || heroInfoMap[String(apostleId)] || { personality: 0, gradeDefault: 3 };
   const personality = (heroMaster.personality ?? 0) as PersonalityType;
   const gradeDefault = heroMaster.gradeDefault ?? 3;
+
+  // 착용한 사복(스킨)이 있으면 스킨 아이콘 해시를 우선 적용
+  let icon = heroMaster.icon;
+  const equippedSkinId = userApostle.skinId;
+  if (equippedSkinId && skinInfoMap) {
+    const skin = skinInfoMap[equippedSkinId] || skinInfoMap[String(equippedSkinId)];
+    if (skin?.skinKey) {
+      icon = skin.skinKey;
+    }
+  }
 
   const heroBoards = masterBoardMap[apostleId] || masterBoardMap[String(apostleId)] || {};
   const boardSteps = userApostle.boardSteps || [];
@@ -578,6 +591,7 @@ export function calculateApostleProgress(
     name: apostleName,
     personality,
     gradeDefault,
+    icon,
     isOwned,
     unlockedBoardCount,
     boards,
@@ -628,7 +642,8 @@ export function calculateAllApostlesProgress(
       apiData.board,
       apiData.heroInfo,
       apiData.text,
-      true
+      true,
+      apiData.skinInfo
     );
     result.set(progress.name, progress);
     result.set(String(progress.apostleId), progress);
@@ -658,7 +673,8 @@ export function calculateAllApostlesProgress(
         apiData.board,
         apiData.heroInfo,
         apiData.text,
-        false
+        false,
+        apiData.skinInfo
       );
 
       result.set(progress.name, progress);

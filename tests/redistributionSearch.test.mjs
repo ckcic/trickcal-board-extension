@@ -31,6 +31,17 @@ test('small reset search agrees with an independent bitmask oracle for every lim
   }
 });
 
+test('조합 탐색은 실행 가능한 후보마다 목적함수 점수를 한 번만 계산한다', () => {
+  const ids = [1, 2, 3, 4, 5, 6, 7, 8];
+  let scoreCalls = 0, feasible = 0;
+  const points = [...searchResetSets(ids, 8, set => {
+    if (set.size === 1 && set.has(8)) return null;
+    feasible++; return { ids: [...set], gain: [...set].reduce((v, id) => v + id, 0) };
+  }, v => { scoreCalls++; return [v.gain, -v.ids.length]; }, compare)];
+  assert.equal(scoreCalls, feasible);
+  assert.equal(points.at(-1).best.gain, 36);
+});
+
 test('large reset beam considers every singleton and retains a non-prefix pair', () => {
   const seen = new Set();
   const points = [...searchResetSets(Array.from({ length: 12 }, (_, i) => i + 1), 2, ids => {
@@ -46,12 +57,12 @@ test('reset search skips a high-refund apostle whose normal restoration consumes
     apostle(2, [yellow(2, 1, 0, 2, 99)], '11'),
     apostle(3, [yellow(2, 1, 0, 2)]));
   const original = JSON.stringify([...progress]);
-  const plan = recommendHwangRedistribution(progress, options({ maxReset: 1 }));
+  const plan = recommendHwangRedistribution(progress, options({ maxReset: 1, restoreNormal: true }));
   assert.equal(plan.after.atk_phys, 6);
   assert.deepEqual(plan.actions.filter(a => a.reset).map(a => a.apostle.apostleId), [2]);
   assert.ok(plan.selected.has('1:0:2'));
   assert.equal(JSON.stringify([...progress]), original);
-  const points = [...iterateHwangRedistribution(progress, options({ maxReset: 3 }))];
+  const points = [...iterateHwangRedistribution(progress, options({ maxReset: 3, restoreNormal: true }))];
   assert.equal(points[0].plan.after.atk_phys, 0);
   assert.ok(points.every((p, i) => p.plan.resetCount <= i && (i === 0 || p.plan.after.atk_phys >= points[i - 1].plan.after.atk_phys)));
 });
@@ -112,3 +123,30 @@ test('curve can cancel inside a reset-limit search and never appends checkpoint 
   const curve = await calculateRedistributionCurve(progress, options());
   assert.deepEqual(curve.points.map(p => p.limit), [0, 1, 2]);
 });
+
+test('그래프 계산은 조기 포화 감지 시 남은 인원 상한을 일괄 채우며 결과 포인트를 온전히 유지한다', async () => {
+  // 5명 사도 중 1명만 황크를 칠함
+  const progress = mapFor(
+    apostle(1, [yellow(2, 1, 0, 2, 99)], '11'),
+    apostle(2, [yellow(2, 1, 0, 2)]),
+    apostle(3, []),
+    apostle(4, []),
+    apostle(5, [])
+  );
+  // 목표 6은 1명만 초기화해도 즉시 달성됨
+  const input = { ownedCrayons: 0, ownedBokr: 0, maxReset: 0, stages: [{ allowBlocked: true, targets: [{ stat: 'atk_phys', target: 6 }] }] };
+  const updates = [];
+  const curve = await calculateRedistributionCurve(progress, input, (done, total) => updates.push([done, total]));
+  // 0~5 전체 포인트가 누락 없이 생성되어야 함
+  assert.deepEqual(curve.points.map(p => p.limit), [0, 1, 2, 3, 4, 5]);
+  // 1명 이후의 점수와 resetCount는 동일하게 유지되어야 함
+  assert.equal(curve.points[0].resetCount, 0);
+  assert.equal(curve.points[1].resetCount, 1);
+  assert.equal(curve.points[2].resetCount, 1);
+  assert.equal(curve.points[5].resetCount, 1);
+  assert.equal(curve.points[1].hwang.atk_phys, 6);
+  assert.equal(curve.points[5].hwang.atk_phys, 6);
+  // 진행도 콜백의 마지막은 완료(total + 1)를 나타내야 함
+  assert.deepEqual(updates.at(-1), [6, 6]);
+});
+

@@ -15,6 +15,13 @@ export function renderStageTargetHint(stat: RedistributionStat, bokr: boolean, l
   return `${bokr ? `1칸당 +${STAT_META_LIST.find(meta => meta.key === stat)?.valuePerNode ?? 0}` : `${getRedistributionStatUnit(stat)}%씩`}${limits ? boardThrough === undefined ? ` · 최대 ${limits[stat].total}칸 · 해금 ${limits[stat].unlocked}칸` : ` · 선택 범위 최대 ${limits[stat].byBoard.slice(0, boardThrough + 1).reduce((a, b) => a + b, 0)}칸` : ''}`;
 }
 
+/** 목표 행의 상한·단위 안내 문구. 편집기 전체 재렌더 없이 행 단위로 갱신할 때도 같은 문구를 사용한다. */
+export function renderStageTargetLimit(stage: RedistributionStage, target: RedistributionStage['targets'][number], scope?: HwangStatLimits,
+  allGoal?: (stage: RedistributionStage, stat: RedistributionStat) => number): string {
+  const bokr = stage.resource === 'bokr';
+  return `${renderStageTargetHint(target.stat, bokr, scope, bokr ? stage.boardThrough ?? stage.boardIndex ?? 0 : undefined)}${bokr ? ` · 목표 +${((target.target ?? allGoal?.(stage, target.stat) ?? 0) * (STAT_META_LIST.find(meta => meta.key === target.stat)?.valuePerNode ?? 0)).toLocaleString('ko-KR')} (기본 수치)` : ''}`;
+}
+
 export function renderHwangStatLimits(limits: HwangStatLimits, resource: 'hwang' | 'bokr' = 'hwang'): string {
   return `<details class="tcbe-rd-limits"><summary>스탯별 최대 ${resource === 'bokr' ? '보크' : '황크'} 칸 수</summary>
     <p>보유 사도 기준입니다. 전체 최대에는 잠긴 보드·꽃잎도 포함하며, 현재 해금 범위는 열린 보드·꽃잎 기준입니다. 경로·예산 제한을 적용하기 전 칸 수입니다.</p>
@@ -27,8 +34,8 @@ export function renderHwangStatLimits(limits: HwangStatLimits, resource: 'hwang'
 export function renderRedistributionStageEditor(stages: RedistributionStage[], limits?: HwangStatLimits, bokrLimits?: HwangStatLimits, allGoal?: (stage: RedistributionStage, stat: RedistributionStat) => number): string {
   return stages.map((stage, index) => {
     const bokr = stage.resource === 'bokr', choices = getRedistributionStageStats(stage), scope = bokr ? bokrLimits : limits;
-    return `<fieldset class="tcbe-rd-stage" data-stage="${index}">
-    <legend>${index + 1}단계</legend>
+    return `<fieldset class="tcbe-rd-stage" data-stage="${index}" draggable="true">
+    <legend><span class="tcbe-rd-drag-handle" title="마우스로 끌어서 순서 변경" aria-label="${index + 1}단계 순서 드래그">⠿</span><select class="tcbe-rd-stage-order" data-stage-order="${index}" title="단계 순서 변경" aria-label="${index + 1}단계 순서 선택">${stages.map((_, i) => `<option value="${i}" ${i === index ? 'selected' : ''}>${i + 1}단계</option>`).join('')}</select></legend>
     <div class="tcbe-rd-stage-actions">
       <button type="button" data-stage-action="up" data-index="${index}" ${index === 0 ? 'disabled' : ''} aria-label="${index + 1}단계 위로">↑</button>
       <button type="button" data-stage-action="down" data-index="${index}" ${index === stages.length - 1 ? 'disabled' : ''} aria-label="${index + 1}단계 아래로">↓</button>
@@ -40,7 +47,7 @@ export function renderRedistributionStageEditor(stages: RedistributionStage[], l
       <select data-stat aria-label="${index + 1}단계 ${targetIndex + 1}번 스탯">${choices.map(([stat, name]) => `<option value="${stat}" ${stat === target.stat ? 'selected' : ''}>${name}</option>`).join('')}</select>
       <select data-mode aria-label="${index + 1}단계 ${targetIndex + 1}번 목표 방식"><option value="percent" ${target.target !== null ? 'selected' : ''}>${bokr ? '목표 칸 수' : '목표 %'}</option><option value="all" ${target.target === null ? 'selected' : ''}>전부</option></select>
       <input data-value type="number" min="0" max="${bokr ? 100000 : Math.floor(100000 / getRedistributionStatUnit(target.stat)) * getRedistributionStatUnit(target.stat)}" step="${bokr ? 1 : getRedistributionStatUnit(target.stat)}" value="${target.target === null ? (allGoal?.(stage, target.stat) ?? 0) : Number.isFinite(target.target) ? bokr ? Math.ceil(target.target) : roundRedistributionTarget(target.target, target.stat) : ''}" ${target.target === null ? 'disabled' : 'required'} aria-label="${index + 1}단계 ${targetIndex + 1}번 목표 ${bokr ? '칸 수' : '백분율'}">
-      <span>${bokr ? '칸' : '%'}</span><small data-limit>${renderStageTargetHint(target.stat, bokr, scope, bokr ? stage.boardThrough ?? stage.boardIndex ?? 0 : undefined)}${bokr ? ` · 목표 +${((target.target ?? allGoal?.(stage, target.stat) ?? 0) * (STAT_META_LIST.find(meta => meta.key === target.stat)?.valuePerNode ?? 0)).toLocaleString('ko-KR')} (기본 수치)` : ''}</small>
+      <span>${bokr ? '칸' : '%'}</span><small data-limit>${renderStageTargetLimit(stage, target, scope, allGoal)}</small>
       <button type="button" data-stage-action="remove-target" data-index="${index}" data-target-index="${targetIndex}" ${stage.targets.length === 1 ? 'disabled' : ''} aria-label="${index + 1}단계 ${targetIndex + 1}번 스탯 삭제">삭제</button>
     </div>`).join('')}
     <div class="tcbe-rd-stage-footer"><button type="button" data-stage-action="add-target" data-index="${index}" ${stage.targets.length >= choices.length ? 'disabled' : ''}>스탯 추가</button>

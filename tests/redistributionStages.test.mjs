@@ -95,6 +95,22 @@ test('예시 7단계는 독립 복사되며 편집기에 추가·삭제·양방�
   assert.equal(createExampleRedistributionStages()[1].targets[0].target, 500);
   const html = renderRedistributionStageEditor(stages);
   for (const action of ['up', 'down', 'delete', 'add-target', 'remove-target']) assert.match(html, new RegExp(`data-stage-action="${action}"`));
+  assert.match(html, /tcbe-rd-drag-handle/);
+  assert.match(html, /draggable="true"/);
+  assert.match(html, /tcbe-rd-stage-order/);
+  assert.match(html, /data-stage-order="0"/);
   assert.match(html, /막힌 경로 포함/); assert.match(html, /value="all"/);
   assert.equal((html.match(/data-stage="/g) || []).length, 7);
 });
+
+test('결과 렌더링에 빠른 점프를 위한 고유 앵커 섹션 ID가 포함된다', () => {
+  const plan = run([node(2, 1, 0, 97)], [stage('crit', 8)], 2);
+  const html = renderRedistributionResult(plan, { ownedCrayons: 2, maxReset: 0 });
+  assert.match(html, /id="tcbe-sec-summary"/);
+  assert.match(html, /id="tcbe-sec-stages"/);
+  assert.match(html, /id="tcbe-sec-distribution"/);
+  assert.match(html, /id="tcbe-sec-orders"/);
+  assert.match(html, /id="tcbe-sec-maps"/);
+  assert.match(html, /id="tcbe-rd-map-1"/);
+});
+

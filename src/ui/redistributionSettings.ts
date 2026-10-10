@@ -6,6 +6,9 @@ export interface RedistributionSettings {
   owned: number;
   bokr: number;
   reset: number;
+  gold?: number;
+  wateringCan?: number;
+  clouds?: number;
   searchMode: 'fast' | 'thorough';
   stages: RedistributionStage[];
 }
@@ -16,6 +19,9 @@ export function parseRedistributionSettings(raw: string | null): RedistributionS
     const value = JSON.parse(raw);
     const integer = (n: unknown, max: number) => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0 && n <= max;
     if (!value || !integer(value.owned, 1000000) || !integer(value.bokr, 1000000) || !integer(value.reset, 1000000) ||
+      (value.gold !== undefined && !integer(value.gold, 2000000000)) ||
+      (value.wateringCan !== undefined && !integer(value.wateringCan, 100000)) ||
+      (value.clouds !== undefined && !integer(value.clouds, 1000000)) ||
       !['fast', 'thorough'].includes(value.searchMode) || !Array.isArray(value.stages) || !value.stages.length || value.stages.length > 30) return null;
     for (const stage of value.stages) {
       if (!stage || (stage.resource !== undefined && !['hwang', 'bokr'].includes(stage.resource)) ||
