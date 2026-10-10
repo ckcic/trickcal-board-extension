@@ -1,8 +1,8 @@
 import { redistributionResourceIcon as resourceIcon } from './redistributionResource.ts';
 import { loadRedistributionSettings, saveRedistributionSettings } from './redistributionSettings.ts';
 import { findProgressByName } from './cardDetector.ts';
-/** 만개·황크 재분배 베타의 입력, 계산 결과와 사도별 변경 지도를 표시한다. */
 import { STAT_META_LIST, NODE_TYPE, isHwangNode } from '../domain/boardProgress.ts';
+import { openExportPresetModal, openImportPresetModal } from './redistributionPresetModal.ts';
 import { getSpentHwangCrayons, getSpentBokrCrayons, getAttackPathAvailability, getHwangTargetValue, createRedistributionGoalPreview, readBokrValues, createExampleRedistributionStages, iterateHwangRedistribution, type RedistributionNode, type RedistributionStat, type RedistributionPlan, type RedistributionOptions, type RedistributionAction } from '../domain/hwangRedistribution.ts';
 import type { ApostleProgress, ResourceCostSummary, StatCategory } from '../domain/types.ts';
 import { escapeHtml } from './html.ts';
@@ -268,7 +268,7 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
             <details open data-settings><summary>목표·경로 설정</summary>
             <div class="tcbe-rd-tabs" role="tablist" aria-label="목표 설정 메뉴"><button type="button" role="tab" id="rd-edit-tab" data-settings-tab="edit" aria-controls="rd-edit-panel" aria-selected="true">단계별 우선순위</button><button type="button" role="tab" id="rd-help-tab" data-settings-tab="help" aria-controls="rd-help-panel" aria-selected="false" tabindex="-1">목표·경로 도움말</button></div>
             <section role="tabpanel" id="rd-edit-panel" aria-labelledby="rd-edit-tab"><p>단계 순서대로 목표를 채웁니다. <small style="color:#64748b;">(⠿ 드래그 또는 번호 드롭다운으로 순서 직접 변경)</small></p>
-            <div data-targets></div><div class="tcbe-rd-stage-tools"><button type="button" data-add-stage>${resourceIcon('hwang')} 단계 추가</button><button type="button" data-add-bokr-stage>${resourceIcon('bokr')} 단계 추가</button><button type="button" data-examples>예시 7단계로 되돌리기</button></div></section>
+            <div data-targets></div><div class="tcbe-rd-stage-tools"><button type="button" data-add-stage>${resourceIcon('hwang')} 단계 추가</button><button type="button" data-add-bokr-stage>${resourceIcon('bokr')} 단계 추가</button><button type="button" data-examples>예시 7단계로 되돌리기</button><button type="button" data-export-preset class="tcbe-rd-preset-btn" title="현재 단계 목록을 JSON 텍스트로 내보내고 복사합니다">📋 설정 내보내기</button><button type="button" data-import-preset class="tcbe-rd-preset-btn" title="공유받은 단계 설정 JSON을 붙여넣어 가져옵니다">📥 설정 가져오기</button></div></section>
             <section role="tabpanel" id="rd-help-panel" aria-labelledby="rd-help-tab" hidden><h4>목표와 누적 범위</h4><p>황크 공격력은 물공·마공 각각 6%, 나머지는 8% 단위입니다. 보크는 물공·마공을 구분합니다. 1~2차 목표 20칸은 두 차수를 합쳐 20칸이며, 1차 목표와 중복해서 더하지 않습니다.</p><h4>막힌 경로와 관문은 별개입니다</h4><p>막힌 경로는 <strong>황크 방어력(물방·마방)·치저</strong> 칸을 통과해야 하는 경로입니다. 포함을 끄면 색칠 여부와 무관하게 그 황크를 통과하지 않습니다. <strong>보크 방어력·치저는 통과할 수 있습니다.</strong> 기존 칠한 칸을 자동으로 지우지는 않으며 초기화 시 일반칸 복구 경로는 별도로 유지합니다.</p><p>‘관문 개방 포함’을 켜면 잠긴 보드도 경로를 연결해 계산합니다. 필요한 관문의 골드·크레파스와 증명서 등 전용 재화를 결과에 표시합니다. 전용 재화의 보유량과 게임 내 개방 조건은 별도로 확인해야 합니다. 끈 단계는 처음 열려 있던 보드 범위만 목표로 삼습니다.</p><h4>공격력 전부의 계산 범위</h4><div class="tcbe-rd-table-wrap"><table><thead><tr><th>관문 기준</th><th>막힌 경로 제외</th><th>막힌 경로 포함</th></tr></thead><tbody><tr><th>관문 개방 끔</th><td>${format(availability.current.unblocked)}% (${availability.current.unblocked / 6}칸)</td><td>${format(availability.current.all)}% (${availability.current.all / 6}칸)</td></tr><tr><th>관문 개방 켬 · 최대 범위</th><td>${format(availability.opened.unblocked)}% (${availability.opened.unblocked / 6}칸)</td><td>${format(availability.opened.all)}% (${availability.opened.all / 6}칸)</td></tr></tbody></table></div><p>모두 보유 사도와 꽃잎 개방을 포함한 경로 기준이며, 예산 적용 전입니다. ‘전체 최대’와 현재 관문에서 가능한 ‘전부’는 다를 수 있습니다.</p></section></details>
             <div class="tcbe-rd-search-mode"><label>계산 방식 <select name="search-mode"><option value="fast">빠른 탐색</option><option value="thorough">상세 탐색 (느림)</option></select></label><small>빠른 탐색은 초기화 조합 비교를 줄입니다. 상세 탐색은 더 좋은 조합을 찾을 수 있지만 오래 걸립니다.</small></div>
             <div class="tcbe-rd-sticky-bar">
@@ -680,7 +680,7 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
     if (action === 'remove-target' && stage.targets.length > 1) stage.targets.splice(Number(button.dataset.targetIndex), 1);
     if (action === 'add-target') {
       const stat = getRedistributionStageStats(stage).map(([stat]) => stat).find(stat => !stage.targets.some(target => target.stat === stat));
-      if (stat) stage.targets.push({ stat, target: stage.resource === 'bokr' ? null : 500 });
+      if (stat) stage.targets.push({ stat, target: stage.resource === 'bokr' ? null : 0 });
     }
     renderTargets(); invalidateResult();
   });
@@ -689,11 +689,24 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
     renderTargets(); invalidateResult();
   });
   dialog.querySelector('[data-add-stage]')!.addEventListener('click', () => {
-    readTargets(); if (stages.length < 30) stages.push({ allowBlocked: false, targets: [{ stat: 'attack', target: 500 }] });
+    readTargets(); if (stages.length < 30) stages.push({ allowBlocked: false, targets: [{ stat: 'attack', target: 0 }] });
     renderTargets(); invalidateResult();
   });
   dialog.querySelector('[data-examples]')!.addEventListener('click', () => {
     stages = createExampleRedistributionStages(); renderTargets(); invalidateResult();
+  });
+  dialog.querySelector('[data-export-preset]')!.addEventListener('click', () => {
+    readTargets();
+    openExportPresetModal(dialog, stages);
+  });
+  dialog.querySelector('[data-import-preset]')!.addEventListener('click', () => {
+    openImportPresetModal(dialog, importedStages => {
+      stages = importedStages;
+      renderTargets();
+      invalidateResult();
+      const status = dialog.querySelector<HTMLElement>('[data-status]');
+      if (status) status.textContent = ` ${stages.length}개 단계 설정을 가져왔습니다.`;
+    });
   });
   let timer: ReturnType<typeof setTimeout> | null = null;
   const form = dialog.querySelector('form')!;

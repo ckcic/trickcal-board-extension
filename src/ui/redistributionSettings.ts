@@ -1,5 +1,7 @@
 import type { RedistributionStage } from '../domain/hwangRedistribution.ts';
-import { getRedistributionStageStats } from './redistributionStageEditor.ts';
+import { validateRedistributionStages, exportRedistributionPreset, parseRedistributionPreset } from '../domain/redistributionPreset.ts';
+
+export { exportRedistributionPreset, parseRedistributionPreset, validateRedistributionStages };
 
 export const REDISTRIBUTION_SETTINGS_KEY = 'tcbe_redistribution_settings_v1';
 export interface RedistributionSettings {
@@ -22,25 +24,15 @@ export function parseRedistributionSettings(raw: string | null): RedistributionS
       (value.gold !== undefined && !integer(value.gold, 2000000000)) ||
       (value.wateringCan !== undefined && !integer(value.wateringCan, 100000)) ||
       (value.clouds !== undefined && !integer(value.clouds, 1000000)) ||
-      !['fast', 'thorough'].includes(value.searchMode) || !Array.isArray(value.stages) || !value.stages.length || value.stages.length > 30) return null;
-    for (const stage of value.stages) {
-      if (!stage || (stage.resource !== undefined && !['hwang', 'bokr'].includes(stage.resource)) ||
-        typeof stage.allowBlocked !== 'boolean' || (stage.allowGates !== undefined && typeof stage.allowGates !== 'boolean') ||
-        (stage.boardThrough !== undefined && !integer(stage.boardThrough, 2)) ||
-        (stage.boardIndex !== undefined && !integer(stage.boardIndex, 2)) ||
-        (stage.resource !== 'bokr' && (stage.boardIndex !== undefined || stage.boardThrough !== undefined)) ||
-        (stage.boardIndex !== undefined && stage.boardThrough !== undefined) ||
-        !Array.isArray(stage.targets) || !stage.targets.length || stage.targets.length > getRedistributionStageStats(stage).length) return null;
-      const stats = new Set(getRedistributionStageStats(stage).map(([stat]) => stat));
-      const seen = new Set<string>();
-      for (const target of stage.targets) {
-        if (!target || !stats.has(target.stat) || seen.has(target.stat) || (target.target !== null &&
-          (stage.resource === 'bokr' && !Number.isSafeInteger(target.target) ||
-          (typeof target.target !== 'number' || !Number.isFinite(target.target) || target.target < 0 || target.target > 100000)))) return null;
-        seen.add(target.stat);
-      }
-    }
-    return value;
+      !['fast', 'thorough'].includes(value.searchMode)) return null;
+
+    const validatedStages = validateRedistributionStages(value.stages);
+    if (!validatedStages) return null;
+
+    return {
+      ...value,
+      stages: validatedStages,
+    };
   } catch { return null; }
 }
 

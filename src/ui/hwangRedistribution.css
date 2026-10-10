@@ -171,4 +171,35 @@
 #tcbe-redistribution-dialog .tcbe-rd-copy-btn { padding: 6px 12px; font-size: 13px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; color: #334155; cursor: pointer; font-weight: 500; transition: all .15s ease; }
 #tcbe-redistribution-dialog .tcbe-rd-copy-btn:hover { background: #f8fafc; border-color: #94a3b8; }
 #tcbe-redistribution-dialog .tcbe-rd-copy-status { font-size: 12px; color: #166534; font-weight: 600; }
+#tcbe-redistribution-dialog .tcbe-rd-preset-btn { font-weight: 600; color: #2563eb; border-color: #bfdbfe; background: #eff6ff; }
+#tcbe-redistribution-dialog .tcbe-rd-preset-btn:hover { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
+
+/* 단계 설정 프리셋 내보내기/가져오기 서브 모달 */
+.tcbe-rd-modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); display: flex; align-items: center; justify-content: center; z-index: 10000; padding: 20px; animation: tcbe-fade-in .15s ease-out; backdrop-filter: blur(2px); }
+@keyframes tcbe-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.tcbe-rd-modal { width: min(640px, 95vw); background: #ffffff; border: 1px solid #cbd5e1; border-radius: 14px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; overflow: hidden; animation: tcbe-slide-up .2s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes tcbe-slide-up { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.tcbe-rd-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+.tcbe-rd-modal-header h3 { margin: 0; font-size: 16px; font-weight: 700; color: #0f172a; border-bottom: none; padding-bottom: 0; }
+.tcbe-rd-modal-close { background: transparent !important; border: none !important; font-size: 20px; line-height: 1; color: #64748b; cursor: pointer; padding: 4px 8px !important; border-radius: 6px; }
+.tcbe-rd-modal-close:hover { background: #e2e8f0 !important; color: #0f172a; }
+.tcbe-rd-modal-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.tcbe-rd-modal-desc { margin: 0; font-size: 13px; color: #334155; line-height: 1.5; }
+.tcbe-rd-modal-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.tcbe-rd-modal-tool-btn, .tcbe-rd-modal-paste-btn { padding: 6px 12px; font-size: 12px; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 6px; background: #f8fafc; color: #334155; cursor: pointer; transition: all .15s ease; display: inline-flex; align-items: center; gap: 5px; }
+.tcbe-rd-modal-tool-btn:hover, .tcbe-rd-modal-paste-btn:hover { background: #e2e8f0; color: #0f172a; border-color: #94a3b8; }
+.tcbe-rd-json-area { width: 100%; box-sizing: border-box; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; line-height: 1.5; padding: 10px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; background: #f8fafc; color: #0f172a; resize: vertical; min-height: 180px; transition: border-color .15s ease, background-color .15s ease; }
+.tcbe-rd-json-area:focus { outline: none; border-color: #2563eb; background: #fff; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
+.tcbe-rd-json-area.tcbe-rd-drag-over { border: 2px dashed #2563eb !important; background: #eff6ff !important; }
+.tcbe-rd-modal-status { font-size: 12px; min-height: 18px; font-weight: 600; }
+.tcbe-rd-status-success { color: #16a34a; }
+.tcbe-rd-status-warning { color: #d97706; }
+.tcbe-rd-status-error { color: #dc2626; }
+.tcbe-rd-modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 18px; border-top: 1px solid #e2e8f0; background: #f8fafc; }
+.tcbe-rd-modal-btn { padding: 8px 16px; font-size: 13px; font-weight: 600; border-radius: 7px; border: 1px solid #cbd5e1; background: #fff; color: #334155; cursor: pointer; transition: all .15s ease; }
+.tcbe-rd-modal-btn:hover { background: #f1f5f9; color: #0f172a; }
+.tcbe-rd-modal-btn.tcbe-rd-btn-primary { background: #2563eb; color: #fff; border-color: #2563eb; }
+.tcbe-rd-modal-btn.tcbe-rd-btn-primary:hover { background: #1d4ed8; border-color: #1d4ed8; }
+
 @media (max-width: 600px) { #tcbe-redistribution-dialog { padding: 14px; } #tcbe-redistribution-dialog h2 { font-size: 18px; } }
+

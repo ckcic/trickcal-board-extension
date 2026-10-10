@@ -57,6 +57,7 @@ src/
    - **사도 미니 아바타:** 사도 진행도 데이터의 `icon` 해시(`HeroIcons/${icon}.webp`)를 통해 유저가 착용한 사복(스킨, `skinId` -> `skinInfo.skinKey`)을 우선 매핑하여 전체 사도의 얼굴 초상화를 선제 확보하고, 웹페이지 DOM 카드(`collectApostlePortraits`) 이미지로 보완합니다. 목차, 작업 순서 표, 사도 지도 헤더에 26~32px 썸네일로 표시하며, 이미지 실패 시 `onerror`로 안전하게 숨깁니다.
    - **단계 드래그 앤 드롭 및 가장자리 자동 스크롤:** 단계 순서 변경 시 상/하단 80px 가장자리 진입 시 rAF 기반 부드러운 자동 스크롤을 지원합니다.
    - **설정 자동 저장:** `localStorage` (`tcbe_redistribution_settings_v1`)를 통해 사용자 입력값을 안전하게 보존·복원합니다.
+   - **단계 설정 프리셋 공유:** 표준 JSON 형식(`type: tcbe-redistribution-preset, version: 1`)을 통해 유저 간 단계 설정을 손쉽게 클립보드 복사 및 붙여넣기로 내보내기/가져오기 할 수 있습니다.
 
 ---
 
@@ -71,7 +72,7 @@ src/
 1. **타입 및 번들 검증**:
    - `node scripts/build.mjs` (또는 `npm run build`)를 실행하여 TypeScript 타입 오류나 번들링 에러가 없는지 검증합니다.
 2. **단위 테스트 검증**:
-   - `node --test tests/*.test.mjs` (또는 `npm test`)를 실행하여 전체 단위 테스트(현재 **157개 테스트**)가 모두 통과하는지 확인합니다.
+   - `node --test tests/*.test.mjs` (또는 `npm test`)를 실행하여 전체 단위 테스트(현재 **163개 테스트**)가 모두 통과하는지 확인합니다.
 3. **하네스 동기화**:
    - `HARNESS.md` 수정 시 반드시 `node scripts/sync-harness.mjs`를 실행하여 `GEMINI.md`, `AGENTS.md`, `CLAUDE.md`로 동기화합니다.
 
