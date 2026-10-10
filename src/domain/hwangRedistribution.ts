@@ -324,6 +324,8 @@ export function* iterateHwangRedistribution(progressMap: Map<string, ApostleProg
   const pathCache = new Map<string, Map<string, string[][]>>();
   type Move = { path: string[]; cost: ResourceCostSummary; gain: HwangStats; score: number[] };
   const groupById = new Map(groups.filter(group => group.length).map(group => [group[0]!.apostleId, group]));
+  // 기존 일반칸 복구 경로는 초기화 조합과 무관하므로 사도별로 재사용한다.
+  const restoreCache = new Map<number, Map<string, string[]>>();
   const moveCache = new Map<string, Move[]>();
   let cachedMoveCount = 0;
   const stagePathsFor = (group: RedistributionNode[], reset: boolean, selected: Set<string>, allowBlocked: boolean, allowGates = false) => {
@@ -352,7 +354,9 @@ export function* iterateHwangRedistribution(progressMap: Map<string, ApostleProg
     for (const group of groups) {
       const reset = resetIds.has(group[0]?.apostleId ?? -1);
       if (reset) {
-        const restore = boardPaths(group, true, true);
+        const id = group[0]!.apostleId;
+        if (!restoreCache.has(id)) restoreCache.set(id, boardPaths(group, true, true));
+        const restore = restoreCache.get(id)!;
         for (const entry of group.filter(item => item.picked && item.node.nodeType === NODE_TYPE.NORMAL)) {
           const path = restore.get(entry.key);
           if (!path) return null;
@@ -442,10 +446,11 @@ export function* iterateHwangRedistribution(progressMap: Map<string, ApostleProg
             const efficiency = useful.filter(item => Math.abs(item.ratio - ratio) < 1e-8).reduce((sum, item) => sum + item.gain, 0) / targetCost;
             const score = [-ratio, efficiency, -cost.epicCrayon, -cost.ultraCrayon];
             move.score = score;
-            moves.push(move);
+            if (nodes.length <= 24) moves.push(move);
+            else if (!moves.length || compare(move.score, moves[0]!.score) > 0) moves[0] = move;
           }
         }
-        moves.sort((a, b) => -compare(a.score, b.score));
+        if (nodes.length <= 24) moves.sort((a, b) => -compare(a.score, b.score));
         const unique = moves;
         if (!unique.length) break;
         const choice = choices[trace.length] ?? 0;

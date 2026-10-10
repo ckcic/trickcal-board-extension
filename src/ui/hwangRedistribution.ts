@@ -45,10 +45,17 @@ function renderGateItems(entry: RedistributionNode): string {
 export function renderRedistributionResult(plan: RedistributionPlan, options: RedistributionOptions): string {
   const summaries = plan.stageResults ?? (options.priorities || []).map(target => ({ allowBlocked: true,
     targets: [{ ...target, all: false, before: getHwangTargetValue(plan.before, target.stat), after: getHwangTargetValue(plan.after, target.stat) }] }));
+  // 사도·차수마다 전체 노드를 재검색하지 않도록 한 번만 분류한다.
+  const boardEntries = new Map<string, RedistributionNode[]>();
+  for (const entry of plan.nodes) {
+    const key = `${entry.apostleId}:${entry.boardIndex}`;
+    if (!boardEntries.has(key)) boardEntries.set(key, []);
+    boardEntries.get(key)!.push(entry);
+  }
   const maps = plan.actions.map(action => {
     const boards = action.apostle.boards.map((board, boardIndex) => {
       const visualBoard = { ...board, stepStr: (board.masterNodes || []).map((_, nodeIndex) => plan.selected.has(`${action.apostle.apostleId}:${boardIndex}:${nodeIndex}`) ? '1' : '0').join('') };
-      const entries = plan.nodes.filter(entry => entry.apostleId === action.apostle.apostleId && entry.boardIndex === boardIndex &&
+      const entries = (boardEntries.get(`${action.apostle.apostleId}:${boardIndex}`) || []).filter(entry =>
         entry.node.nodeType !== 0 && entry.node.grid && entry.node.grid.x >= 0 && entry.node.grid.y >= 0);
       if (!entries.length) return '';
       const xs = entries.map(entry => entry.node.grid!.x), ys = entries.map(entry => entry.node.grid!.y);
@@ -206,7 +213,7 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
     button.addEventListener('keydown', event => {
       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
       event.preventDefault();
-      const next = settingsTabs[event.key === 'Home' ? 0 : event.key === 'End' ? settingsTabs.length - 1 : (settingsTabs.indexOf(button) + 1) % settingsTabs.length]!;
+      const next = settingsTabs[event.key === 'Home' ? 0 : event.key === 'End' ? settingsTabs.length - 1 : (settingsTabs.indexOf(button) + (event.key === 'ArrowLeft' ? -1 : 1) + settingsTabs.length) % settingsTabs.length]!;
       selectTab(next); next.focus();
     });
   }
