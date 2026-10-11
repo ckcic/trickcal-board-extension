@@ -6,6 +6,7 @@
 import { PERSONALITY_META_LIST, STAT_META_LIST } from '../domain/boardProgress.ts';
 import { checkForUpdate } from '../domain/updateChecker.ts';
 import { openHwangRedistribution } from './hwangRedistribution.ts';
+import { closeBoardRecovery, openBoardRecovery } from './boardRecovery.ts';
 import type {
   ApostleProgress,
   BoardFilterLevel,
@@ -162,9 +163,18 @@ export class FilterPanelController {
     redistributionButton.className = 'tcbe-btn';
     redistributionButton.textContent = '만개·황크 재분배 (베타)';
     redistributionButton.addEventListener('click', () => {
+      closeBoardRecovery();
       if (this.summaryProgressMap) openHwangRedistribution(this.summaryProgressMap);
     });
     content.appendChild(redistributionButton);
+    const recoveryButton = document.createElement('button');
+    recoveryButton.type = 'button';
+    recoveryButton.className = 'tcbe-btn tcbe-recovery-entry';
+    recoveryButton.textContent = '황크·보크 회수 계산 (베타)';
+    recoveryButton.addEventListener('click', () => {
+      if (this.summaryProgressMap) openBoardRecovery(this.summaryProgressMap);
+    });
+    content.appendChild(recoveryButton);
 
     // ----------------------------------------------------
     // Row 1: 사도 기본 속성 (성격, 초기 성급)

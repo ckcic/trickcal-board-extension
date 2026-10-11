@@ -18,6 +18,7 @@ import type { ApostleProgress, ExtractedApiData, FilterState } from './domain/ty
 import { applyFilterToCards, enhanceApostleCards, setBadgesVisible } from './ui/boardEnhancer.ts';
 import { FilterPanelController } from './ui/filterPanel.ts';
 import { closeHwangRedistribution } from './ui/hwangRedistribution.ts';
+import { closeBoardRecovery } from './ui/boardRecovery.ts';
 
 (() => {
   chrome.runtime.onMessage.addListener((message, sender, respond) => {
@@ -185,6 +186,7 @@ import { closeHwangRedistribution } from './ui/hwangRedistribution.ts';
       // /board URL이 아니거나 사도별 탭이 아닌 경우 완전히 언마운트/숨김 처리 후 종료
       if (!isApostleTab) {
         closeHwangRedistribution();
+        closeBoardRecovery();
         document.documentElement.removeAttribute('data-tcbe-board-level');
         updateVirtualGrid(false);
         if (filterController) {
@@ -274,6 +276,7 @@ import { closeHwangRedistribution } from './ui/hwangRedistribution.ts';
   listenForBoardData((data: ExtractedApiData) => {
     try {
       closeHwangRedistribution();
+      closeBoardRecovery();
       latestProgressMap = calculateAllApostlesProgress(data);
       // 새로운 데이터를 수신했으므로 스탯 집계 캐시 초기화
       filterController?.clearCache();
@@ -302,7 +305,7 @@ import { closeHwangRedistribution } from './ui/hwangRedistribution.ts';
   // 탭 전환 버튼 등 클릭 시 신속하게 재판별
   document.addEventListener('click', (e) => {
     const target = e.target instanceof Element ? e.target : null;
-    if (target && !target.closest('#tcbe-filter-panel, #tcbe-bokr-modal-container, #tcbe-redistribution-dialog')) {
+    if (target && !target.closest('#tcbe-filter-panel, #tcbe-bokr-modal-container, #tcbe-redistribution-dialog, #tcbe-recovery-dialog')) {
       scheduleRefresh(50);
     }
   });

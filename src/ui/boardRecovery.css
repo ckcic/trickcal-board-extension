@@ -1,0 +1,48 @@
+/* 회수 베타 진입과 별도 계산창은 기존 재분배 배치에 종속되지 않는다. */
+.tcbe-recovery-entry { display: block; margin-top: 6px; }
+#tcbe-recovery-dialog { box-sizing: border-box; width: min(1100px, calc(100vw - 24px)); max-height: 92dvh; margin: auto; padding: 22px; border: 1px solid #cbd5e1; border-radius: 16px; background: #fff; color: #1e293b; font: 14px/1.6 system-ui, sans-serif; overflow: auto; }
+#tcbe-recovery-dialog::backdrop { background: rgb(15 23 42 / 55%); }
+#tcbe-recovery-dialog [hidden] { display: none !important; }
+#tcbe-recovery-dialog header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+#tcbe-recovery-dialog h2 { margin: 0; font-size: 22px; }
+#tcbe-recovery-dialog h2 small { padding: 3px 8px; font-size: 12px; background: #fef3c7; color: #92400e; border-radius: 12px; }
+#tcbe-recovery-dialog button { padding: 7px 12px; border: 1px solid #cbd5e1; border-radius: 7px; background-color: #f8fafc; color: #1e293b; cursor: pointer; }
+#tcbe-recovery-dialog button:disabled { opacity: .5; cursor: default; }
+#tcbe-recovery-dialog :focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+#tcbe-recovery-dialog [data-calculate], #tcbe-recovery-dialog [aria-pressed=true] { background: #15803d; color: white; }
+#tcbe-recovery-dialog fieldset { margin: 14px 0; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; }
+#tcbe-recovery-dialog legend { font-weight: 700; padding: 0 5px; }
+#tcbe-recovery-dialog input[type=checkbox], #tcbe-recovery-dialog input[type=radio] { accent-color: #15803d; margin-right: 7px; }
+#tcbe-recovery-dialog input[type=number] { width: 70px; }
+#tcbe-recovery-dialog input[type=number], #tcbe-recovery-dialog select { padding: 6px; border: 1px solid #94a3b8; border-radius: 5px; color: #1e293b; background: white; }
+.tcbe-rc-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 12px 0; }
+.tcbe-rc-check-row { padding: 10px 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 10px; }
+.tcbe-rc-check-row > button { margin-left: 12px; }
+.tcbe-rc-check-row > div { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; margin-top: 12px; }
+.tcbe-rc-check-row label { display: flex; align-items: center; min-height: 36px; cursor: pointer; }
+.tcbe-rc-notice, .tcbe-rc-total { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: 8px; }
+.tcbe-rc-total strong { font-size: 20px; }
+.tcbe-rc-apostle { border: 1px solid #cbd5e1; border-radius: 10px; margin: 10px 0; }
+.tcbe-rc-apostle > summary { padding: 14px; cursor: pointer; font-weight: 600; }
+.tcbe-rc-apostle > summary img { width: 28px; height: 28px; object-fit: contain; vertical-align: middle; }
+.tcbe-rc-apostle > div { padding: 0 14px 14px; }
+.tcbe-rc-alternatives { display: flex; flex-wrap: wrap; gap: 12px; }
+.tcbe-rc-alternative { flex: 1; min-width: 220px; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; }
+.tcbe-rc-alternative:has(input:checked) { border-color: #15803d; background: #f0fdf4; }
+.tcbe-rc-alternative p { margin: 6px 0; }
+.tcbe-rc-summary-main { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 8px; vertical-align: middle; }
+#tcbe-recovery-dialog .tcbe-rc-summary-main img { display: inline-block; margin: 0; }
+.tcbe-rc-hint { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; background: #f3e8ff; color: #6b21a8; border-radius: 6px; font-size: 12px; }
+.tcbe-rc-maps { display: flex; flex-wrap: wrap; gap: 22px; overflow: auto; }
+.tcbe-rc-map { display: grid; width: max-content; padding: 6px; }
+#tcbe-recovery-dialog .tcbe-rc-tile { position: relative; box-sizing: border-box; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 5px; background-color: transparent; }
+/* 공통 꽃 프레임의 안쪽 여백을 버튼 초기화 규칙이 덮지 않게 한다. */
+#tcbe-recovery-dialog .tcbe-rc-tile.tcbe-map-flower { padding: 16%; }
+#tcbe-recovery-dialog ol { max-height: 300px; overflow: auto; padding-left: 26px; }
+#tcbe-recovery-dialog li { margin-bottom: 5px; }
+@media (max-width: 760px) {
+  #tcbe-recovery-dialog { padding: 14px; }
+  #tcbe-recovery-dialog h2 { font-size: 18px; }
+  .tcbe-rc-check-row > div { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tcbe-rc-alternative { min-width: 0; flex-basis: 100%; }
+}

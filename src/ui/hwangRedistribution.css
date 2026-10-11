@@ -132,33 +132,33 @@
 #tcbe-redistribution-dialog .tcbe-rd-apostle summary { display: flex; align-items: center; gap: 10px; }
 #tcbe-redistribution-dialog .tcbe-rd-apostle summary .tcbe-rd-avatar { width: 32px; height: 32px; }
 #tcbe-redistribution-dialog .tcbe-rd-apostle { border: 1px solid #cbd5e1; padding: 12px; margin: 10px 0; border-radius: 8px; }
-#tcbe-redistribution-dialog .tcbe-rd-maps { display: flex; flex-wrap: wrap; gap: 24px; overflow: auto; }
-#tcbe-redistribution-dialog .tcbe-rd-map { display: grid; gap: 0; width: max-content; padding: 4px 4px 8px; }
-#tcbe-redistribution-dialog .tcbe-rd-tile { box-sizing: border-box; outline: 2px solid transparent; outline-offset: -2px; }
-#tcbe-redistribution-dialog .tcbe-rd-tile.tcbe-rd-keep { outline-color: #16803d; }
-#tcbe-redistribution-dialog .tcbe-rd-tile.tcbe-rd-add { outline-color: #2563eb; }
-#tcbe-redistribution-dialog .tcbe-rd-tile.tcbe-rd-remove { outline-color: #dc2626; outline-style: dashed; }
-#tcbe-redistribution-dialog .tcbe-rd-tile.tcbe-rd-empty { opacity: .5; }
-#tcbe-redistribution-dialog .tcbe-rd-state-mark { position: absolute; right: -1px; top: -1px; z-index: 1; display: flex; align-items: center; justify-content: center; width: 13px; height: 13px; border-radius: 50%; color: #fff; font: bold 11px/1 system-ui, sans-serif; pointer-events: none; }
-#tcbe-redistribution-dialog .tcbe-rd-keep .tcbe-rd-state-mark { background: #16803d; }
-#tcbe-redistribution-dialog .tcbe-rd-add .tcbe-rd-state-mark { background: #2563eb; }
-#tcbe-redistribution-dialog .tcbe-rd-remove .tcbe-rd-state-mark { background: #dc2626; }
-#tcbe-redistribution-dialog .tcbe-rd-keep { background-color: #dcfce7; color: #166534; }
-#tcbe-redistribution-dialog .tcbe-rd-add { background-color: #dbeafe; color: #1e40af; }
-#tcbe-redistribution-dialog .tcbe-rd-remove { background-color: #fee2e2; color: #991b1b; }
-#tcbe-redistribution-dialog .tcbe-rd-empty { background-color: #f1f5f9; color: #64748b; }
-#tcbe-redistribution-dialog .tcbe-rd-tile { background-color: transparent; }
-#tcbe-redistribution-dialog .tcbe-rd-resource { display: inline-flex; align-items: center; gap: 4px; margin-right: 8px; vertical-align: middle; white-space: nowrap; }
-#tcbe-redistribution-dialog .tcbe-rd-resource-icon { display: inline-block; width: 24px; height: 24px; flex-shrink: 0; vertical-align: middle; background: center / contain no-repeat; }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .tcbe-rd-maps { display: flex; flex-wrap: wrap; gap: 24px; overflow: auto; }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .tcbe-rd-map { display: grid; gap: 0; width: max-content; padding: 4px 4px 8px; }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .tcbe-rd-tile { box-sizing: border-box; outline: 2px solid transparent; outline-offset: -2px; }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .tcbe-rd-tile.tcbe-rd-keep { outline-color: #16803d; }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .tcbe-rd-tile.tcbe-rd-add { outline-color: #2563eb; }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .tcbe-rd-tile.tcbe-rd-remove { outline-color: #dc2626; outline-style: dashed; }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .tcbe-rd-tile.tcbe-rd-empty { opacity: .5; }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .tcbe-rd-state-mark { position: absolute; right: -1px; top: -1px; z-index: 1; display: flex; align-items: center; justify-content: center; width: 13px; height: 13px; border-radius: 50%; color: #fff; font: bold 11px/1 system-ui, sans-serif; pointer-events: none; }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .tcbe-rd-keep .tcbe-rd-state-mark { background: #16803d; }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .tcbe-rd-add .tcbe-rd-state-mark { background: #2563eb; }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .tcbe-rd-remove .tcbe-rd-state-mark { background: #dc2626; }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .tcbe-rd-keep { background-color: #dcfce7; color: #166534; }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .tcbe-rd-add { background-color: #dbeafe; color: #1e40af; }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .tcbe-rd-remove { background-color: #fee2e2; color: #991b1b; }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .tcbe-rd-empty { background-color: #f1f5f9; color: #64748b; }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .tcbe-rd-tile { background-color: transparent; }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .tcbe-rd-resource { display: inline-flex; align-items: center; gap: 4px; margin-right: 8px; vertical-align: middle; white-space: nowrap; }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .tcbe-rd-resource-icon { display: inline-block; width: 24px; height: 24px; flex-shrink: 0; vertical-align: middle; background: center / contain no-repeat; }
 #tcbe-redistribution-dialog .tcbe-rd-curve-preview { margin: 18px 0; padding: 12px; background: #f5f8ee; border: 1px solid #dbe5ce; border-radius: 10px; }
-#tcbe-redistribution-dialog .pastel-basic { background-image: var(--tcbe-pastel-basic); }
-#tcbe-redistribution-dialog .pastel-average { background-image: var(--tcbe-pastel-average); }
-#tcbe-redistribution-dialog .pastel-epic { background-image: var(--tcbe-pastel-epic); }
-#tcbe-redistribution-dialog .pastel-ultra { background-image: var(--tcbe-pastel-ultra); }
-#tcbe-redistribution-dialog .icon-gold { background-image: var(--tcbe-gold-icon); }
-#tcbe-redistribution-dialog .watering-can { background-image: url('https://cdn.note.trickcal.com/Materials/a6iBdIQUa2Z8GrR0S05hucxq7qjTIFhCl.webp'); }
-#tcbe-redistribution-dialog .sunshine-cloud { background-image: url('https://note.trickcal.com/UI/SunnyRain_001.webp'); }
-#tcbe-redistribution-dialog .tcbe-rd-resource-icon.tcbe-rd-sm { width: 16px; height: 16px; vertical-align: -3px; }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .pastel-basic { background-image: var(--tcbe-pastel-basic); }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .pastel-average { background-image: var(--tcbe-pastel-average); }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .pastel-epic { background-image: var(--tcbe-pastel-epic); }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .pastel-ultra { background-image: var(--tcbe-pastel-ultra); }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .icon-gold { background-image: var(--tcbe-gold-icon); }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .watering-can { background-image: url('https://cdn.note.trickcal.com/Materials/a6iBdIQUa2Z8GrR0S05hucxq7qjTIFhCl.webp'); }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .sunshine-cloud { background-image: url('https://note.trickcal.com/UI/SunnyRain_001.webp'); }
+:is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .tcbe-rd-resource-icon.tcbe-rd-sm { width: 16px; height: 16px; vertical-align: -3px; }
 #tcbe-redistribution-dialog .tcbe-rd-paint-cost { display: block; font-size: 12px; margin-bottom: 6px; }
 #tcbe-redistribution-dialog .tcbe-rd-legend { display: flex; gap: 8px; flex-wrap: wrap; }
 #tcbe-redistribution-dialog .tcbe-rd-legend span { padding: 3px 8px; border-radius: 4px; }
