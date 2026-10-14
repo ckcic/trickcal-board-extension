@@ -1,15 +1,19 @@
-import { matchesApostleFilter } from '../../domain/filters.ts';
 /**
  * @file boardEnhancer.ts
  * @description 트릭컬 노트의 사도 카드 DOM을 감지하여 뱃지/하이라이트/필터/정렬 및 보크 타일 경로 탐색을 오케스트레이션하는 진입점 모듈
  */
 
+import { DIALOG_EXCLUSION_SELECTOR } from '../common/selectors.ts';
+import { getUniqueApostles } from '../../domain/apostleProgress.ts';
+import { matchesApostleFilter } from '../../domain/filters.ts';
+import { selectApostleIds } from '../../domain/listSelection.ts';
 import { findApostlePathToBokr } from '../../domain/boardPathfinder.ts';
 import { TILE_APOSTLE_ID, TILE_BOARD_LEVEL, TILE_NODE_ID } from '../../bridge/tileIdentity.ts';
-import type { ApostleProgress, FilterState } from '../../domain/types.ts';
+import type { ProgressMap, ApostleProgress, FilterState } from '../../domain/types.ts';
 import { createBadgeElement } from './badge.ts';
 import { closeBokrModal, showBokrModal } from './bokrModal.ts';
-import { findCardContainer, findProgressByName } from './cardDetector.ts';
+import { findCardContainer } from './cardDetector.ts';
+import { findProgressByName } from '../../domain/apostleLookup.ts';
 import { createNormalStatElement } from './normalStat.ts';
 import { updateBoardTileHighlights } from './tileHighlight.ts';
 
@@ -40,21 +44,6 @@ function reuseEnhanceRow(row: Element | null, progress: ApostleProgress, filter?
     row.setAttribute('data-tcbe-rendered-filter', key);
   }
   return true;
-}
-
-/**
- * 골드 수치를 트릭컬 노트 스타일의 'k' 단위로 포맷팅 (예: 300,000 -> '300k', 10,000 -> '10k', 0 -> '0k')
- */
-export function formatGold(gold: number): string {
-  if (!gold || gold === 0) return '0k';
-  if (gold >= 1000) {
-    const kVal = gold / 1000;
-    const formatted = Number.isInteger(kVal)
-      ? kVal.toLocaleString()
-      : kVal.toLocaleString(undefined, { maximumFractionDigits: 1 });
-    return `${formatted}k`;
-  }
-  return `${gold.toLocaleString()}`;
 }
 
 /**
@@ -245,6 +234,14 @@ export function attachBokrTileClickListener(card: HTMLElement, progress: Apostle
   );
 }
 
+/** 차수별 열 표시 여부이며 1·2차는 같은 부모 행을 공유한다. */
+const BOARD_LEVEL_VISIBILITY: Record<FilterState['boardLevel'], readonly [boolean, boolean, boolean]> = {
+  all: [true, true, true],
+  '1': [true, false, false],
+  '2': [false, true, false],
+  '3': [false, false, true],
+};
+
 /**
  * 보드 기준 필터에 따라 사도 카드 내부의 1, 2, 3차 보드 열 및 묶음 row 표시/숨김 (캐시 적용)
  */
@@ -264,46 +261,81 @@ export function applyBoardLevelVisibility(card: HTMLElement, boardLevel: FilterS
   // 3차 보드를 묶는 부모 row (b3Col의 부모)
   const row3 = b3Col?.parentElement as HTMLElement | null;
 
-  if (boardLevel === '1') {
-    if (b1Col) b1Col.style.display = '';
-    if (b2Col) b2Col.style.display = 'none';
-    if (b3Col) b3Col.style.display = 'none';
-    if (row12) row12.style.display = '';
-    if (row3) row3.style.display = 'none';
-  } else if (boardLevel === '2') {
-    if (b1Col) b1Col.style.display = 'none';
-    if (b2Col) b2Col.style.display = '';
-    if (b3Col) b3Col.style.display = 'none';
-    if (row12) row12.style.display = '';
-    if (row3) row3.style.display = 'none';
-  } else if (boardLevel === '3') {
-    if (b1Col) b1Col.style.display = 'none';
-    if (b2Col) b2Col.style.display = 'none';
-    if (b3Col) b3Col.style.display = '';
-    if (row12) row12.style.display = 'none';
-    if (row3) row3.style.display = '';
-  } else {
-    // 'all' (전체)
-    if (b1Col) b1Col.style.display = '';
-    if (b2Col) b2Col.style.display = '';
-    if (b3Col) b3Col.style.display = '';
-    if (row12) row12.style.display = '';
-    if (row3) row3.style.display = '';
+  const [show1, show2, show3] = BOARD_LEVEL_VISIBILITY[boardLevel];
+  const elements: Array<[HTMLElement | null, boolean]> = [
+    [b1Col, show1], [b2Col, show2], [b3Col, show3], [row12, show1 || show2], [row3, show3],
+  ];
+  for (const [element, visible] of elements) {
+    if (element) element.style.display = visible ? '' : 'none';
   }
+}
+
+/** 카드 내부에서 사도 이름과 일치하는 요소를 찾고 필요하면 사도 ID도 대조한다. */
+function findCardName(
+  card: HTMLElement, nameToProgress: Map<string, ApostleProgress>, expectedApostleId?: number
+): { progress: ApostleProgress; element: HTMLElement } | null {
+  const textElements = card.querySelectorAll<HTMLElement>('div, span, h2, h3, h4, p, strong, b');
+  for (const element of textElements) {
+    if (element.children.length > 2) continue;
+    const text = element.textContent?.trim();
+    if (!text) continue;
+    const progress = findProgressByName(nameToProgress, text);
+    if (progress && (expectedApostleId === undefined || progress.apostleId === expectedApostleId)) {
+      return { progress, element };
+    }
+  }
+  return null;
+}
+
+/** 두 탐색 경로에서 배지 재사용·삽입과 카드 기능 연결을 같은 순서로 처리한다. */
+function enhanceCard(
+  card: HTMLElement, progress: ApostleProgress, activeFilter: FilterState | undefined,
+  resolveAnchor: () => Element | null
+): void {
+  if (card.getAttribute(ATTR_APOSTLE_NAME) !== progress.name) {
+    card.setAttribute(ATTR_APOSTLE_NAME, progress.name);
+  }
+  if (card.getAttribute(ATTR_APOSTLE_ID) !== String(progress.apostleId)) {
+    card.setAttribute(ATTR_APOSTLE_ID, String(progress.apostleId));
+  }
+  const existingRow = card.querySelector('.tcbe-badge-row');
+  const existingOldBadge = card.querySelector('.tcbe-badge-container');
+  if (!reuseEnhanceRow(existingRow, progress, activeFilter)) {
+    // 기존 행을 교체하거나 재사용할 때는 이름 요소를 다시 탐색하지 않는다.
+    const anchor = !existingRow && !existingOldBadge ? resolveAnchor() : null;
+    const newRow = createApostleEnhanceRow(progress, activeFilter);
+    newRow.setAttribute('data-tcbe-rendered-filter', badgeFilterKey(activeFilter));
+    renderedProgress.set(newRow, progress);
+    if (existingRow) {
+      existingRow.replaceWith(newRow);
+    } else if (existingOldBadge) {
+      existingOldBadge.replaceWith(newRow);
+    } else if (anchor) {
+      if (anchor.nextSibling) {
+        anchor.parentNode?.insertBefore(newRow, anchor.nextSibling);
+      } else {
+        anchor.parentNode?.appendChild(newRow);
+      }
+    }
+  }
+  if (activeFilter) applyBoardLevelVisibility(card, activeFilter.boardLevel);
+  updateBoardTileHighlights(card, progress, activeFilter);
+  attachBokrTileClickListener(card, progress);
+  card.setAttribute(ATTR_ENHANCED, 'true');
 }
 
 /**
  * 페이지 내의 사도 카드를 탐색하여 뱃지를 삽입 또는 업데이트하고 타일 하이라이트 및 보드 차수 가시성을 갱신
  */
 export function enhanceApostleCards(
-  apostleProgressMap: Map<string, ApostleProgress>,
+  apostleProgressMap: ProgressMap,
   activeFilter?: FilterState,
   targetCards?: HTMLElement[]
 ): number {
   let enhancedCount = 0;
 
   const nameToProgress = new Map<string, ApostleProgress>();
-  apostleProgressMap.forEach((prog) => {
+  getUniqueApostles(apostleProgressMap).forEach((prog) => {
     if (prog.name) {
       const trimmed = prog.name.trim();
       const normalized = trimmed.replace(/\s+/g, '');
@@ -321,7 +353,7 @@ export function enhanceApostleCards(
   const processedCards = new Set<HTMLElement>();
 
   cardElements.forEach((card) => {
-    if (card.closest('[role="dialog"], [data-slot="dialog-content"], [data-slot="dialog-overlay"]')) {
+    if (card.closest(DIALOG_EXCLUSION_SELECTOR)) {
       return;
     }
     // 캐시 확인: 이미 식별된 카드는 속성에서 직접 조회하여 불필요한 텍스트 DOM 순회 생략
@@ -342,79 +374,18 @@ export function enhanceApostleCards(
 
     let nameElement: HTMLElement | null = null;
     if (!progress) {
-      const textElements = Array.from(
-        card.querySelectorAll<HTMLElement>('div, span, h2, h3, h4, p, strong, b')
-      );
-      for (const el of textElements) {
-        if (el.children.length > 2) continue;
-        const text = el.textContent?.trim();
-        if (!text) continue;
-        const found = findProgressByName(nameToProgress, text);
-        if (found) {
-          progress = found;
-          nameElement = el;
-          break;
-        }
+      const found = findCardName(card, nameToProgress);
+      if (found) {
+        progress = found.progress;
+        nameElement = found.element;
       }
     }
 
     if (!progress) return;
 
-    if (cachedName !== progress.name) {
-      card.setAttribute(ATTR_APOSTLE_NAME, progress.name);
-      card.setAttribute(ATTR_APOSTLE_ID, String(progress.apostleId));
-    }
-
-    const filterKey = badgeFilterKey(activeFilter);
-    const existingRow = card.querySelector('.tcbe-badge-row');
-    const existingOldBadge = card.querySelector('.tcbe-badge-container');
-
-    // 이미 올바른 필터 조건으로 렌더링된 배지 행이 있다면 DOM 재생성 및 교체 생략
-    if (!reuseEnhanceRow(existingRow, progress, activeFilter)) {
-      if (!nameElement && !existingRow && !existingOldBadge) {
-        const textElements = Array.from(
-          card.querySelectorAll<HTMLElement>('div, span, h2, h3, h4, p, strong, b')
-        );
-        for (const el of textElements) {
-          if (el.children.length > 2) continue;
-          const text = el.textContent?.trim();
-          if (!text) continue;
-          const found = findProgressByName(nameToProgress, text);
-          if (found && found.apostleId === progress.apostleId) {
-            nameElement = el;
-            break;
-          }
-        }
-      }
-
-      const newRow = createApostleEnhanceRow(progress, activeFilter);
-      newRow.setAttribute('data-tcbe-rendered-filter', filterKey);
-      renderedProgress.set(newRow, progress);
-
-      if (existingRow) {
-        existingRow.replaceWith(newRow);
-      } else if (existingOldBadge) {
-        existingOldBadge.replaceWith(newRow);
-      } else if (nameElement) {
-        if (nameElement.nextSibling) {
-          nameElement.parentNode?.insertBefore(newRow, nameElement.nextSibling);
-        } else {
-          nameElement.parentNode?.appendChild(newRow);
-        }
-      }
-    }
-
-    // 보드 차수별 가시성(1차, 2차, 3차 필터) 적용
-    if (activeFilter) {
-      applyBoardLevelVisibility(card, activeFilter.boardLevel);
-    }
-
-    // 보드 타일 하이라이트 갱신
-    updateBoardTileHighlights(card, progress, activeFilter);
-
-    // 보크 타일 클릭 리스너 및 마킹 적용
-    attachBokrTileClickListener(card, progress);
-    card.setAttribute(ATTR_ENHANCED, 'true');
+    const matchedProgress = progress;
+    enhanceCard(card, progress, activeFilter,
+      () => nameElement ?? findCardName(card, nameToProgress, matchedProgress.apostleId)?.element ?? null);
     processedCards.add(card);
     enhancedCount++;
   });
@@ -431,37 +402,7 @@ export function enhanceApostleCards(
       const card = findCardContainer(el);
       if (!card || processedCards.has(card)) return;
 
-      card.setAttribute(ATTR_APOSTLE_NAME, progress.name);
-      card.setAttribute(ATTR_APOSTLE_ID, String(progress.apostleId));
-
-      const filterKey = badgeFilterKey(activeFilter);
-      const existingRow = card.querySelector('.tcbe-badge-row');
-      const existingOldBadge = card.querySelector('.tcbe-badge-container');
-
-      if (!reuseEnhanceRow(existingRow, progress, activeFilter)) {
-        const newRow = createApostleEnhanceRow(progress, activeFilter);
-        newRow.setAttribute('data-tcbe-rendered-filter', filterKey);
-        renderedProgress.set(newRow, progress);
-
-        if (existingRow) {
-          existingRow.replaceWith(newRow);
-        } else if (existingOldBadge) {
-          existingOldBadge.replaceWith(newRow);
-        } else {
-          if (el.nextSibling) {
-            el.parentNode?.insertBefore(newRow, el.nextSibling);
-          } else {
-            el.parentNode?.appendChild(newRow);
-          }
-        }
-      }
-
-      if (activeFilter) {
-        applyBoardLevelVisibility(card, activeFilter.boardLevel);
-      }
-      updateBoardTileHighlights(card, progress, activeFilter);
-      attachBokrTileClickListener(card, progress);
-      card.setAttribute(ATTR_ENHANCED, 'true');
+      enhanceCard(card, progress, activeFilter, () => el);
       processedCards.add(card);
       enhancedCount++;
     });
@@ -475,24 +416,20 @@ export function enhanceApostleCards(
  */
 export function applyFilterToCards(
   filter: FilterState,
-  apostleProgressMap: Map<string, ApostleProgress>,
+  apostleProgressMap: ProgressMap,
   targetCards?: HTMLElement[]
 ): { total: number; visible: number } {
   const cards = targetCards ?? document.querySelectorAll<HTMLElement>(`[${ATTR_APOSTLE_NAME}]`);
   let total = 0;
   let visible = 0;
 
-  // 사도 가나다순(한국어 이름 순) 인덱스 맵 생성 (기본 정렬 및 2차 정렬 키)
-  const sortedNames = Array.from(new Set(apostleProgressMap.values()))
-    .map((p) => p.name)
-    .sort((a, b) => a.localeCompare(b, 'ko'));
-  const nameOrderMap = new Map<string, number>();
-  sortedNames.forEach((name, index) => {
-    nameOrderMap.set(name, index);
-  });
+  // 전체 데이터의 공통 정렬 결과를 사용해 화면 밖 카드와 부분 갱신도 같은 순서를 유지한다.
+  const orderByApostleId = new Map(
+    selectApostleIds(apostleProgressMap, filter).map((apostleId, index) => [apostleId, index])
+  );
 
   cards.forEach((card) => {
-    if (card.closest('[role="dialog"], [data-slot="dialog-content"], [data-slot="dialog-overlay"]')) {
+    if (card.closest(DIALOG_EXCLUSION_SELECTOR)) {
       return;
     }
     const apostleName = card.getAttribute(ATTR_APOSTLE_NAME);
@@ -527,34 +464,7 @@ export function applyFilterToCards(
       }
       visible++;
 
-      const nameIndex = nameOrderMap.get(progress.name) ?? 0;
-      const totalNames = sortedNames.length;
-      let targetOrder = '';
-
-      // 7. 사도 카드 정렬(Sort) 적용 (오름차순/내림차순 지원 및 동일 순위 가나다순)
-      if (filter.sortBy === 'name_asc') {
-        targetOrder = String(nameIndex);
-      } else if (filter.sortBy === 'name_desc') {
-        targetOrder = String(totalNames - nameIndex);
-      } else if (filter.sortBy === 'unlocked_desc') {
-        // 3관 -> 1관 (동일 관문 내 가나다순)
-        targetOrder = String((3 - progress.unlockedBoardCount) * 10000 + nameIndex);
-      } else if (filter.sortBy === 'unlocked_asc') {
-        // 1관 -> 3관 (동일 관문 내 가나다순)
-        targetOrder = String(progress.unlockedBoardCount * 10000 + nameIndex);
-      } else if (filter.sortBy === 'grade_desc') {
-        // 3성 -> 1성 (동일 성급 내 가나다순)
-        targetOrder = String((3 - progress.gradeDefault) * 10000 + nameIndex);
-      } else if (filter.sortBy === 'grade_asc') {
-        // 1성 -> 3성 (동일 성급 내 가나다순)
-        targetOrder = String(progress.gradeDefault * 10000 + nameIndex);
-      } else if (filter.sortBy === 'personality_asc') {
-        // 성격 순 (순수 -> 냉정 -> 광기 -> 활발 -> 우울 -> 공명, 동일 성격 내 가나다순)
-        targetOrder = String(progress.personality * 10000 + nameIndex);
-      } else if (filter.sortBy === 'personality_desc') {
-        // 성격 역순 (공명 -> 우울 -> 활발 -> 광기 -> 냉정 -> 순수, 동일 성격 내 가나다순)
-        targetOrder = String((5 - progress.personality) * 10000 + nameIndex);
-      }
+      const targetOrder = String(orderByApostleId.get(progress.apostleId) ?? 0);
 
       // 불필요한 Reflow/재렌더링 방지를 위해 order에 실제 변경이 있을 때만 업데이트
       if (card.style.order !== targetOrder) {

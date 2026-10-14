@@ -5,6 +5,7 @@
 
 import { getNormalStatUnitValue } from './normalStatValues.ts';
 import type {
+  ProgressMap,
   ApostleProgress,
   BoardNodeProgress,
   BoardProgress,
@@ -630,8 +631,8 @@ export function calculateApostleProgress(
  */
 export function calculateAllApostlesProgress(
   apiData: ExtractedApiData
-): Map<string, ApostleProgress> {
-  const result = new Map<string, ApostleProgress>();
+): ProgressMap {
+  const result: ProgressMap = new Map();
   const ownedIdSet = new Set<number>();
 
   // 1. 유저 보유 사도 진행도 계산 및 등록

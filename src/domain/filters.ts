@@ -1,5 +1,16 @@
 import type { ApostleProgress, FilterState } from './types.ts';
 
+/** 컨트롤러마다 복사하여 사용하는 기본 필터 상태 */
+export const DEFAULT_FILTER_STATE: Readonly<FilterState> = Object.freeze({
+  status: 'all',
+  boardLevel: 'all',
+  statCategory: 'all',
+  personality: 'all',
+  grade: 'all',
+  unlockedTier: 'all',
+  sortBy: 'name_asc',
+});
+
 /** 카드 표시와 미완료 인원 집계가 같은 조건을 사용하도록 판정한다. */
 export function matchesApostleFilter(progress: ApostleProgress, filter: FilterState): boolean {
   if (filter.grade !== 'all' && progress.gradeDefault !== filter.grade) return false;

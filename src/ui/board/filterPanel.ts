@@ -3,23 +3,36 @@
  * @description 트릭컬 노트의 사도별 탭 상단에 배치되는 스탯/성격/성급/보드차수별 필터 컨트롤 패널 및 스탯별 총 칸 수/수치 통계 바
  */
 
+import { DEFAULT_FILTER_STATE } from '../../domain/filters.ts';
+import { aggregateBokrStats, type StatAggregates } from '../../domain/statAggregates.ts';
 import { PERSONALITY_META_LIST, STAT_META_LIST } from '../../domain/boardProgress.ts';
 import { checkForUpdate } from '../../domain/updateChecker.ts';
-import { openHwangRedistribution, closeHwangRedistribution } from '../redistribution/hwangRedistribution.ts';
-import { closeBoardRecovery, openBoardRecovery } from '../recovery/boardRecovery.ts';
+import { openHwangRedistribution } from '../redistribution/hwangRedistribution.ts';
+import { openBoardRecovery } from '../recovery/boardRecovery.ts';
 import type {
-  ApostleProgress,
-  BoardFilterLevel,
-  BokrFilterStatus,
+  ProgressMap,
   FilterState,
-  GradeFilterTarget,
-  StatCategory,
-  UnlockedTierFilter,
+  StatFilterTarget,
 } from '../../domain/types.ts';
 
 export interface FilterChangeCallback {
   (newState: FilterState): void;
 }
+
+type ToggleFilterKey = 'personality' | 'grade' | 'status' | 'boardLevel' | 'unlockedTier';
+interface ToggleOption<T> { key: T; label: string; }
+
+/** 생성과 갱신에서 같은 기본 방향·라벨·도움말을 사용한다. */
+const SORT_DEFS = [
+  { key: 'name', label: '이름순', initial: 'name_asc', alternate: 'name_desc',
+    title: '이름 가나다순 오름차순(▴)/내림차순(▾)으로 사도를 정렬합니다.' },
+  { key: 'unlocked', label: '<span class="tcbe-icon-gate"></span> 보드 해금', initial: 'unlocked_desc', alternate: 'unlocked_asc',
+    title: '해금된 보드 수(3관~1관) 내림차순(▾)/오름차순(▴)으로 사도를 정렬합니다.' },
+  { key: 'grade', label: '초기 성급', initial: 'grade_desc', alternate: 'grade_asc',
+    title: '초기 성급(3성~1성) 내림차순(▾)/오름차순(▴)으로 사도를 정렬합니다.' },
+  { key: 'personality', label: '성격순', initial: 'personality_asc', alternate: 'personality_desc',
+    title: '성격(순수/냉정/광기/활발/우울/공명) 오름차순(▴)/내림차순(▾)으로 사도를 정렬합니다.' },
+] as const;
 
 export class FilterPanelController {
   private container: HTMLElement | null = null;
@@ -28,20 +41,12 @@ export class FilterPanelController {
   private originalSearchParent: HTMLElement | null = null;
   private originalSearchNextSibling: Node | null = null;
 
-  private state: FilterState = {
-    status: 'all',
-    boardLevel: 'all',
-    statCategory: 'all',
-    personality: 'all',
-    grade: 'all',
-    unlockedTier: 'all',
-    sortBy: 'name_asc',
-  };
+  private state: FilterState = { ...DEFAULT_FILTER_STATE };
   private onFilterChange: FilterChangeCallback;
 
   /** 스탯 집계 캐시: 필터 조건 키 => 집계 데이터 */
-  private statAggregatesCache = new Map<string, Record<StatCategory, { picked: number; total: number; remaining: number }>>();
-  private summaryProgressMap: Map<string, ApostleProgress> | null = null;
+  private statAggregatesCache = new Map<string, StatAggregates>();
+  private summaryProgressMap: ProgressMap | null = null;
   private renderedSummaries = new WeakMap<HTMLElement, string>();
 
   constructor(onFilterChange: FilterChangeCallback) {
@@ -172,7 +177,6 @@ export class FilterPanelController {
     redistributionButton.className = 'tcbe-btn tcbe-btn-tool';
     redistributionButton.innerHTML = '✨ 만개·황크 재분배 <small class="tcbe-badge-tool-beta">베타</small>';
     redistributionButton.addEventListener('click', () => {
-      closeBoardRecovery();
       if (this.summaryProgressMap) openHwangRedistribution(this.summaryProgressMap);
     });
     toolsRow.appendChild(redistributionButton);
@@ -182,7 +186,6 @@ export class FilterPanelController {
     recoveryButton.className = 'tcbe-btn tcbe-btn-tool';
     recoveryButton.innerHTML = '🧹 황크·보크 회수 계산 <small class="tcbe-badge-tool-beta">베타</small>';
     recoveryButton.addEventListener('click', () => {
-      closeHwangRedistribution();
       if (this.summaryProgressMap) openBoardRecovery(this.summaryProgressMap);
     });
     toolsRow.appendChild(recoveryButton);
@@ -195,76 +198,15 @@ export class FilterPanelController {
     const row1 = document.createElement('div');
     row1.className = 'tcbe-panel-row';
 
-    // 1-1. 성격(Personality) 필터
-    const persGroup = document.createElement('div');
-    persGroup.className = 'tcbe-panel-group';
-
-    const persLabel = document.createElement('span');
-    persLabel.className = 'tcbe-panel-label';
-    persLabel.textContent = '성격:';
-    persGroup.appendChild(persLabel);
-
-    // 전체 성격 버튼
-    const allPersBtn = document.createElement('button');
-    allPersBtn.type = 'button';
-    allPersBtn.className = `tcbe-btn tcbe-btn-pers ${this.state.personality === 'all' ? 'tcbe-active' : ''}`;
-    allPersBtn.textContent = '전체 성격';
-    allPersBtn.setAttribute('data-personality-id', 'all');
-    allPersBtn.addEventListener('click', () => {
-      this.state.personality = 'all';
-      this.updateButtonStylesByAttr(persGroup, 'data-personality-id', 'all');
-      this.onFilterChange(this.getState());
-    });
-    persGroup.appendChild(allPersBtn);
-
-    // 개별 성격 버튼
-    PERSONALITY_META_LIST.forEach((meta) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = `tcbe-btn tcbe-btn-pers ${this.state.personality === meta.id ? 'tcbe-active' : ''}`;
-      btn.innerHTML = `<span class="tcbe-sprite-pers tcbe-sprite-pers-${meta.spriteIndex}"></span> ${meta.nameKo}`;
-      btn.setAttribute('data-personality-id', String(meta.id));
-      btn.addEventListener('click', () => {
-        const nextKey = this.state.personality === meta.id ? 'all' : meta.id;
-        this.state.personality = nextKey;
-        this.updateButtonStylesByAttr(persGroup, 'data-personality-id', String(nextKey));
-        this.onFilterChange(this.getState());
-      });
-      persGroup.appendChild(btn);
-    });
-    row1.appendChild(persGroup);
-
-    // 1-2. 초기 성급 필터 (전체/3성/2성/1성)
-    const gradeGroup = document.createElement('div');
-    gradeGroup.className = 'tcbe-panel-group';
-
-    const gradeLabel = document.createElement('span');
-    gradeLabel.className = 'tcbe-panel-label';
-    gradeLabel.textContent = '초기 성급:';
-    gradeGroup.appendChild(gradeLabel);
-
-    const gradeButtons: Array<{ key: GradeFilterTarget; label: string }> = [
-      { key: 'all', label: '전체' },
-      { key: 3, label: '3성' },
-      { key: 2, label: '2성' },
-      { key: 1, label: '1성' },
-    ];
-
-    gradeButtons.forEach(({ key, label }) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = `tcbe-btn ${this.state.grade === key ? 'tcbe-active' : ''}`;
-      btn.textContent = label;
-      btn.setAttribute('data-grade-key', String(key));
-      btn.addEventListener('click', () => {
-        const nextKey: GradeFilterTarget = this.state.grade === key && key !== 'all' ? 'all' : key;
-        this.state.grade = nextKey;
-        this.updateButtonStylesByAttr(gradeGroup, 'data-grade-key', String(nextKey));
-        this.onFilterChange(this.getState());
-      });
-      gradeGroup.appendChild(btn);
-    });
-    row1.appendChild(gradeGroup);
+    row1.appendChild(this.createToggleGroup('personality', '성격:', 'data-personality-id', [
+      { key: 'all', label: '전체 성격' },
+      ...PERSONALITY_META_LIST.map(meta => ({ key: meta.id,
+        label: `<span class="tcbe-sprite-pers tcbe-sprite-pers-${meta.spriteIndex}"></span> ${meta.nameKo}` })),
+    ], 'tcbe-btn-pers'));
+    row1.appendChild(this.createToggleGroup('grade', '초기 성급:', 'data-grade-key', [
+      { key: 'all', label: '전체' }, { key: 3, label: '3성' },
+      { key: 2, label: '2성' }, { key: 1, label: '1성' },
+    ]));
     content.appendChild(row1);
 
     // ----------------------------------------------------
@@ -273,100 +215,17 @@ export class FilterPanelController {
     const row2 = document.createElement('div');
     row2.className = 'tcbe-panel-row';
 
-    // 2-1. 보크 완료 상태 (전체/미완료/완료)
-    const statusGroup = document.createElement('div');
-    statusGroup.className = 'tcbe-panel-group';
-
-    const statusLabel = document.createElement('span');
-    statusLabel.className = 'tcbe-panel-label';
-    statusLabel.textContent = '보크 상태:';
-    statusGroup.appendChild(statusLabel);
-
-    const statusButtons: Array<{ key: BokrFilterStatus; label: string }> = [
-      { key: 'all', label: '전체' },
-      { key: 'incomplete', label: '미완료' },
-      { key: 'complete', label: '완료' },
-    ];
-
-    statusButtons.forEach(({ key, label }) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = `tcbe-btn ${this.state.status === key ? 'tcbe-active' : ''}`;
-      btn.textContent = label;
-      btn.setAttribute('data-status-key', key);
-      btn.addEventListener('click', () => {
-        const nextKey: BokrFilterStatus = this.state.status === key && key !== 'all' ? 'all' : key;
-        this.state.status = nextKey;
-        this.updateButtonStylesByAttr(statusGroup, 'data-status-key', nextKey);
-        this.onFilterChange(this.getState());
-      });
-      statusGroup.appendChild(btn);
-    });
-    row2.appendChild(statusGroup);
-
-    // 2-2. 표시 보드 (전체/1차/2차/3차)
-    const levelGroup = document.createElement('div');
-    levelGroup.className = 'tcbe-panel-group';
-
-    const levelLabel = document.createElement('span');
-    levelLabel.className = 'tcbe-panel-label';
-    levelLabel.textContent = '표시 보드:';
-    levelGroup.appendChild(levelLabel);
-
-    const levelButtons: Array<{ key: BoardFilterLevel; label: string }> = [
-      { key: 'all', label: '전체' },
-      { key: '1', label: '1차' },
-      { key: '2', label: '2차' },
-      { key: '3', label: '3차' },
-    ];
-
-    levelButtons.forEach(({ key, label }) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = `tcbe-btn ${this.state.boardLevel === key ? 'tcbe-active' : ''}`;
-      btn.textContent = label;
-      btn.setAttribute('data-level-key', key);
-      btn.addEventListener('click', () => {
-        const nextKey: BoardFilterLevel = this.state.boardLevel === key && key !== 'all' ? 'all' : key;
-        this.state.boardLevel = nextKey;
-        this.updateButtonStylesByAttr(levelGroup, 'data-level-key', nextKey);
-        this.onFilterChange(this.getState());
-      });
-      levelGroup.appendChild(btn);
-    });
-    row2.appendChild(levelGroup);
-
-    // 2-3. 해금 관문 필터 (전체 / 1차 / 2차 / 3차)
-    const tierGroup = document.createElement('div');
-    tierGroup.className = 'tcbe-panel-group';
-
-    const tierLabel = document.createElement('span');
-    tierLabel.className = 'tcbe-panel-label';
-    tierLabel.innerHTML = '<span class="tcbe-icon-gate"></span> 해금 관문:';
-    tierGroup.appendChild(tierLabel);
-
-    const tierButtons: Array<{ key: UnlockedTierFilter; label: string }> = [
-      { key: 'all', label: '전체' },
-      { key: 1, label: '1차' },
-      { key: 2, label: '2차' },
-      { key: 3, label: '3차' },
-    ];
-
-    tierButtons.forEach(({ key, label }) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = `tcbe-btn ${this.state.unlockedTier === key ? 'tcbe-active' : ''}`;
-      btn.textContent = label;
-      btn.setAttribute('data-tier-key', String(key));
-      btn.addEventListener('click', () => {
-        const nextKey: UnlockedTierFilter = this.state.unlockedTier === key && key !== 'all' ? 'all' : key;
-        this.state.unlockedTier = nextKey;
-        this.updateButtonStylesByAttr(tierGroup, 'data-tier-key', String(nextKey));
-        this.onFilterChange(this.getState());
-      });
-      tierGroup.appendChild(btn);
-    });
-    row2.appendChild(tierGroup);
+    row2.appendChild(this.createToggleGroup('status', '보크 상태:', 'data-status-key', [
+      { key: 'all', label: '전체' }, { key: 'incomplete', label: '미완료' }, { key: 'complete', label: '완료' },
+    ]));
+    row2.appendChild(this.createToggleGroup('boardLevel', '표시 보드:', 'data-level-key', [
+      { key: 'all', label: '전체' }, { key: '1', label: '1차' },
+      { key: '2', label: '2차' }, { key: '3', label: '3차' },
+    ]));
+    row2.appendChild(this.createToggleGroup('unlockedTier', '<span class="tcbe-icon-gate"></span> 해금 관문:', 'data-tier-key', [
+      { key: 'all', label: '전체' }, { key: 1, label: '1차' },
+      { key: 2, label: '2차' }, { key: 3, label: '3차' },
+    ]));
 
     // 2-4. 사도 이름 검색창 슬롯 (Row 2 우측)
     const searchSlot = document.createElement('div');
@@ -399,61 +258,20 @@ export class FilterPanelController {
     sortLabel.textContent = '정렬:';
     sortGroup.appendChild(sortLabel);
 
-    // 이름순 (name_asc ↔ name_desc)
-    const nameSortBtn = document.createElement('button');
-    nameSortBtn.type = 'button';
-    nameSortBtn.className = `tcbe-btn ${this.state.sortBy.startsWith('name') ? 'tcbe-active' : ''}`;
-    nameSortBtn.setAttribute('data-sort-key', 'name');
-    nameSortBtn.textContent = this.state.sortBy === 'name_desc' ? '이름순 ▾' : '이름순 ▴';
-    nameSortBtn.title = '이름 가나다순 오름차순(▴)/내림차순(▾)으로 사도를 정렬합니다.';
-    nameSortBtn.addEventListener('click', () => {
-      this.state.sortBy = this.state.sortBy === 'name_asc' ? 'name_desc' : 'name_asc';
-      this.updateSortButtons(sortGroup);
-      this.onFilterChange(this.getState());
+    SORT_DEFS.forEach(def => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'tcbe-btn';
+      button.setAttribute('data-sort-key', def.key);
+      button.title = def.title;
+      button.addEventListener('click', () => {
+        this.state.sortBy = this.state.sortBy === def.initial ? def.alternate : def.initial;
+        this.updateSortButtons(sortGroup);
+        this.onFilterChange(this.getState());
+      });
+      sortGroup.appendChild(button);
     });
-    sortGroup.appendChild(nameSortBtn);
-
-    // 보드 해금 순 (unlocked_desc ↔ unlocked_asc)
-    const unlockSortBtn = document.createElement('button');
-    unlockSortBtn.type = 'button';
-    unlockSortBtn.className = `tcbe-btn ${this.state.sortBy.startsWith('unlocked') ? 'tcbe-active' : ''}`;
-    unlockSortBtn.setAttribute('data-sort-key', 'unlocked');
-    unlockSortBtn.innerHTML = `<span class="tcbe-icon-gate"></span> 보드 해금 ${this.state.sortBy === 'unlocked_asc' ? '▴' : '▾'}`;
-    unlockSortBtn.title = '해금된 보드 수(3관~1관) 내림차순(▾)/오름차순(▴)으로 사도를 정렬합니다.';
-    unlockSortBtn.addEventListener('click', () => {
-      this.state.sortBy = this.state.sortBy === 'unlocked_desc' ? 'unlocked_asc' : 'unlocked_desc';
-      this.updateSortButtons(sortGroup);
-      this.onFilterChange(this.getState());
-    });
-    sortGroup.appendChild(unlockSortBtn);
-
-    // 초기 성급 순 (grade_desc ↔ grade_asc)
-    const gradeSortBtn = document.createElement('button');
-    gradeSortBtn.type = 'button';
-    gradeSortBtn.className = `tcbe-btn ${this.state.sortBy.startsWith('grade') ? 'tcbe-active' : ''}`;
-    gradeSortBtn.setAttribute('data-sort-key', 'grade');
-    gradeSortBtn.textContent = this.state.sortBy === 'grade_asc' ? '초기 성급 ▴' : '초기 성급 ▾';
-    gradeSortBtn.title = '초기 성급(3성~1성) 내림차순(▾)/오름차순(▴)으로 사도를 정렬합니다.';
-    gradeSortBtn.addEventListener('click', () => {
-      this.state.sortBy = this.state.sortBy === 'grade_desc' ? 'grade_asc' : 'grade_desc';
-      this.updateSortButtons(sortGroup);
-      this.onFilterChange(this.getState());
-    });
-    sortGroup.appendChild(gradeSortBtn);
-
-    // 성격 순 (personality_asc ↔ personality_desc)
-    const persSortBtn = document.createElement('button');
-    persSortBtn.type = 'button';
-    persSortBtn.className = `tcbe-btn ${this.state.sortBy.startsWith('personality') ? 'tcbe-active' : ''}`;
-    persSortBtn.setAttribute('data-sort-key', 'personality');
-    persSortBtn.textContent = this.state.sortBy === 'personality_desc' ? '성격순 ▾' : '성격순 ▴';
-    persSortBtn.title = '성격(순수/냉정/광기/활발/우울/공명) 오름차순(▴)/내림차순(▾)으로 사도를 정렬합니다.';
-    persSortBtn.addEventListener('click', () => {
-      this.state.sortBy = this.state.sortBy === 'personality_asc' ? 'personality_desc' : 'personality_asc';
-      this.updateSortButtons(sortGroup);
-      this.onFilterChange(this.getState());
-    });
-    sortGroup.appendChild(persSortBtn);
+    this.updateSortButtons(sortGroup);
 
     row3.appendChild(sortGroup);
 
@@ -473,14 +291,7 @@ export class FilterPanelController {
     allStatBtn.textContent = '전체 스탯';
     allStatBtn.setAttribute('data-stat-key', 'all');
     allStatBtn.title = '모든 스탯의 보크 노드를 대상으로 필터링합니다.';
-    allStatBtn.addEventListener('click', () => {
-      this.state.statCategory = 'all';
-      const panelEl = document.querySelector('#tcbe-filter-panel') as HTMLElement;
-      if (panelEl) {
-        this.updateButtonStylesByAttr(panelEl, 'data-stat-key', 'all');
-      }
-      this.onFilterChange(this.getState());
-    });
+    allStatBtn.addEventListener('click', () => this.selectStat('all'));
     statGroup.appendChild(allStatBtn);
 
     // 개별 스탯 버튼
@@ -492,15 +303,7 @@ export class FilterPanelController {
       btn.setAttribute('data-stat-key', meta.key);
       btn.id = `tcbe-btn-stat-${meta.key}`;
       btn.title = `${meta.nameKo} 보크: 1칸당 +${meta.valuePerNode}`;
-      btn.addEventListener('click', () => {
-        const nextKey = this.state.statCategory === meta.key ? 'all' : meta.key;
-        this.state.statCategory = nextKey;
-        const panelEl = document.querySelector('#tcbe-filter-panel') as HTMLElement;
-        if (panelEl) {
-          this.updateButtonStylesByAttr(panelEl, 'data-stat-key', nextKey);
-        }
-        this.onFilterChange(this.getState());
-      });
+      btn.addEventListener('click', () => this.selectStat(meta.key));
       statGroup.appendChild(btn);
     });
     row3.appendChild(statGroup);
@@ -516,6 +319,42 @@ export class FilterPanelController {
 
     this.container = panel;
     return panel;
+  }
+
+  /** 필드별 값 타입과 기존 재클릭 시 전체 선택 동작을 유지한다. */
+  private createToggleGroup<K extends ToggleFilterKey>(
+    field: K, labelHtml: string, attrName: string,
+    options: ToggleOption<FilterState[K]>[], buttonClass = ''
+  ): HTMLElement {
+    const group = document.createElement('div');
+    group.className = 'tcbe-panel-group';
+    const label = document.createElement('span');
+    label.className = 'tcbe-panel-label';
+    label.innerHTML = labelHtml;
+    group.appendChild(label);
+    options.forEach(({ key, label }) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `tcbe-btn ${buttonClass} ${this.state[field] === key ? 'tcbe-active' : ''}`;
+      button.innerHTML = label;
+      button.setAttribute(attrName, String(key));
+      button.addEventListener('click', () => {
+        const nextKey = this.state[field] === key ? DEFAULT_FILTER_STATE[field] : key;
+        this.state[field] = nextKey;
+        this.updateButtonStylesByAttr(group, attrName, String(nextKey));
+        this.onFilterChange(this.getState());
+      });
+      group.appendChild(button);
+    });
+    return group;
+  }
+
+  /** 스탯 버튼과 요약 카드가 같은 선택 상태와 알림을 사용한다. */
+  private selectStat(key: StatFilterTarget): void {
+    const nextKey = this.state.statCategory === key ? 'all' : key;
+    this.state.statCategory = nextKey;
+    if (this.container) this.updateButtonStylesByAttr(this.container, 'data-stat-key', nextKey);
+    this.onFilterChange(this.getState());
   }
 
   /**
@@ -539,23 +378,12 @@ export class FilterPanelController {
     const buttons = sortGroup.querySelectorAll<HTMLButtonElement>('.tcbe-btn[data-sort-key]');
     buttons.forEach((btn) => {
       const key = btn.getAttribute('data-sort-key');
-      if (key === 'name') {
-        const isActive = this.state.sortBy.startsWith('name');
-        btn.classList.toggle('tcbe-active', isActive);
-        btn.textContent = this.state.sortBy === 'name_desc' ? '이름순 ▾' : '이름순 ▴';
-      } else if (key === 'unlocked') {
-        const isActive = this.state.sortBy.startsWith('unlocked');
-        btn.classList.toggle('tcbe-active', isActive);
-        btn.innerHTML = `<span class="tcbe-icon-gate"></span> 보드 해금 ${this.state.sortBy === 'unlocked_asc' ? '▴' : '▾'}`;
-      } else if (key === 'grade') {
-        const isActive = this.state.sortBy.startsWith('grade');
-        btn.classList.toggle('tcbe-active', isActive);
-        btn.textContent = this.state.sortBy === 'grade_asc' ? '초기 성급 ▴' : '초기 성급 ▾';
-      } else if (key === 'personality') {
-        const isActive = this.state.sortBy.startsWith('personality');
-        btn.classList.toggle('tcbe-active', isActive);
-        btn.textContent = this.state.sortBy === 'personality_desc' ? '성격순 ▾' : '성격순 ▴';
-      }
+      const def = SORT_DEFS.find(item => item.key === key);
+      if (!def) return;
+      const isActive = this.state.sortBy === def.initial || this.state.sortBy === def.alternate;
+      const direction = isActive ? this.state.sortBy : def.initial;
+      btn.classList.toggle('tcbe-active', isActive);
+      btn.innerHTML = `${def.label} ${direction.endsWith('_asc') ? '▴' : '▾'}`;
     });
   }
 
@@ -582,7 +410,7 @@ export class FilterPanelController {
    * 필터 조건(성격, 성급, 보드 차수, 해금 관문)에 맞추어 스탯별 총 칸 수, 칠한 칸 수, 1칸당 수치 요약 바 갱신 (메모이제이션 적용)
    */
   public updateStatSummaryGrid(
-    progressMap: Map<string, ApostleProgress>,
+    progressMap: ProgressMap,
     filter: FilterState
   ) {
     const summaryContainer = document.getElementById('tcbe-stat-summary-row');
@@ -601,58 +429,7 @@ export class FilterPanelController {
     let statAggregates = this.statAggregatesCache.get(cacheKey);
 
     if (!statAggregates) {
-      statAggregates = {
-        hp: { picked: 0, total: 0, remaining: 0 },
-        atk_phys: { picked: 0, total: 0, remaining: 0 },
-        atk_mag: { picked: 0, total: 0, remaining: 0 },
-        def_phys: { picked: 0, total: 0, remaining: 0 },
-        def_mag: { picked: 0, total: 0, remaining: 0 },
-        crit: { picked: 0, total: 0, remaining: 0 },
-        crit_dmg: { picked: 0, total: 0, remaining: 0 },
-        crit_res: { picked: 0, total: 0, remaining: 0 },
-        crit_dmg_res: { picked: 0, total: 0, remaining: 0 },
-      };
-
-      const uniqueApostles = new Set<ApostleProgress>();
-      progressMap.forEach((prog) => uniqueApostles.add(prog));
-
-      uniqueApostles.forEach((prog) => {
-        // 해금 관문 필터
-        if (filter.unlockedTier !== 'all' && prog.unlockedBoardCount !== filter.unlockedTier) {
-          return;
-        }
-        // 초기 성급 필터
-        if (filter.grade !== 'all' && prog.gradeDefault !== filter.grade) {
-          return;
-        }
-        // 성격 필터
-        if (filter.personality !== 'all' && prog.personality !== filter.personality) {
-          return;
-        }
-
-        STAT_META_LIST.forEach((meta) => {
-          if (filter.boardLevel === 'all') {
-            const s = prog.bokr.byStat[meta.key];
-            if (s) {
-              statAggregates![meta.key].picked += s.picked;
-              statAggregates![meta.key].total += s.total;
-              statAggregates![meta.key].remaining += s.remaining;
-            }
-          } else {
-            const lvl = Number(filter.boardLevel);
-            const bProg = prog.boards.find((b) => b.boardStepLevel === lvl);
-            if (bProg) {
-              const s = bProg.bokr.byStat[meta.key];
-              if (s) {
-                statAggregates![meta.key].picked += s.picked;
-                statAggregates![meta.key].total += s.total;
-                statAggregates![meta.key].remaining += s.remaining;
-              }
-            }
-          }
-        });
-      });
-
+      statAggregates = aggregateBokrStats(progressMap, filter);
       this.statAggregatesCache.set(cacheKey, statAggregates);
     }
 
@@ -733,13 +510,7 @@ export class FilterPanelController {
       item.addEventListener('click', (e) => {
         // 툴팁 클릭 이벤트 전파 방지
         e.stopPropagation();
-        const nextKey = this.state.statCategory === meta.key ? 'all' : meta.key;
-        this.state.statCategory = nextKey;
-        const panelEl = document.querySelector('#tcbe-filter-panel') as HTMLElement;
-        if (panelEl) {
-          this.updateButtonStylesByAttr(panelEl, 'data-stat-key', nextKey);
-        }
-        this.onFilterChange(this.getState());
+        this.selectStat(meta.key);
       });
 
       itemsContainer.appendChild(item);

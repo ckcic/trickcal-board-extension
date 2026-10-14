@@ -1,13 +1,14 @@
-import { redistributionResourceIcon, redistributionBoardLabel } from './redistributionResource.ts';
+import { formatNumber } from '../common/format.ts';
+import { renderResourceIcon } from '../common/resources.ts';
+import { redistributionBoardLabel } from './redistributionResource.ts';
 /** 단계는 묶어서, 최종 배치는 스탯당 한 줄로 보여준다. */
 import { STAT_META_LIST } from '../../domain/boardProgress.ts';
 import { getHwangTargetValue, readBokrValues, type RedistributionPlan, type RedistributionStageResult, type RedistributionStat } from '../../domain/hwangRedistribution.ts';
 import { getRedistributionStatUnit } from '../../domain/hwangStatLimits.ts';
 
-const format = (value: number) => Number(value.toFixed(1)).toLocaleString('ko-KR');
 const names = new Map<RedistributionStat, string>(STAT_META_LIST.map(meta => [meta.key, meta.nameKo]));
 names.set('attack', '공격력');
-const resourceIcon = (bokr: boolean) => redistributionResourceIcon(bokr ? 'bokr' : 'hwang');
+const resourceIcon = (bokr: boolean) => renderResourceIcon(bokr ? 'bokr' : 'hwang');
 
 export function renderRedistributionSummary(plan: RedistributionPlan, stages: RedistributionStageResult[]): string {
   const stageRows = stages.map((stage, index) => {
@@ -15,7 +16,7 @@ export function renderRedistributionSummary(plan: RedistributionPlan, stages: Re
     const lines = (value: (target: RedistributionStageResult['targets'][number]) => string) =>
       stage.targets.map(target => `<div class="tcbe-rd-line">${names.get(target.stat)} ${value(target)}</div>`).join('');
     const order = `${bokr ? `${redistributionBoardLabel(stage)} · ` : ''}${stage.allowBlocked ? '막힌 경로 포함' : '막힌 경로 제외'} (황크 방어력·치저) · ${stage.allowGates ? '관문 개방 포함' : '현재 관문'}`;
-    return `<tr><th>${index + 1}단계<small>${resourceIcon(bokr)}</small></th><td>${order}</td><td>${lines(target => `${target.all ? '전부 · ' : ''}${format(target.target)}${unit}`)}</td><td>${lines(target => `${format(target.before)}${unit}`)}</td><td>${lines(target => `${format(target.after)}${unit}`)}</td></tr>`;
+    return `<tr><th>${index + 1}단계<small>${resourceIcon(bokr)}</small></th><td>${order}</td><td>${lines(target => `${target.all ? '전부 · ' : ''}${formatNumber(target.target)}${unit}`)}</td><td>${lines(target => `${formatNumber(target.before)}${unit}`)}</td><td>${lines(target => `${formatNumber(target.after)}${unit}`)}</td></tr>`;
   }).join('');
   const statRows = (['hwang', 'bokr'] as const).map(resource => {
     const bokr = resource === 'bokr';
@@ -44,7 +45,7 @@ export function renderRedistributionSummary(plan: RedistributionPlan, stages: Re
       const byBoard = [0, 1, 2].map(board => `<td>${selected.filter(entry => entry.boardIndex === board).length} / ${entries.filter(entry => entry.boardIndex === board).length}</td>`).join('');
       const cost = selected.reduce((sum, entry) => sum + (bokr ? entry.cost.epicCrayon : entry.cost.ultraCrayon), 0);
       const actual = bokr ? selected.reduce((sum, entry) => sum + getHwangTargetValue(readBokrValues(entry.node), stat), 0) : 0;
-      return `<tr><th>${resourceIcon(bokr)} ${names.get(stat)}</th><td>${goals.length ? `${Math.ceil(target / (bokr ? 1 : getRedistributionStatUnit(stat)))}칸` : '—'}${bokr ? [...boardGoals.map((goal, board) => goal ? `<small>${board + 1}차만 ${goal}칸</small>` : ''), ...cumulativeGoals.map((goal, board) => goal ? `<small>${redistributionBoardLabel({ boardThrough: board })} ${goal}칸</small>` : '')].join('') : ''}</td>${byBoard}<td>${bokr ? `+${format(actual)} <small>(${value}칸)</small>` : `${format(value)}%`}${missing ? ` <small class="tcbe-rd-short">(${missing}칸 부족)</small>` : ''}</td><td class="${value < before ? 'tcbe-rd-short' : 'tcbe-rd-positive'}">${value >= before ? '+' : ''}${selected.length - original.length}칸</td><td>${resourceIcon(bokr)}${format(cost)}</td></tr>`;
+      return `<tr><th>${resourceIcon(bokr)} ${names.get(stat)}</th><td>${goals.length ? `${Math.ceil(target / (bokr ? 1 : getRedistributionStatUnit(stat)))}칸` : '—'}${bokr ? [...boardGoals.map((goal, board) => goal ? `<small>${board + 1}차만 ${goal}칸</small>` : ''), ...cumulativeGoals.map((goal, board) => goal ? `<small>${redistributionBoardLabel({ boardThrough: board })} ${goal}칸</small>` : '')].join('') : ''}</td>${byBoard}<td>${bokr ? `+${formatNumber(actual)} <small>(${value}칸)</small>` : `${formatNumber(value)}%`}${missing ? ` <small class="tcbe-rd-short">(${missing}칸 부족)</small>` : ''}</td><td class="${value < before ? 'tcbe-rd-short' : 'tcbe-rd-positive'}">${value >= before ? '+' : ''}${selected.length - original.length}칸</td><td>${resourceIcon(bokr)}${formatNumber(cost)}</td></tr>`;
     }).join('');
   }).join('');
   return `<h3 id="tcbe-sec-stages">1. 단계별 목표 요약</h3><div class="tcbe-rd-table-wrap"><table class="tcbe-rd-stage-summary"><thead><tr><th>단계</th><th>대상 보드·경로</th><th>목표</th><th>현재</th><th>추천</th></tr></thead><tbody>${stageRows}</tbody></table></div>

@@ -243,6 +243,9 @@ export interface ApostleProgress {
   normal: NormalBoardProgress;
 }
 
+/** 사도 ID와 이름 별칭으로 같은 진행도 객체를 조회하는 맵 */
+export type ProgressMap = Map<string, ApostleProgress>;
+
 /** 사도 카드 정렬 옵션 (asc/desc 양방향 토글 지원) */
 export type SortOption =
   | 'name_asc'          // 이름순 오름차순 (가나다순)

@@ -1,20 +1,20 @@
+import { formatNumber } from '../common/format.ts';
+import type { ProgressMap } from '../../domain/types.ts';
 import { calculateApostleRecovery, getBestRecoveryAlternative, getRecoveryNodes, getRecoveryTargets, subtractRecoveryCost, type RecoveryAlternative, type RecoveryResource, type RecoveryResult, type RecoverySelection } from '../../domain/boardRecovery.ts';
 import { createEmptyCostSummary, NODE_TYPE, STAT_META_LIST } from '../../domain/boardProgress.ts';
 import { sumCosts } from '../../domain/boardPathfinder.ts';
-import type { ApostleProgress } from '../../domain/types.ts';
 import { matchesKoreanSearch } from '../../domain/koreanSearch.ts';
-import { closeHwangRedistribution } from '../redistribution/hwangRedistribution.ts';
-import { collectApostlePortraits, renderApostleAvatar, renderRedistributionCost } from '../redistribution/redistributionResult.ts';
+import { closeAllTools, closeTool, registerToolModal } from '../common/toolModals.ts';
+import { collectApostlePortraits, renderApostleAvatar } from '../common/apostlePortraits.ts';
+import { renderResourceCost, renderResourceIcon as resourceIcon } from '../common/resources.ts';
 import { getBoardNodeVisual, computeBoardGridLayout, getTileGridStyle } from '../board/boardNode.ts';
 import { escapeHtml } from '../common/html.ts';
 import { createCommonModal } from '../common/commonModal.ts';
 import { copyTextWithFeedback } from '../common/clipboard.ts';
-import { redistributionResourceIcon as resourceIcon } from '../redistribution/redistributionResource.ts';
 import { expandRecoveryPicks, getRecoveryStatOptions, loadRecoverySettings, saveRecoverySettings } from './boardRecoverySettings.ts';
 
-let dispose: (() => void) | null = null;
-export function closeBoardRecovery(): void { dispose?.(); }
-const signed = (n: number) => `${n > 0 ? '+' : ''}${Number(n.toFixed(1)).toLocaleString('ko-KR')}`;
+export function closeBoardRecovery(): void { closeTool('recovery'); }
+const signed = (n: number) => `${n > 0 ? '+' : ''}${formatNumber(n)}`;
 const resourceName = (resource: RecoveryResource) => resource === 'hwang' ? '황크' : '보크';
 const netLabel = (plan: RecoveryAlternative) => `${resourceIcon('hwang')} ${signed(plan.net.ultraCrayon)} ${resourceIcon('bokr')} ${signed(plan.net.epicCrayon)}`;
 const planKey = (plan: RecoveryAlternative) => `${Number(plan.flowering)}:${plan.priority}`;
@@ -64,8 +64,8 @@ function renderStatChanges(plan: RecoveryAlternative): string {
   }).join('');
 }
 
-export function openBoardRecovery(progressMap: Map<string, ApostleProgress>): void {
-  closeBoardRecovery(); closeHwangRedistribution();
+export function openBoardRecovery(progressMap: ProgressMap): void {
+  closeAllTools();
   const savedSettings = loadRecoverySettings();
   const apostles = [...new Map([...progressMap.values()].filter(a => a.isOwned !== false).map(a => [a.apostleId, a])).values()];
   const portraits = collectApostlePortraits(progressMap);
@@ -74,6 +74,7 @@ export function openBoardRecovery(progressMap: Map<string, ApostleProgress>): vo
   let searchQuery = '', onlyPositive = false;
   const choices = new Map<number, string>();
 
+  let unregisterTool = () => {};
   const modal = createCommonModal({
     id: 'tcbe-recovery-dialog',
     titleId: 'tcbe-rc-title',
@@ -106,10 +107,11 @@ export function openBoardRecovery(progressMap: Map<string, ApostleProgress>): vo
     onClose: () => {
       closed = true;
       generation++;
-      dispose = null;
+      unregisterTool();
     },
   });
 
+  unregisterTool = registerToolModal('recovery', modal.close);
   const dialog = modal.dialog;
   const status = dialog.querySelector<HTMLElement>('[data-status]')!;
   const output = dialog.querySelector<HTMLElement>('[data-output]')!;
@@ -231,7 +233,7 @@ export function openBoardRecovery(progressMap: Map<string, ApostleProgress>): vo
         <span data-search-count class="tcbe-rc-hint"></span>
       </div>
       <p>순위 기준은 목록 순서만 바꿉니다. 사도별 경로를 선택하면 지도·작업 순서·누적 회수량에 적용됩니다.</p>
-      <div class="tcbe-rc-total">선택한 상위 ${limit}명 순회수 · ${resourceIcon('hwang')} <strong>${signed(net.ultraCrayon)}</strong> · ${resourceIcon('bokr')} <strong>${signed(net.epicCrayon)}</strong><p>환급 외 준비 재화: ${renderRedistributionCost(extra)}</p></div>
+      <div class="tcbe-rc-total">선택한 상위 ${limit}명 순회수 · ${resourceIcon('hwang')} <strong>${signed(net.ultraCrayon)}</strong> · ${resourceIcon('bokr')} <strong>${signed(net.epicCrayon)}</strong><p>환급 외 준비 재화: ${renderResourceCost(extra)}</p></div>
       <p class="tcbe-rc-notice">추천 순회수량이며 최대 회수를 보장하지 않습니다. 초기화 환급 − 전체 복구 비용으로 계산합니다. 추가 재화와 초기화 가능 횟수를 확인하고, 필요한 환급을 먼저 확보한 뒤 복구하세요. 음수는 추가 필요량입니다.</p>
       <p>지도: 초록 ✓ 유지·복구 · 파랑 + 새로 칠함 · 빨강 × 지움 · 흐린 칸 미선택. 만개칸은 재분배 지도와 같은 꽃 모양으로 표시합니다. 칸을 누르면 상세 정보와 작업 번호를 확인할 수 있습니다.</p>
       <div data-apostles-list>
@@ -248,14 +250,14 @@ export function openBoardRecovery(progressMap: Map<string, ApostleProgress>): vo
               return `<label class="tcbe-rc-alternative"><span><input type="radio" name="rc-${id}" data-alternative="${id}" value="${planKey(alternative)}" ${plan === alternative ? 'checked' : ''}><strong>${label}</strong></span><p>순회수 ${netLabel(alternative)}</p><p>사용 ${resourceIcon('watering-can')} ${alternative.spend.wateringCan || 0} · ${resourceIcon('gold')} ${alternative.spend.gold.toLocaleString('ko-KR')}</p>${difference}</label>`;
             }).join('')}</div>${result.alternatives.some(p => p.flowering) && !alternatives.some(p => p.flowering) ? '<p>만개 허용안도 비교했지만 기본안과 같은 색칠 계획입니다.</p>' : ''}<p>대상 ${result.targets.size}칸 · 미복구 ${result.targets.size - plan.repaintedTargets.length}칸 · 추천 경로에서 재복구 ${plan.repaintedTargets.length}칸</p>
             ${plan.usedNewBokr ? '<p class="tcbe-rc-notice">새 보크를 사용하지 않고 모든 보존 대상을 연결할 계획을 찾지 못해 새 보크 경로를 포함했습니다.</p>' : ''}
-            <p>전체 환급: ${renderRedistributionCost(plan.refund)}</p><p>전체 복구·색칠: ${renderRedistributionCost(plan.spend)}</p>${renderStatChanges(plan)}
+            <p>전체 환급: ${renderResourceCost(plan.refund)}</p><p>전체 복구·색칠: ${renderResourceCost(plan.spend)}</p>${renderStatChanges(plan)}
             <div data-map></div><p data-tile-info role="status">칸을 선택하면 상세 정보가 표시됩니다.</p>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
               <h4 style="margin:0;">작업 순서</h4>
               <button type="button" data-copy-apostle="${id}" style="font-size:12px; padding:3px 8px;">이 사도 작업 순서 복사</button>
             </div>
             <p>이 사도를 초기화한 뒤 필요한 추가 재화를 확보하고 아래 순서대로 칠하세요. 열린 관문·꽃잎은 다시 열지 않습니다.</p>
-            <ol>${plan.paint.map(entry => `<li>${entry.boardIndex + 1}차 #${entry.node.id} ${entry.node.nodeType === NODE_TYPE.PETAL ? '꽃잎 개방' : entry.node.nodeType === NODE_TYPE.HWANG_EXT ? '만개 확장 황크 색칠' : entry.picked ? '복구' : '새 색칠'} · ${renderRedistributionCost(entry.cost)}</li>`).join('') || '<li>다시 칠할 칸 없음</li>'}</ol>` : `<p>${escapeHtml(result.error || '계획을 찾지 못했습니다.')}</p>`}</div></details>`;
+            <ol>${plan.paint.map(entry => `<li>${entry.boardIndex + 1}차 #${entry.node.id} ${entry.node.nodeType === NODE_TYPE.PETAL ? '꽃잎 개방' : entry.node.nodeType === NODE_TYPE.HWANG_EXT ? '만개 확장 황크 색칠' : entry.picked ? '복구' : '새 색칠'} · ${renderResourceCost(entry.cost)}</li>`).join('') || '<li>다시 칠할 칸 없음</li>'}</ol>` : `<p>${escapeHtml(result.error || '계획을 찾지 못했습니다.')}</p>`}</div></details>`;
         }).join('') || '<p>현재 칠한 제거 대상이 없습니다.</p>'}
       </div>
       <div data-search-empty hidden style="text-align: center; padding: 24px; color: #64748b; font-size: 14px;">검색 조건에 맞는 사도가 없습니다.</div>`;
@@ -311,7 +313,7 @@ export function openBoardRecovery(progressMap: Map<string, ApostleProgress>): vo
       const result = results.find(r => r.apostle.apostleId === Number(details.dataset.apostle));
       const entry = result?.nodes.find(n => n.key === button.dataset.tile);
       const info = details.querySelector<HTMLElement>('[data-tile-info]');
-      if (info) { info.textContent = button.title; if (entry) info.innerHTML += ` · 칸 비용: ${renderRedistributionCost(entry.cost)}`; } return;
+      if (info) { info.textContent = button.title; if (entry) info.innerHTML += ` · 칸 비용: ${renderResourceCost(entry.cost)}`; } return;
     }
     if (button.hasAttribute('data-cancel')) {
       generation++; results = []; calculate.disabled = false; cancel.hidden = true;
@@ -358,13 +360,6 @@ export function openBoardRecovery(progressMap: Map<string, ApostleProgress>): vo
     render(); modal.switchTab('results');
     dialog.querySelector<HTMLButtonElement>('[data-tab="results"]')!.focus();
   });
-
-  dispose = () => {
-    closed = true;
-    generation++;
-    modal.close();
-    dispose = null;
-  };
 
   updateSelection();
 }

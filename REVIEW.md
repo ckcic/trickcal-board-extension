@@ -6,8 +6,104 @@
 ---
 
 ## 📑 목차
+0. [리팩토링 후보 목록 (2026-10-14)](#-0-리팩토링-후보-목록-2026-10-14)
 1. [v1.0.9: 만개·황크 재분배 & 회수 계산 베타 리뷰 및 최적화](#-1-v109-만개황크-재분배--회수-계산-베타-리뷰-및-최적화)
 2. [v1.0.7~v1.0.8: 코드 검토, 최적화 분석 및 신규 데이터(10/01 패치) 검증 보고서](#-2-v107v108-코드-검토-최적화-분석-및-신규-데이터1001-패치-검증-보고서)
+
+---
+
+# 🧹 0. 리팩토링 후보 목록 (2026-10-14)
+
+상태: **R3·R6·R1·R2·R5·R4 완료, 다음 세션은 R7부터 진행.** R7은 헤더·import 순서 정리만 선행 완료했고 핵심 3개 작업은 남아 있다. R8~R12는 대기 중이다. 각 항목은 기능 변경 없는 구조 개선이 목적이며, 진행 시 `node scripts/build.mjs`와 `node --test tests/*.test.mjs`로 회귀를 확인한다. 현재 전체 테스트는 243개다.
+
+**권장 진행 순서:** R3 → R6 → R1 → R2 → R5 → R4 → 나머지
+(R3·R6은 작은 변경으로 정렬 불일치 같은 버그 위험을 먼저 없애고, 이후 큰 파일 정리를 쉽게 만든다.)
+
+## 다음 세션 시작점 및 현재 인수인계
+
+- **작업 기준:** `dev`. 이번 세션에서는 R3 → R6 → R1 → R2 → R5 → R4 순으로 완료했다. 사용자가 현재까지의 변경을 `dev`에 커밋·푸시하고 R7은 다음에 진행하도록 요청했다.
+- **검증 기준:** `node scripts/build.mjs`로 타입 검사·개발 번들을 생성하고 `node --test tests/*.test.mjs`의 243개 테스트를 확인한다. `dist/`는 Git 제외 대상이므로 체크아웃 후 필요하면 다시 빌드한다. `HARNESS.md`는 변경하지 않았다.
+- **사용자 확인:** R1 필터 패널과 R2 카드 강화 변경 후 사용자가 화면에서 정상 동작한다고 확인했다. R5·R4 변경에 대한 에이전트의 실제 브라우저 UI 검증은 미실행이다. 재분배·회수 창 개폐·스크롤 복원, 단계 순서 변경, 추천·그래프 계산/취소, 목차 검색, 설정 저장·복원을 다음 실제 화면 확인 대상으로 남긴다.
+- **R7 남은 작업:** `content.ts`의 `isApostleTabActive()`를 `ui/board/pageDetector.ts`로 분리하고 캐시 무효화 조건을 설계한다. `TCBE_GRID_STATS` 검증은 `bridge/`로, `injectSpriteStyles()`의 에셋 URL 목록은 상수 모듈로 이동한다. 이미 처리한 헤더·import 정리는 반복하지 않는다.
+- **R7 주의점:** URL·SPA 화면·사도/스탯 탭 전환과 검색창의 필터 패널 이동을 캐시가 따라가야 한다. 원본 DOM 변경을 확장 클래스가 있다는 이유로 감시에서 제외하지 않고, 가상 목록의 필터·정렬 및 부분 카드 갱신 동작을 유지한다. 새 API 데이터 수신 시 기존 모달 닫기와 집계 캐시 초기화도 유지한다.
+- **남은 순서:** R7 → R8 → R9 → R10 → R11 → R12. 각 단계별로 빌드·전체 테스트와 완료 기록을 갱신한다. 아래 후보 설명의 줄 번호는 최초 분석 당시 기준이며 현재 코드에서는 달라질 수 있다.
+
+## 🔴 우선순위 높음 (중복이 많고 버그 위험이 큼)
+
+### R1. `src/ui/board/filterPanel.ts`: 버튼 그룹 코드 반복
+- 성격·성급·보크 상태·표시 보드·해금 관문 버튼이 같은 구조로 5번 반복됨 (L195-369). → 제네릭 `createToggleGroup<T>()`로 통합.
+- 정렬 버튼 4개 생성부와 `updateSortButtons()`(L538-560)가 같은 라벨 로직을 이중으로 보유. → `SORT_DEFS` 정의 테이블 하나로 생성·갱신을 함께 처리.
+- 스탯 선택 클릭 처리가 3곳에 복사됨 (L476-483, L495-503, L733-743). → `selectStat(key)`로 통합하고 `document.querySelector('#tcbe-filter-panel')` 대신 `this.container` 사용.
+- 스탯 집계 로직(L603-657)은 DOM과 무관한 순수 로직. → `src/domain/`으로 이동하고 단위 테스트 추가.
+- **완료 (2026-10-14, `dev`):** 5개 필터 그룹을 타입 안전한 `createToggleGroup()`으로 통합하고, 정렬 버튼 생성·갱신에 `SORT_DEFS`를 함께 사용한다. 스탯 버튼과 요약 카드는 `selectStat()`을 사용하며 컨트롤러의 `this.container` 안에서 버튼 상태를 갱신한다.
+- **도메인 분리:** `domain/statAggregates.ts`의 `aggregateBokrStats()`로 보크 집계를 이동했다. 기존 집계·DOM 캐시는 유지하며 상태·선택 스탯·정렬은 집계 조건에 넣지 않는다. 미보유 사도 및 미해금 차수의 전체 스탯 범위도 기존 동작을 유지한다.
+- **검증:** `tests/statAggregates.test.mjs` 10개, `tests/filterPanel.test.mjs` 7개 추가. 속성·차수·복합 필터, 별칭 및 입력 보존, 필터 재클릭·전체 복귀, 정렬 방향·활성 표시, 스탯 버튼·요약 카드 선택 동기화를 검증했다. 타입 검사·개발 빌드 성공, 전체 215개 테스트 통과. 실제 브라우저 UI 검증은 미실행.
+
+### R2. `src/ui/board/boardEnhancer.ts`: 카드 강화 로직 중복
+- 메인 루프(L363-419)와 보조 탐색 루프(L434-466)가 거의 동일. → `enhanceCard(card, progress, anchor)`로 추출.
+- 이름으로 텍스트 요소를 찾는 루프가 2번 반복됨 (L345-358, L375-387). → 공통 헬퍼로 추출.
+- `applyBoardLevelVisibility()`(L251-293)의 긴 if 분기. → 차수별 표시 여부 테이블로 단순화.
+- **완료 (2026-10-14, `dev`):** 메인·보조 탐색의 카드 처리를 `enhanceCard()`로 통합했다. 이름 텍스트 탐색은 `findCardName()`을 공유하며, 이미지로 식별한 카드의 배지 위치를 찾을 때 사도 ID도 대조한다. 기존 배지 행을 재사용·교체할 때는 이름 요소를 다시 탐색하지 않는다.
+- **표시 정리:** `BOARD_LEVEL_VISIBILITY` 테이블로 차수별 보드 열과 1·2차 공유 부모 행의 표시를 처리한다. 같은 차수 캐시와 가상 카드의 별도 표시 정책은 유지한다.
+- **검증:** `tests/boardEnhancer.test.mjs` 8개 추가. 텍스트·이미지·보조 탐색의 배지 삽입/추가 위치, 중복 처리 방지·행 재사용, 차수 전환·공유 행·누락 열을 검증했다. 기존 진행도 변경·필터 변경·부분 갱신·가상 목록 회귀를 포함해 전체 223개 테스트 통과, 타입 검사·개발 빌드 성공. 이번 R2의 실제 브라우저 UI 검증은 미실행.
+
+### R3. 정렬 로직 이중 구현 (불일치 위험)
+- `applyFilterToCards()`의 CSS `order` 계산(boardEnhancer.ts L535-557)과 `selectApostleIds()`의 비교 함수(`src/domain/listSelection.ts` L7-19)가 같은 규칙을 각자 구현함.
+- 한쪽만 고치면 일반 목록과 가상 목록(Virtuoso)의 정렬 결과가 달라질 수 있음. → domain에 공통 비교 함수 하나를 두고 양쪽에서 사용.
+- **완료 (2026-10-14, `dev`):** `compareApostles()`로 비교 기준을 통합하고 일반 카드의 CSS `order`도 `selectApostleIds()`의 전체 정렬 결과에서 생성한다. 가상 카드의 CSS 정렬 제외 처리는 유지한다.
+- **검증:** `tests/listSelection.test.mjs`에 10개 테스트 추가. 8개 정렬 방식과 동점 가나다순, 별칭 중복 제거, 필터, 부분 카드 갱신, 숨김 복원, 빈 목록 및 입력 Map 순서 보존을 검증했다. 타입 검사·개발 빌드 성공, 전체 197개 테스트 통과. 실제 브라우저 UI 검증은 미실행.
+
+### R4. `src/ui/redistribution/hwangRedistribution.ts`: 거대 클로저
+- `openHwangRedistribution()` 하나에 약 600줄. HTML 템플릿, 폼 읽기·쓰기, 목차(TOC), 탭, 드래그, 계산 실행이 모두 섞여 있음.
+- 폼 값 읽기가 3번 반복됨 (L166-175, L546-549, L617-618). → `readFormOptions()`로 통합.
+- `querySelector(...)!` non-null 단언이 다수 존재해 하네스의 DOM Null Safety 규칙과 맞지 않음.
+- → 템플릿 / TOC / 단계 드래그 / 계산 실행을 별도 모듈로 분리.
+- **완료 (2026-10-14, `dev`):** 본문 템플릿(`redistributionTemplate.ts`), 목차(`redistributionToc.ts`), 드래그(`redistributionStageDrag.ts`), 추천·그래프 실행(`redistributionCalculation.ts`), 폼 읽기·복원(`redistributionForm.ts`), 설정 내부 탭·지연 도움말 분석(`redistributionSettingsTabs.ts`)을 분리했다. 진입점은 단계 편집·설정 저장·결과 무효화와 모듈 연결을 담당하며 261줄로 줄었다.
+- **입력·수명 관리:** 저장·추천·그래프가 `readFormOptions()`를 공유한다. 진입점과 새 모듈의 DOM non-null 단언을 제거하고 필수 요소 누락 시 안전하게 처리한다. 닫기 시 계산·지연 도움말·드래그 프레임 및 드래그 이벤트를 정리하고 계산 전 입력의 비활성 상태를 복원한다. 저장 타이머 실행 후에는 타이머 참조도 해제한다.
+- **검증:** 폼 테스트 4개, 드래그·목차·설정 탭 테스트 4개, 계산 실행 테스트 5개 추가. 선택 재화·보크 누적 전부 목표·설정 복원, 초성 검색의 DOM 재사용, 자동 스크롤 종료, 추천 성공·실패·취소·닫기, 추천 전 그래프와 취소·입력 복원을 검증했다. 계산 실행 테스트는 계산·렌더러 대역을 사용하며 실제 알고리즘은 기존 도메인 회귀로 확인한다. 타입 검사·개발 빌드 성공, 전체 243개 테스트 통과. 이번 R4의 실제 브라우저 UI 검증은 미실행.
+
+## 🟡 우선순위 중간 (구조와 의존성)
+
+### R5. 기능 간 직접 의존 정리
+- 회수 기능(`src/ui/recovery/boardRecovery.ts` L6-12)이 재분배 모듈에서 `collectApostlePortraits`, `renderApostleAvatar`, `renderRedistributionCost`, `redistributionResourceIcon`을 가져다 씀. → `src/ui/common/`으로 이동.
+- `redistributionResult.ts`가 `board/cardDetector.ts`의 `findProgressByName`에 의존. → 공통 위치로 이동 검토.
+- 모달끼리 서로의 close 함수를 호출하는 구조 (filterPanel, content, boardRecovery). → 공통 도구 모달 레지스트리(`closeAllTools()`)로 교체.
+- **완료 (2026-10-14, `dev`):** 초상화 수집·아바타를 `ui/common/apostlePortraits.ts`로, 비용 표시·재화 아이콘을 `ui/common/resources.ts`의 `renderResourceCost()`·`renderResourceIcon()`으로 이동했다. 회수 UI는 재분배 UI 모듈을 직접 import하지 않는다. 기존 CSS 클래스와 표시 형식은 유지한다.
+- **이름 조회 분리:** DOM 의존성이 없는 `findProgressByName()`을 `domain/apostleLookup.ts`로 이동해 카드 강화와 공통 초상화 수집에서 사용한다.
+- **도구 모달 등록:** `ui/common/toolModals.ts`로 활성 재분배·회수 도구를 관리한다. 도구를 열거나 페이지·진행도 데이터가 바뀔 때 `closeAllTools()`를 호출하고, 일반 닫기 시 등록을 해제한다. 기능별 닫기 함수는 해당 도구만 닫는 래퍼로 유지하며 기존 계산 취소·타이머 정리·스크롤 복원 콜백을 사용한다. 중첩 프리셋 모달은 이 레지스트리에 포함하지 않는다.
+- **검증:** 이름·스킨 초상화와 도구 등록·해제·재등록·중복 닫기·재진입·취소 콜백 테스트 7개 추가. 기존 비용 표시·초상화 테스트를 공통 모듈로 연결했다. 타입 검사·개발 빌드 성공, 전체 230개 테스트 통과. 이번 R5의 실제 브라우저 UI 검증은 미실행.
+
+### R6. 반복되는 작은 코드 공통화
+- 사도 중복 제거 `new Set(progressMap.values())`가 5곳 이상 (content.ts, filterPanel.ts, listSelection.ts, boardEnhancer.ts, hwangRedistribution.ts, boardRecovery.ts). → `getUniqueApostles()` 유틸과 `ProgressMap` 타입 별칭 도입.
+- 기본 `FilterState` 객체가 filterPanel.ts(L31-39)와 content.ts(L206-216)에 중복. → `DEFAULT_FILTER_STATE` 상수로 통합.
+- `const format = (value) => Number(value.toFixed(1)).toLocaleString('ko-KR')`가 재분배 모듈 4곳에 복사됨 (hwangRedistribution, redistributionResult, redistributionSummary, redistributionCurve). → common 유틸로 통합.
+- 다이얼로그 제외 셀렉터 `'[role="dialog"], [data-slot="dialog-content"], [data-slot="dialog-overlay"]'`가 content.ts·boardEnhancer.ts에 3번 반복. → 상수화.
+- `formatGold()`가 boardEnhancer.ts에 위치할 이유가 없음. → common 유틸로 이동.
+- **완료 (2026-10-14, `dev`):** `domain/apostleProgress.ts`의 `getUniqueApostles()`와 `ProgressMap` 타입을 도입했다. 사도 목록·필터 집계·카드 이름 검색·초상화 수집에서 같은 객체를 참조하는 별칭의 중복 처리를 통합했다. 기존 재분배·회수 계산의 ID 기준 중복 제거는 의미가 다르므로 유지했다.
+- **공통화:** `domain/filters.ts`의 읽기 전용 `DEFAULT_FILTER_STATE`를 복사해 사용한다. `ui/common/format.ts`로 숫자·골드 포맷을 옮기고 재분배 4개 모듈과 회수 숫자 표시에 적용했다. `ui/common/selectors.ts`로 동일한 다이얼로그 제외 셀렉터를 통합했다.
+- **검증:** 별칭 중복 제거·객체 참조·등장 순서·빈 목록·입력 보존 테스트를 추가하고 기존 골드 포맷 테스트의 import를 공통 모듈로 변경했다. 타입 검사·개발 빌드 성공, 전체 198개 테스트 통과. 실제 브라우저 UI 검증은 미실행.
+
+### R7. `src/content.ts` 진입점 정리
+- `isApostleTabActive()`(L87-131)가 갱신마다 페이지의 모든 버튼을 순회함. → `ui/board/pageDetector.ts`로 분리하고 결과 캐시 (성능 개선 효과도 있음).
+- 가상 그리드 메시지 검증(L38-47)은 `src/bridge/`로 이동.
+- 에셋 URL 목록(`injectSpriteStyles`)은 상수 모듈로 분리.
+- **선행 완료:** `content.ts`, `boardEnhancer.ts`의 파일 헤더를 import 위로 정리했다.
+- **다음 세션 진행:** 페이지 판별 분리·캐시, 브리지 메시지 검증 이동, 에셋 URL 목록 분리는 아직 미구현이다. R4의 재분배 UI 진입점 분리와 별도 작업이다.
+
+### R8. `src/domain/boardProgress.ts` 분리
+- 아이템 ID, `NODE_TYPE`, `STAT_META_LIST`, `PERSONALITY_META_LIST` 같은 상수·메타 정보와 진척도 계산이 한 파일에 공존. → 상수는 `domain/constants.ts`로 분리 (re-export로 기존 import 호환 유지).
+- `getStatCategoryFromStatType()`(L92-133)의 긴 switch. → 조회 테이블(`Record<number, StatCategory>`)로 교체.
+
+## 🟢 우선순위 낮음 (가독성과 마감 정리)
+
+- **R9. `src/domain/hwangRedistribution.ts`**: 40KB·616줄로 한 줄이 매우 김. 타입 정의 / 예시 단계 / 탐색 로직으로 파일 분리.
+- **R10. `src/ui/recovery/boardRecovery.ts`**: 한 줄짜리 HTML 템플릿이 길어 읽기 어려움. 줄바꿈하거나 렌더링 함수로 분할.
+- **R11. `src/ui/board/board.css` (1273줄)**: 필터 패널 / 배지 / 타일 하이라이트 / 지도 타일로 분할 검토. CSS 내부 중복은 아직 확인하지 않음.
+- **R12. 작은 정리 항목**
+  - `FilterPanelController.updateStats()`의 미사용 인자 `_totalCards` 제거.
+  - `'tcbe_panel_open'` 저장 키 상수화.
+  - 요약 툴팁의 인라인 스타일(`color: #38bdf8`)을 CSS 클래스로 이동.
+  - 업데이트 배지 생성 로직(filterPanel.ts L111-133)을 별도 모듈로 분리.
 
 ---
 

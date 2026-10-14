@@ -1,8 +1,8 @@
+import type { ProgressMap } from './types.ts';
 /** 보유 사도의 황크 최대 칸 수. 계정 별칭은 중복 집계하지 않는다. */
 import { getNodeStatCategories, isHwangNode, NODE_TYPE, STAT_CATEGORIES } from './boardProgress.ts';
 import { findLinkedPetalNode } from './boardPathfinder.ts';
 import type { RedistributionStat } from './hwangRedistribution.ts';
-import type { ApostleProgress } from './types.ts';
 
 export interface HwangStatLimit {
   byBoard: number[];
@@ -18,7 +18,7 @@ export function roundRedistributionTarget(value: number, stat: RedistributionSta
   return Number.isFinite(value) && value >= 0 ? Math.ceil(value / unit) * unit : value;
 }
 
-export function getHwangStatLimits(progressMap: Map<string, ApostleProgress>, resource: 'hwang' | 'bokr' = 'hwang'): HwangStatLimits {
+export function getHwangStatLimits(progressMap: ProgressMap, resource: 'hwang' | 'bokr' = 'hwang'): HwangStatLimits {
   const result = Object.fromEntries(['attack', ...STAT_CATEGORIES].map(stat =>
     [stat, { byBoard: [0, 0, 0], total: 0, unlocked: 0 }])) as HwangStatLimits;
   const apostles = new Map([...progressMap.values()].map(apostle => [apostle.apostleId, apostle]));

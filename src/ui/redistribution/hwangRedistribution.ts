@@ -1,51 +1,41 @@
-import { redistributionResourceIcon as resourceIcon } from './redistributionResource.ts';
+import { renderRedistributionTemplate } from './redistributionTemplate.ts';
+import { setupRedistributionToc } from './redistributionToc.ts';
+import { setupRedistributionSettingsTabs } from './redistributionSettingsTabs.ts';
+import { setupRedistributionStageDrag } from './redistributionStageDrag.ts';
+import { setupRedistributionCalculation } from './redistributionCalculation.ts';
+import { readFormOptions, restoreFormOptions } from './redistributionForm.ts';
+import { collectApostlePortraits } from '../common/apostlePortraits.ts';
+import { closeAllTools, closeTool, registerToolModal } from '../common/toolModals.ts';
+import { formatNumber } from '../common/format.ts';
+import type { ProgressMap } from '../../domain/types.ts';
 import { loadRedistributionSettings, saveRedistributionSettings } from './redistributionSettings.ts';
 import { openExportPresetModal, openImportPresetModal } from './redistributionPresetModal.ts';
 import {
   getSpentHwangCrayons,
   getSpentBokrCrayons,
-  getAttackPathAvailability,
   createRedistributionGoalPreview,
   createExampleRedistributionStages,
-  iterateHwangRedistribution,
   type RedistributionPlan,
-  type RedistributionOptions,
-  type RedistributionAction,
   type RedistributionStat,
 } from '../../domain/hwangRedistribution.ts';
-import type { ApostleProgress } from '../../domain/types.ts';
-import { escapeHtml } from '../common/html.ts';
 import { createCommonModal } from '../common/commonModal.ts';
 import {
   renderRedistributionStageEditor,
   readRedistributionStages,
-  renderHwangStatLimits,
   getRedistributionStageStats,
   renderStageTargetHint,
 } from './redistributionStageEditor.ts';
-import { calculateRedistributionCurve } from '../../domain/redistributionCurve.ts';
-import { renderRedistributionCurve } from './redistributionCurve.ts';
 import {
   getHwangStatLimits,
   getRedistributionStatUnit,
   roundRedistributionTarget,
 } from '../../domain/hwangStatLimits.ts';
-import { matchesKoreanSearch } from '../../domain/koreanSearch.ts';
-import { copyTextWithFeedback } from '../common/clipboard.ts';
-import {
-  collectApostlePortraits,
-  renderApostleAvatar,
-  generateOrdersText,
-  renderRedistributionResult,
-} from './redistributionResult.ts';
 
-let dispose: (() => void) | null = null;
-export function closeHwangRedistribution(): void { dispose?.(); }
-const format = (value: number) => Number(value.toFixed(1)).toLocaleString('ko-KR');
+export function closeHwangRedistribution(): void { closeTool('redistribution'); }
 
 
-export function openHwangRedistribution(progressMap: Map<string, ApostleProgress>): void {
-  closeHwangRedistribution();
+export function openHwangRedistribution(progressMap: ProgressMap): void {
+  closeAllTools();
   let portraitMapCache: Map<string | number, string> | null = null;
   const getPortraitMap = () => (portraitMapCache ??= collectApostlePortraits(progressMap));
   const spentCrayons = getSpentHwangCrayons(progressMap);
@@ -54,75 +44,17 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
   const limits = getHwangStatLimits(progressMap);
   const bokrLimits = getHwangStatLimits(progressMap, 'bokr');
   const allGoal = createRedistributionGoalPreview(progressMap);
-  let curveController: AbortController | null = null;
-  let calculationController: AbortController | null = null;
   const savedSettings = loadRedistributionSettings();
   let stages = savedSettings?.stages ?? createExampleRedistributionStages();
 
-  let timer: ReturnType<typeof setTimeout> | null = null;
   let saveSettingsTimer: ReturnType<typeof setTimeout> | null = null;
 
-  const bodyHtml = `
-    <div class="tcbe-rd-panels">
-      <section role="tabpanel" id="tcbe-panel-settings" aria-labelledby="tcbe-redistribution-dialog-tab-settings" class="tcbe-rd-panel">
-        <div class="tcbe-rd-settings-view">
-          <p>현재 필터와 관계없이 보유 사도 전체를 계산합니다. 게임이나 노트의 데이터를 변경하지 않습니다.</p>
-          <p class="tcbe-rd-notice">초기화해도 열린 관문·꽃잎과 기본 색칠된 1차 시작 칸은 유지됩니다. 지워지는 칸에서 사용한 크레파스 4종·골드만 돌려받으며 물뿌리개는 반환되지 않습니다.</p>
-          <form>
-            <div class="tcbe-rd-budget-overview">${(['hwang','bokr'] as const).map(resource => `<div>${resourceIcon(resource)} <span>이미 사용 <strong>${format(resource === 'hwang' ? spentCrayons : spentBokr)}개</strong></span><span>+ 미사용 보유 = 총 <output ${resource === 'hwang' ? 'data-total' : 'data-total-bokr'} aria-live="polite">${format(resource === 'hwang' ? spentCrayons : spentBokr)}개</output></span></div>`).join('')}</div>
-            <div class="tcbe-rd-inputs"><label>${resourceIcon('hwang')} 추가 보유 (미사용) <input aria-label="추가 보유 황크 (미사용)" name="owned" type="number" min="0" max="1000000" step="1" value="0" required></label><label>${resourceIcon('bokr')} 추가 보유 (미사용) <input aria-label="추가 보유 보크 (미사용)" name="bokr" type="number" min="0" max="1000000" step="1" value="0" required></label><label>초기화 인원 상한 <input name="reset" type="number" min="0" max="${ownedCount}" step="1" value="0" required></label></div>
-            <div class="tcbe-rd-inputs tcbe-rd-optional-inputs"><label><span class="tcbe-rd-resource-icon icon-gold" aria-hidden="true"></span> 소지 골드 <input name="gold" type="number" min="0" max="2000000000" step="1" placeholder="선택 (생략 가능)"></label><label><span class="tcbe-rd-resource-icon watering-can" aria-hidden="true"></span> 소지 물뿌리개 <input name="watering-can" type="number" min="0" max="100000" step="1" placeholder="선택 (개수)"></label><label><span class="tcbe-rd-resource-icon sunshine-cloud" aria-hidden="true"></span> 소지 햇살구름 <input name="clouds" type="number" min="0" max="1000000" step="1" placeholder="10개 = 1물뿌리개"></label></div>
-            <p>황크·보크는 추가 보유량과 초기화 환급분 안에서 사용합니다. 소지 골드와 물뿌리개/햇살구름(10개당 물뿌리개 1개 환산)을 입력하면 차감 후 잔여/부족분을 계산하며, 미입력 시 순수 필요량만 표시합니다.</p>
-            ${renderHwangStatLimits(limits)}${renderHwangStatLimits(bokrLimits, 'bokr')}
-            <details open data-settings><summary>목표·경로 설정</summary>
-            <div class="tcbe-rd-tabs" role="tablist" aria-label="목표 설정 메뉴"><button type="button" role="tab" id="rd-edit-tab" data-settings-tab="edit" aria-controls="rd-edit-panel" aria-selected="true">단계별 우선순위</button><button type="button" role="tab" id="rd-help-tab" data-settings-tab="help" aria-controls="rd-help-panel" aria-selected="false" tabindex="-1">목표·경로 도움말</button></div>
-            <section role="tabpanel" id="rd-edit-panel" aria-labelledby="rd-edit-tab"><p>단계 순서대로 목표를 채웁니다. <small style="color:#64748b;">(⠿ 드래그 또는 번호 드롭다운으로 순서 직접 변경)</small></p>
-            <div data-targets></div><div class="tcbe-rd-stage-tools"><button type="button" data-add-stage>${resourceIcon('hwang')} 단계 추가</button><button type="button" data-add-bokr-stage>${resourceIcon('bokr')} 단계 추가</button><button type="button" data-examples>예시 7단계로 되돌리기</button><button type="button" data-export-preset class="tcbe-rd-preset-btn" title="현재 단계 목록을 JSON 텍스트로 내보내고 복사합니다">📋 설정 내보내기</button><button type="button" data-import-preset class="tcbe-rd-preset-btn" title="공유받은 단계 설정 JSON을 붙여넣어 가져옵니다">📥 설정 가져오기</button></div></section>
-            <section role="tabpanel" id="rd-help-panel" aria-labelledby="rd-help-tab" hidden><h4>목표와 누적 범위</h4><p>황크 공격력은 물공·마공 각각 6%, 나머지는 8% 단위입니다. 보크는 물공·마공을 구분합니다. 1~2차 목표 20칸은 두 차수를 합쳐 20칸이며, 1차 목표와 중복해서 더하지 않습니다.</p><h4>막힌 경로와 관문은 별개입니다</h4><p>막힌 경로는 <strong>황크 방어력(물방·마방)·치저</strong> 칸을 통과해야 하는 경로입니다. 포함을 끄면 색칠 여부와 무관하게 그 황크를 통과하지 않습니다. <strong>보크 방어력·치저는 통과할 수 있습니다.</strong> 기존 칠한 칸을 자동으로 지우지는 않으며 초기화 시 일반칸 복구 경로는 별도로 유지합니다.</p><p>‘관문 개방 포함’을 켜면 잠긴 보드도 경로를 연결해 계산합니다. 필요한 관문의 골드·크레파스와 증명서 등 전용 재화를 결과에 표시합니다. 전용 재화의 보유량과 게임 내 개방 조건은 별도로 확인해야 합니다. 끈 단계는 처음 열려 있던 보드 범위만 목표로 삼습니다.</p><h4>공격력 전부의 계산 범위</h4><div data-availability-container><p style="color:#64748b;font-size:13px;margin:8px 0;">도움말 탭을 열면 공격력 계산 범위를 분석합니다...</p></div><p>모두 보유 사도와 꽃잎 개방을 포함한 경로 기준이며, 예산 적용 전입니다. ‘전체 최대’와 현재 관문에서 가능한 ‘전부’는 다를 수 있습니다.</p></section></details>
-            <div class="tcbe-rd-search-mode"><label>계산 방식 <select name="search-mode"><option value="fast">빠른 탐색</option><option value="thorough">상세 탐색 (느림)</option></select></label><small>빠른 탐색은 초기화 조합 비교를 줄입니다. 상세 탐색은 더 좋은 조합을 찾을 수 있지만 오래 걸립니다.</small></div>
-            <div class="tcbe-rd-sticky-bar">
-              <button type="submit" class="tcbe-btn tcbe-active">추천안 계산</button>
-              <button type="button" data-cancel-calculation hidden>계산 취소</button>
-              <span data-status role="status" aria-live="polite"></span>
-            </div>
-          </form>
-        </div>
-      </section>
-      <section role="tabpanel" id="tcbe-panel-result" aria-labelledby="tcbe-tab-result" class="tcbe-rd-panel" hidden>
-        <div class="tcbe-rd-result-container">
-          <div class="tcbe-rd-result-content" data-result aria-label="재분배 계산 결과">
-            <div class="tcbe-rd-empty-placeholder"><p>👈 <strong>[목표·예산 설정]</strong> 탭에서 예산과 목표를 확인한 후<br><strong>[추천안 계산]</strong>을 누르면 여기에 상세 작업 순서와 사도별 보드 지도가 표시됩니다.</p></div>
-          </div>
-          <nav class="tcbe-rd-toc" aria-label="빠른 이동 목차" data-toc-container hidden>
-            <div class="tcbe-rd-toc-header"><strong>빠른 이동 목차</strong></div>
-            <div class="tcbe-rd-toc-section">
-              <span class="tcbe-rd-toc-category">주요 섹션</span>
-              <button type="button" class="tcbe-rd-toc-item" data-toc-target="tcbe-sec-summary">📊 계산 요약 &amp; 재화</button>
-              <button type="button" class="tcbe-rd-toc-item" data-toc-target="tcbe-sec-stages">🎯 목표 달성 요약</button>
-              <button type="button" class="tcbe-rd-toc-item" data-toc-target="tcbe-sec-orders">🔢 3. 작업 순서</button>
-              <button type="button" class="tcbe-rd-toc-item" data-toc-target="tcbe-sec-maps">🗺️ 사도별 지도 전체</button>
-            </div>
-            <div class="tcbe-rd-toc-section" data-toc-apostles-section>
-              <div class="tcbe-rd-toc-category"><span>사도별 바로가기</span><span class="tcbe-rd-toc-count" data-toc-count></span></div>
-              <input type="search" class="tcbe-rd-toc-search" data-toc-search placeholder="사도 이름 검색 (초성 지원)" aria-label="사도 이름 검색">
-              <div class="tcbe-rd-toc-apostles" data-toc-apostles></div>
-            </div>
-            <div class="tcbe-rd-toc-footer">
-              <button type="button" class="tcbe-rd-toc-top" data-toc-top>↑ 맨 위로</button>
-            </div>
-          </nav>
-        </div>
-      </section>
-      <section role="tabpanel" id="tcbe-panel-curve" aria-labelledby="tcbe-tab-curve" class="tcbe-rd-panel" hidden>
-        <div class="tcbe-rd-curve-preview">
-          <h3>초기화 인원별 스탯 미리 계산</h3>
-          <p>추천안을 먼저 계산할 필요 없이 현재 예산·목표로 0명부터 전체 인원을 비교합니다. 그래프를 확인한 뒤 초기화 인원 상한을 정하고 추천안을 계산하세요.</p>
-          <div class="tcbe-rd-curve-controls"><button type="button" data-curve>인원별 그래프 계산</button><span data-curve-status role="status" aria-live="polite"></span></div>
-          <div data-curve-result></div>
-        </div>
-      </section>
-    </div>`;
+  const bodyHtml = renderRedistributionTemplate(spentCrayons, spentBokr, ownedCount, limits, bokrLimits);
 
+  let disposeDrag = () => {};
+  let disposeSettingsTabs = () => {};
+  let calculation = { dispose() {}, invalidateCurve() {} };
+  let unregisterTool = () => {};
   const modal = createCommonModal({
     id: 'tcbe-redistribution-dialog',
     title: '만개·황크 재분배',
@@ -135,10 +67,10 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
     initialTabId: 'settings',
     bodyHtml,
     onClose: () => {
-      stopAutoScroll();
-      calculationController?.abort();
-      curveController?.abort();
-      if (timer !== null) clearTimeout(timer);
+      unregisterTool();
+      disposeDrag();
+      disposeSettingsTabs();
+      calculation.dispose();
       if (saveSettingsTimer !== null) {
         clearTimeout(saveSettingsTimer);
         saveSettings();
@@ -146,36 +78,22 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
     },
   });
 
+  unregisterTool = registerToolModal('redistribution', modal.close);
   const dialog = modal.dialog;
-  const targetList = dialog.querySelector<HTMLElement>('[data-targets]')!;
-  const readOptionalInt = (name: string): number | undefined => {
-    const input = dialog.querySelector<HTMLInputElement>(`[name=${name}]`);
-    if (!input || !input.value.trim()) return undefined;
-    const num = input.valueAsNumber;
-    return Number.isSafeInteger(num) && num >= 0 ? num : undefined;
+  const targetList = dialog.querySelector<HTMLElement>('[data-targets]');
+  const form = dialog.querySelector('form');
+  if (!targetList || !form) { modal.close(); return; }
+  if (savedSettings) restoreFormOptions(dialog, savedSettings, ownedCount);
+  const saveSettings = () => {
+    const options = readFormOptions(dialog);
+    if (!options) return;
+    saveRedistributionSettings({ owned: options.ownedCrayons, bokr: options.ownedBokr ?? 0, reset: options.maxReset,
+      gold: options.ownedGold, wateringCan: options.ownedWateringCan, clouds: options.ownedClouds,
+      searchMode: options.searchMode ?? 'fast', stages: options.stages ?? [] });
   };
-  if (savedSettings) {
-    for (const name of ['owned', 'bokr', 'reset'] as const) {
-      dialog.querySelector<HTMLInputElement>(`[name=${name}]`)!.value = String(name === 'reset' ? Math.min(savedSettings.reset, ownedCount) : savedSettings[name]);
-    }
-    if (savedSettings.gold !== undefined) dialog.querySelector<HTMLInputElement>('[name=gold]')!.value = String(savedSettings.gold);
-    if (savedSettings.wateringCan !== undefined) dialog.querySelector<HTMLInputElement>('[name=watering-can]')!.value = String(savedSettings.wateringCan);
-    if (savedSettings.clouds !== undefined) dialog.querySelector<HTMLInputElement>('[name=clouds]')!.value = String(savedSettings.clouds);
-    dialog.querySelector<HTMLSelectElement>('[name=search-mode]')!.value = savedSettings.searchMode;
-  }
-  const saveSettings = () => saveRedistributionSettings({
-    owned: dialog.querySelector<HTMLInputElement>('[name=owned]')!.valueAsNumber,
-    bokr: dialog.querySelector<HTMLInputElement>('[name=bokr]')!.valueAsNumber,
-    reset: dialog.querySelector<HTMLInputElement>('[name=reset]')!.valueAsNumber,
-    gold: readOptionalInt('gold'),
-    wateringCan: readOptionalInt('watering-can'),
-    clouds: readOptionalInt('clouds'),
-    searchMode: dialog.querySelector<HTMLSelectElement>('[name=search-mode]')!.value as 'fast' | 'thorough',
-    stages: readRedistributionStages(targetList),
-  });
   const debouncedSaveSettings = () => {
     if (saveSettingsTimer !== null) clearTimeout(saveSettingsTimer);
-    saveSettingsTimer = setTimeout(saveSettings, 300);
+    saveSettingsTimer = setTimeout(() => { saveSettingsTimer = null; saveSettings(); }, 300);
   };
   let currentCalculatedPlan: RedistributionPlan | null = null;
   const invalidateResult = (event?: Event) => {
@@ -183,7 +101,7 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
     const targetName = event?.target instanceof HTMLInputElement ? event.target.name : '';
     const keepCurve = ['reset', 'gold', 'watering-can', 'clouds'].includes(targetName);
     if (!keepCurve) {
-      curveController?.abort();
+      calculation.invalidateCurve();
       dialog.querySelector('[data-curve-result]')?.replaceChildren();
       const curveStatus = dialog.querySelector('[data-curve-status]');
       if (curveStatus) curveStatus.textContent = '';
@@ -191,7 +109,7 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
     for (const [name, selector, spent] of [['owned', '[data-total]', spentCrayons], ['bokr', '[data-total-bokr]', spentBokr]] as const) {
       const extra = dialog.querySelector<HTMLInputElement>(`[name=${name}]`)?.valueAsNumber;
       const total = dialog.querySelector(selector);
-      if (total) total.textContent = extra !== undefined && Number.isSafeInteger(extra) && extra >= 0 ? `${format(spent + extra)}개` : '입력을 확인해 주세요';
+      if (total) total.textContent = extra !== undefined && Number.isSafeInteger(extra) && extra >= 0 ? `${formatNumber(spent + extra)}개` : '입력을 확인해 주세요';
     }
     const result = dialog.querySelector<HTMLElement>('[data-result]');
     if (currentCalculatedPlan && result && result.children.length > 0) {
@@ -214,242 +132,32 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
   };
   const renderTargets = () => {
     targetList.innerHTML = renderRedistributionStageEditor(stages, limits, bokrLimits, allGoal);
-    dialog.querySelector<HTMLButtonElement>('[data-add-stage]')!.disabled = stages.length >= 30;
-    dialog.querySelector<HTMLButtonElement>('[data-add-bokr-stage]')!.disabled = stages.length >= 30;
+    for (const selector of ['[data-add-stage]', '[data-add-bokr-stage]']) {
+      const button = dialog.querySelector<HTMLButtonElement>(selector);
+      if (button) button.disabled = stages.length >= 30;
+    }
   };
   const readTargets = () => { stages = readRedistributionStages(targetList); };
   renderTargets();
   invalidateResult();
-  dialog.querySelector('[data-status]')!.textContent = '';
+  const status = dialog.querySelector('[data-status]');
+  if (status) status.textContent = '';
 
-  const renderTocApostles = (actions: RedistributionAction[]) => {
-    const apostlesContainer = dialog.querySelector<HTMLElement>('[data-toc-apostles]');
-    if (!apostlesContainer) return;
-    if (!actions.length) {
-      apostlesContainer.innerHTML = '<div style="color:#94a3b8;padding:8px 4px;text-align:center;">사도 없음</div>';
-      return;
-    }
-    apostlesContainer.innerHTML = actions.map(action => {
-      const badgeClass = action.reset ? 'tcbe-rd-toc-badge-reset' : 'tcbe-rd-toc-badge-add';
-      const badgeText = action.reset ? '초기화' : '추가';
-      const avatar = renderApostleAvatar(action.apostle.apostleId, action.apostle.name, getPortraitMap());
-      return `<button type="button" class="tcbe-rd-toc-item tcbe-rd-toc-apostle-item" data-toc-target="tcbe-rd-map-${action.apostle.apostleId}" data-apostle-name="${escapeHtml(action.apostle.name)}">${avatar}<span class="tcbe-rd-toc-name" title="${escapeHtml(action.apostle.name)}">${escapeHtml(action.apostle.name)}</span><span class="tcbe-rd-toc-badge ${badgeClass}">${badgeText}</span></button>`;
-    }).join('') + '<div class="tcbe-rd-toc-empty" style="color:#94a3b8;padding:8px 4px;text-align:center;display:none;">검색 결과 없음</div>';
-  };
+  const updateToc = setupRedistributionToc(dialog, getPortraitMap);
 
-  const filterTocApostles = (query: string) => {
-    const apostlesContainer = dialog.querySelector<HTMLElement>('[data-toc-apostles]');
-    if (!apostlesContainer) return;
-    const q = query.trim();
-    const items = apostlesContainer.querySelectorAll<HTMLButtonElement>('.tcbe-rd-toc-apostle-item');
-    const emptyEl = apostlesContainer.querySelector<HTMLElement>('.tcbe-rd-toc-empty');
-    let visibleCount = 0;
-    for (const item of items) {
-      const name = item.dataset.apostleName || '';
-      const visible = !q || matchesKoreanSearch(name, q);
-      item.style.display = visible ? '' : 'none';
-      if (visible) visibleCount++;
-    }
-    if (emptyEl) emptyEl.style.display = visibleCount === 0 ? '' : 'none';
-  };
+  disposeSettingsTabs = setupRedistributionSettingsTabs(dialog, progressMap);
 
-  const updateToc = (plan: RedistributionPlan) => {
-    const tocContainer = dialog.querySelector<HTMLElement>('[data-toc-container]');
-    const countEl = dialog.querySelector<HTMLElement>('[data-toc-count]');
-    const searchInput = dialog.querySelector<HTMLInputElement>('[data-toc-search]');
-    if (!tocContainer) return;
-    if (!plan.actions.length) {
-      tocContainer.hidden = true;
-      return;
-    }
-    if (countEl) countEl.textContent = `${plan.actions.length}명`;
-    if (searchInput) searchInput.value = '';
-    renderTocApostles(plan.actions);
-    tocContainer.hidden = false;
-  };
-
-  dialog.querySelector<HTMLInputElement>('[data-toc-search]')?.addEventListener('input', event => {
-    filterTocApostles((event.target as HTMLInputElement).value);
-  });
-
-  const resultContent = dialog.querySelector<HTMLElement>('.tcbe-rd-result-content') || dialog.querySelector<HTMLElement>('[data-result]')!;
-  dialog.querySelector('[data-toc-top]')?.addEventListener('click', () => {
-    resultContent.scrollTo({ top: 0, behavior: 'smooth' });
-  });
-  dialog.querySelector('[data-toc-container]')?.addEventListener('click', event => {
-    const button = (event.target as HTMLElement).closest<HTMLElement>('[data-toc-target]');
-    if (!button) return;
-    const targetId = button.dataset.tocTarget;
-    if (!targetId) return;
-    const targetElement = dialog.querySelector<HTMLElement>(`#${targetId}`);
-    if (targetElement) {
-      if (targetElement instanceof HTMLDetailsElement) {
-        targetElement.open = true;
-      } else {
-        const details = targetElement.closest<HTMLDetailsElement>('details');
-        if (details) details.open = true;
-      }
-      targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  });
-
-  let availabilityLoaded = false;
-  const loadAvailability = () => {
-    if (availabilityLoaded) return;
-    const container = dialog.querySelector<HTMLElement>('[data-availability-container]');
-    if (!container) return;
-    availabilityLoaded = true;
-    container.innerHTML = '<p style="color:#64748b;font-size:13px;margin:8px 0;">공격력 계산 범위를 분석하는 중...</p>';
-    setTimeout(() => {
-      const availability = getAttackPathAvailability(progressMap);
-      container.innerHTML = `<div class="tcbe-rd-table-wrap"><table><thead><tr><th>관문 기준</th><th>막힌 경로 제외</th><th>막힌 경로 포함</th></tr></thead><tbody><tr><th>관문 개방 끔</th><td>${format(availability.current.unblocked)}% (${availability.current.unblocked / 6}칸)</td><td>${format(availability.current.all)}% (${availability.current.all / 6}칸)</td></tr><tr><th>관문 개방 켬 · 최대 범위</th><td>${format(availability.opened.unblocked)}% (${availability.opened.unblocked / 6}칸)</td><td>${format(availability.opened.all)}% (${availability.opened.all / 6}칸)</td></tr></tbody></table></div>`;
-    }, 10);
-  };
-
-  const settingsTabs = [...dialog.querySelectorAll<HTMLButtonElement>('[data-settings-tab]')];
-  const selectTab = (button: HTMLButtonElement) => {
-    for (const item of settingsTabs) {
-      const active = item === button;
-      item.setAttribute('aria-selected', String(active)); item.tabIndex = active ? 0 : -1;
-      dialog.querySelector<HTMLElement>(`#${item.getAttribute('aria-controls')}`)!.hidden = !active;
-    }
-    if (button.dataset.settingsTab === 'help') {
-      loadAvailability();
-    }
-  };
-  for (const button of settingsTabs) {
-    button.addEventListener('click', () => selectTab(button));
-    button.addEventListener('keydown', event => {
-      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-      event.preventDefault();
-      const next = settingsTabs[event.key === 'Home' ? 0 : event.key === 'End' ? settingsTabs.length - 1 : (settingsTabs.indexOf(button) + 1) % settingsTabs.length]!;
-      selectTab(next); next.focus();
-    });
-  }
-
-  // 우선순위 단계 드래그 앤 드롭 순서 변경 및 가장자리 자동 스크롤(Auto Scroll)
-  let dragSourceIndex: number | null = null;
-  let autoScrollRafId: number | null = null;
-  let autoScrollSpeed = 0;
-  const settingsPanel = dialog.querySelector<HTMLElement>('#tcbe-panel-settings')!;
-
-  const stopAutoScroll = () => {
-    if (autoScrollRafId !== null) {
-      cancelAnimationFrame(autoScrollRafId);
-      autoScrollRafId = null;
-    }
-    autoScrollSpeed = 0;
-  };
-
-  const autoScrollLoop = () => {
-    if (autoScrollSpeed !== 0 && settingsPanel) {
-      settingsPanel.scrollTop += autoScrollSpeed;
-      autoScrollRafId = requestAnimationFrame(autoScrollLoop);
-    } else {
-      stopAutoScroll();
-    }
-  };
-
-  const updateAutoScroll = (clientY: number) => {
-    if (!settingsPanel || dragSourceIndex === null) {
-      stopAutoScroll();
-      return;
-    }
-    const rect = settingsPanel.getBoundingClientRect();
-    const edgeThreshold = 80;
-    const maxSpeed = 16;
-
-    if (clientY < rect.top + edgeThreshold && clientY >= rect.top - 60) {
-      const distance = Math.max(0, clientY - rect.top);
-      const factor = (edgeThreshold - distance) / edgeThreshold;
-      autoScrollSpeed = -Math.max(3, Math.round(Math.min(1, factor) * maxSpeed));
-    } else if (clientY > rect.bottom - edgeThreshold && clientY <= rect.bottom + 60) {
-      const distance = Math.max(0, rect.bottom - clientY);
-      const factor = (edgeThreshold - distance) / edgeThreshold;
-      autoScrollSpeed = Math.max(3, Math.round(Math.min(1, factor) * maxSpeed));
-    } else {
-      autoScrollSpeed = 0;
-    }
-
-    if (autoScrollSpeed !== 0 && autoScrollRafId === null) {
-      autoScrollRafId = requestAnimationFrame(autoScrollLoop);
-    } else if (autoScrollSpeed === 0 && autoScrollRafId !== null) {
-      stopAutoScroll();
-    }
-  };
-
-  settingsPanel.addEventListener('dragover', event => {
-    if (dragSourceIndex !== null) {
-      event.preventDefault();
-      updateAutoScroll(event.clientY);
-    }
-  });
-
-  targetList.addEventListener('dragstart', event => {
-    const stage = (event.target as HTMLElement).closest<HTMLElement>('[data-stage]');
-    if (!stage) return;
-    dragSourceIndex = Number(stage.dataset.stage);
-    stage.classList.add('dragging');
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'move';
-      event.dataTransfer.setData('text/plain', String(dragSourceIndex));
-    }
-  });
-  targetList.addEventListener('dragover', event => {
-    event.preventDefault();
-    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-    updateAutoScroll(event.clientY);
-    const targetStage = (event.target as HTMLElement).closest<HTMLElement>('[data-stage]');
-    if (!targetStage || dragSourceIndex === null) return;
-    const rect = targetStage.getBoundingClientRect();
-    const midY = rect.top + rect.height / 2;
-    targetList.querySelectorAll('.drag-over-top, .drag-over-bottom').forEach(el => {
-      if (el !== targetStage) el.classList.remove('drag-over-top', 'drag-over-bottom');
-    });
-    if (event.clientY < midY) {
-      targetStage.classList.add('drag-over-top');
-      targetStage.classList.remove('drag-over-bottom');
-    } else {
-      targetStage.classList.add('drag-over-bottom');
-      targetStage.classList.remove('drag-over-top');
-    }
-  });
-  targetList.addEventListener('dragleave', event => {
-    const targetStage = (event.target as HTMLElement).closest<HTMLElement>('[data-stage]');
-    if (targetStage && !targetStage.contains(event.relatedTarget as Node)) {
-      targetStage.classList.remove('drag-over-top', 'drag-over-bottom');
-    }
-  });
-  targetList.addEventListener('drop', event => {
-    event.preventDefault();
-    stopAutoScroll();
-    const targetStage = (event.target as HTMLElement).closest<HTMLElement>('[data-stage]');
-    targetList.querySelectorAll('.drag-over-top, .drag-over-bottom, .dragging').forEach(el => {
-      el.classList.remove('drag-over-top', 'drag-over-bottom', 'dragging');
-    });
-    if (!targetStage || dragSourceIndex === null) return;
-    const targetIndex = Number(targetStage.dataset.stage);
-    if (dragSourceIndex === targetIndex) return;
-    readTargets();
-    const [moved] = stages.splice(dragSourceIndex, 1);
-    if (moved) {
-      const rect = targetStage.getBoundingClientRect();
-      const insertIndex = event.clientY > rect.top + rect.height / 2
-        ? (dragSourceIndex < targetIndex ? targetIndex : targetIndex + 1)
-        : (dragSourceIndex < targetIndex ? targetIndex - 1 : targetIndex);
+  disposeDrag = setupRedistributionStageDrag(targetList, dialog.querySelector<HTMLElement>('#tcbe-panel-settings'),
+    (sourceIndex, targetIndex, after) => {
+      readTargets();
+      const [moved] = stages.splice(sourceIndex, 1);
+      if (!moved) return;
+      const insertIndex = after ? (sourceIndex < targetIndex ? targetIndex : targetIndex + 1)
+        : (sourceIndex < targetIndex ? targetIndex - 1 : targetIndex);
       stages.splice(Math.max(0, Math.min(stages.length, insertIndex)), 0, moved);
       renderTargets();
       invalidateResult();
-    }
-    dragSourceIndex = null;
-  });
-  targetList.addEventListener('dragend', () => {
-    stopAutoScroll();
-    targetList.querySelectorAll('.drag-over-top, .drag-over-bottom, .dragging').forEach(el => {
-      el.classList.remove('drag-over-top', 'drag-over-bottom', 'dragging');
     });
-    dragSourceIndex = null;
-  });
 
   targetList.addEventListener('change', event => {
     if (event.target instanceof HTMLSelectElement && event.target.hasAttribute('data-stage-order')) {
@@ -467,7 +175,11 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
       return;
     }
     if (event.target instanceof HTMLInputElement && event.target.hasAttribute('data-resource')) {
-      readTargets(); const stage = stages[Number(event.target.closest<HTMLElement>('[data-stage]')!.dataset.stage)]!;
+      const stageElement = event.target.closest<HTMLElement>('[data-stage]');
+      if (!stageElement) return;
+      readTargets();
+      const stage = stages[Number(stageElement.dataset.stage)];
+      if (!stage) return;
       const bokr = stage.resource === 'bokr';
       stage.boardIndex = undefined; stage.boardThrough = bokr ? 0 : undefined;
       stage.targets = [...new Map(stage.targets.map(target => {
@@ -479,18 +191,22 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement) {
       const row = event.target.closest('[data-target]');
       if (row) {
-        const stat = row.querySelector<HTMLSelectElement>('[data-stat]')!.value as RedistributionStat;
-        const bokr = row.closest('[data-stage]')!.querySelector<HTMLInputElement>('[data-resource]:checked')!.value === 'bokr';
+        const statSelect = row.querySelector<HTMLSelectElement>('[data-stat]');
+        const resource = row.closest('[data-stage]')?.querySelector<HTMLInputElement>('[data-resource]:checked');
+        const input = row.querySelector<HTMLInputElement>('[data-value]');
+        if (!statSelect || !resource || !input) return;
+        const stat = statSelect.value as RedistributionStat;
+        const bokr = resource.value === 'bokr';
         const unit = bokr ? 1 : getRedistributionStatUnit(stat);
-        const input = row.querySelector<HTMLInputElement>('[data-value]')!;
         input.step = String(unit); input.max = String(Math.floor(100000 / unit) * unit);
         if (Number.isFinite(input.valueAsNumber)) input.value = String(bokr ? Math.ceil(input.valueAsNumber) : roundRedistributionTarget(input.valueAsNumber, stat));
-        row.querySelector('[data-limit]')!.textContent = renderStageTargetHint(stat, bokr, bokr ? bokrLimits : limits);
+        const limit = row.querySelector('[data-limit]');
+        if (limit) limit.textContent = renderStageTargetHint(stat, bokr, bokr ? bokrLimits : limits);
       }
     }
     if (event.target instanceof HTMLSelectElement && event.target.hasAttribute('data-mode')) {
-      const row = event.target.closest('[data-target]')!;
-      const input = row.querySelector<HTMLInputElement>('[data-value]')!;
+      const input = event.target.closest('[data-target]')?.querySelector<HTMLInputElement>('[data-value]');
+      if (!input) return;
       input.disabled = event.target.value === 'all'; input.required = !input.disabled;
     }
     readTargets(); renderTargets(); invalidateResult();
@@ -500,8 +216,10 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
     if (!button) return;
     readTargets(); const index = Number(button.dataset.index), action = button.dataset.stageAction;
     const stage = stages[index]; if (!stage) return;
-    if (action === 'up' && index > 0) [stages[index - 1], stages[index]] = [stage, stages[index - 1]!];
-    if (action === 'down' && index < stages.length - 1) [stages[index], stages[index + 1]] = [stages[index + 1]!, stage];
+    const previousStage = stages[index - 1];
+    if (action === 'up' && previousStage) [stages[index - 1], stages[index]] = [stage, previousStage];
+    const nextStage = stages[index + 1];
+    if (action === 'down' && nextStage) [stages[index], stages[index + 1]] = [nextStage, stage];
     if (action === 'delete' && stages.length > 1) stages.splice(index, 1);
     if (action === 'remove-target' && stage.targets.length > 1) stage.targets.splice(Number(button.dataset.targetIndex), 1);
     if (action === 'add-target') {
@@ -510,22 +228,22 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
     }
     renderTargets(); invalidateResult();
   });
-  dialog.querySelector('[data-add-bokr-stage]')!.addEventListener('click', () => {
+  dialog.querySelector('[data-add-bokr-stage]')?.addEventListener('click', () => {
     readTargets(); if (stages.length < 30) stages.push({ resource: 'bokr', boardThrough: 0, allowBlocked: false, targets: [{ stat: 'atk_phys', target: null }] });
     renderTargets(); invalidateResult();
   });
-  dialog.querySelector('[data-add-stage]')!.addEventListener('click', () => {
+  dialog.querySelector('[data-add-stage]')?.addEventListener('click', () => {
     readTargets(); if (stages.length < 30) stages.push({ allowBlocked: false, targets: [{ stat: 'attack', target: 0 }] });
     renderTargets(); invalidateResult();
   });
-  dialog.querySelector('[data-examples]')!.addEventListener('click', () => {
+  dialog.querySelector('[data-examples]')?.addEventListener('click', () => {
     stages = createExampleRedistributionStages(); renderTargets(); invalidateResult();
   });
-  dialog.querySelector('[data-export-preset]')!.addEventListener('click', () => {
+  dialog.querySelector('[data-export-preset]')?.addEventListener('click', () => {
     readTargets();
     openExportPresetModal(dialog, stages);
   });
-  dialog.querySelector('[data-import-preset]')!.addEventListener('click', () => {
+  dialog.querySelector('[data-import-preset]')?.addEventListener('click', () => {
     openImportPresetModal(dialog, importedStages => {
       stages = importedStages;
       renderTargets();
@@ -534,116 +252,10 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
       if (status) status.textContent = ` ${stages.length}개 단계 설정을 가져왔습니다.`;
     });
   });
-  const form = dialog.querySelector('form')!;
   form.addEventListener('input', invalidateResult);
   form.addEventListener('change', invalidateResult);
-  const cancelCalculation = dialog.querySelector<HTMLButtonElement>('[data-cancel-calculation]')!;
-  cancelCalculation.addEventListener('click', () => { calculationController?.abort(); dialog.querySelector('[data-status]')!.textContent = ' 계산을 취소했습니다.'; });
-  form.addEventListener('submit', event => {
-    event.preventDefault(); if (timer !== null || calculationController || curveController || !form.reportValidity()) return;
-    readTargets();
-    const options: RedistributionOptions = {
-      searchMode: dialog.querySelector<HTMLSelectElement>('[name=search-mode]')!.value as 'fast' | 'thorough',
-      ownedCrayons: dialog.querySelector<HTMLInputElement>('[name=owned]')!.valueAsNumber,
-      ownedBokr: dialog.querySelector<HTMLInputElement>('[name=bokr]')!.valueAsNumber,
-      maxReset: dialog.querySelector<HTMLInputElement>('[name=reset]')!.valueAsNumber,
-      ownedGold: readOptionalInt('gold'),
-      ownedWateringCan: readOptionalInt('watering-can'),
-      ownedClouds: readOptionalInt('clouds'),
-      stages,
-    };
-    const status = dialog.querySelector<HTMLElement>('[data-status]')!;
-    const result = dialog.querySelector<HTMLElement>('[data-result]')!;
-    const controls = [...form.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLSelectElement>('input, button, select')].map(control => ({ control, disabled: control.disabled }));
-    controls.forEach(({ control }) => { control.disabled = true; });
-    const controller = new AbortController(); calculationController = controller;
-    cancelCalculation.hidden = false; cancelCalculation.disabled = false;
-    status.textContent = ' 계산 중…'; result.replaceChildren();
-    timer = setTimeout(async () => {
-      timer = null;
-      try {
-        let plan: RedistributionPlan | undefined;
-        for (const point of iterateHwangRedistribution(progressMap, options, true)) {
-          if (controller.signal.aborted) return;
-          plan = point.plan; status.textContent = ` 계산 중 · 초기화 상한 ${point.limit}명 기준 (요청 상한 ${options.maxReset}명)`;
-          await new Promise(resolve => setTimeout(resolve, 0));
-        }
-        if (controller.signal.aborted) return;
-        currentCalculatedPlan = plan!;
-        result.classList.remove('tcbe-rd-stale-content');
-        result.querySelector('.tcbe-rd-stale-banner')?.remove();
-        result.innerHTML = renderRedistributionResult(plan!, options, getPortraitMap());
-        status.textContent = ' 계산 완료';
-        updateToc(plan!);
-        const badge = dialog.querySelector<HTMLElement>('[data-tab-badge="result"]') || dialog.querySelector<HTMLElement>('[data-result-badge]');
-        if (badge) badge.hidden = false;
-        modal.switchTab('result');
-        const resultContent = dialog.querySelector<HTMLElement>('.tcbe-rd-result-content');
-        if (resultContent) resultContent.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-      catch (error) { status.textContent = error instanceof Error ? error.message : '계산에 실패했습니다.'; }
-      finally { calculationController = null; cancelCalculation.hidden = true; controls.forEach(({ control, disabled }) => { control.disabled = disabled; }); }
-    }, 30);
-  });
-  dialog.addEventListener('error', event => {
-    if (event.target instanceof HTMLImageElement && event.target.classList.contains('tcbe-rd-avatar')) {
-      event.target.style.display = 'none';
-    }
-  }, true);
-  dialog.addEventListener('click', async event => {
-    const filterBtn = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-action-filter]') : null;
-    if (filterBtn) {
-      const filter = filterBtn.dataset.actionFilter;
-      const chips = dialog.querySelectorAll<HTMLButtonElement>('[data-action-filter]');
-      chips.forEach(chip => chip.classList.toggle('tcbe-rd-chip-active', chip === filterBtn));
-      dialog.querySelectorAll<HTMLTableRowElement>('tr[data-action-row]').forEach(row => {
-        row.hidden = filter !== 'all' && row.dataset.actionRow !== filter;
-      });
-      return;
-    }
-    const copyButton = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-copy-orders]') : null;
-    if (copyButton && currentCalculatedPlan) {
-      const statusEl = dialog.querySelector<HTMLElement>('[data-copy-status]');
-      const text = generateOrdersText(currentCalculatedPlan);
-      await copyTextWithFeedback(text, statusEl, '✓ 복사되었습니다.');
-      return;
-    }
-    const curveButton = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-curve]') : null;
-    if (curveButton) {
-      if (calculationController) return;
-      if (!form.reportValidity()) return;
-      readTargets();
-      const options: RedistributionOptions = {
-        searchMode: dialog.querySelector<HTMLSelectElement>('[name=search-mode]')!.value as 'fast' | 'thorough',
-        ownedCrayons: dialog.querySelector<HTMLInputElement>('[name=owned]')!.valueAsNumber,
-        ownedBokr: dialog.querySelector<HTMLInputElement>('[name=bokr]')!.valueAsNumber,
-        ownedGold: readOptionalInt('gold'),
-        ownedWateringCan: readOptionalInt('watering-can'),
-        ownedClouds: readOptionalInt('clouds'),
-        maxReset: 0,
-        stages,
-      };
-      if (curveController) { curveController.abort(); return; }
-      const controller = new AbortController(); curveController = controller;
-      const status = dialog.querySelector<HTMLElement>('[data-curve-status]')!, result = dialog.querySelector<HTMLElement>('[data-curve-result]')!;
-      const controls = [...form.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLSelectElement>('input,button,select')].map(control => ({ control, disabled: control.disabled }));
-      controls.forEach(({ control }) => { control.disabled = true; });
-      curveButton.disabled = false; curveButton.textContent = '그래프 계산 취소'; result.replaceChildren();
-      try {
-        const curve = await calculateRedistributionCurve(progressMap, options, (_done, _total, limit, max) => { status.textContent = ` 계산 중 · 초기화 상한 ${limit}명 기준 (0~${max}명 비교)`; }, controller.signal);
-        if (!controller.signal.aborted) { result.innerHTML = renderRedistributionCurve(curve); status.textContent = ' 계산 완료'; }
-      } catch (error) { status.textContent = error instanceof Error ? error.message : '그래프 계산에 실패했습니다.'; }
-      finally { curveController = null; curveButton.textContent = '인원별 그래프 계산'; controls.forEach(({ control, disabled }) => { control.disabled = disabled; }); }
-      return;
-    }
-    const button = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-show-map]') : null;
-    if (!button) return;
-    const map = dialog.querySelector<HTMLDetailsElement>(`#tcbe-rd-map-${button.dataset.showMap}`);
-    if (map) { map.open = true; map.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-  });
+  calculation = setupRedistributionCalculation({ dialog, progressMap, readOptions: () => readFormOptions(dialog),
+    readTargets, updateToc, getPortraitMap, switchTab: modal.switchTab,
+    onPlan: plan => { currentCalculatedPlan = plan; } });
 
-  dispose = () => {
-    dispose = null;
-    modal.close();
-  };
 }

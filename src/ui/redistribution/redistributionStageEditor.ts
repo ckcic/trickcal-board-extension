@@ -1,4 +1,4 @@
-import { redistributionResourceIcon } from './redistributionResource.ts';
+import { renderResourceIcon } from '../common/resources.ts';
 /** 단계별 목표 편집 UI. 같은 스탯은 서로 다른 단계에서 반복할 수 있다. */
 import { STAT_META_LIST } from '../../domain/boardProgress.ts';
 import type { RedistributionStage, RedistributionStat } from '../../domain/hwangRedistribution.ts';
@@ -41,7 +41,7 @@ export function renderRedistributionStageEditor(stages: RedistributionStage[], l
       <button type="button" data-stage-action="down" data-index="${index}" ${index === stages.length - 1 ? 'disabled' : ''} aria-label="${index + 1}단계 아래로">↓</button>
       <button type="button" data-stage-action="delete" data-index="${index}" ${stages.length === 1 ? 'disabled' : ''} aria-label="${index + 1}단계 삭제">단계 삭제</button>
     </div>
-    <div class="tcbe-rd-stage-options"><div class="tcbe-rd-resource-choice" role="group" aria-label="${index + 1}단계 재화">${(['hwang', 'bokr'] as const).map(resource => `<label title="${resource === 'hwang' ? '황크' : '보크'}"><input type="radio" data-resource name="stage-resource-${index}" value="${resource}" ${(stage.resource || 'hwang') === resource ? 'checked' : ''} aria-label="${index + 1}단계 ${resource === 'hwang' ? '황크' : '보크'}">${redistributionResourceIcon(resource)}</label>`).join('')}</div>
+    <div class="tcbe-rd-stage-options"><div class="tcbe-rd-resource-choice" role="group" aria-label="${index + 1}단계 재화">${(['hwang', 'bokr'] as const).map(resource => `<label title="${resource === 'hwang' ? '황크' : '보크'}"><input type="radio" data-resource name="stage-resource-${index}" value="${resource}" ${(stage.resource || 'hwang') === resource ? 'checked' : ''} aria-label="${index + 1}단계 ${resource === 'hwang' ? '황크' : '보크'}">${renderResourceIcon(resource)}</label>`).join('')}</div>
       ${bokr ? `<label>대상 보드 <select data-board-through aria-label="${index + 1}단계 대상 보드">${[0, 1, 2].map(board => `<option value="${board}" ${board === (stage.boardThrough ?? stage.boardIndex ?? 0) ? 'selected' : ''}>${board === 0 ? '1차' : `1~${board + 1}차`}</option>`).join('')}</select></label><small>선택한 차수까지 누적한 칸 수</small>` : '<small>연결에 필요한 보크만 사용</small>'}</div>
     ${stage.targets.map((target, targetIndex) => `<div class="tcbe-rd-target" data-target="${targetIndex}">
       <select data-stat aria-label="${index + 1}단계 ${targetIndex + 1}번 스탯">${choices.map(([stat, name]) => `<option value="${stat}" ${stat === target.stat ? 'selected' : ''}>${name}</option>`).join('')}</select>

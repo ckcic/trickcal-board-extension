@@ -1,6 +1,6 @@
+import type { ProgressMap } from './types.ts';
 import { getHwangTargetValue, readBokrValues, iterateHwangRedistribution, type HwangStats, type RedistributionOptions, type RedistributionStageResult, type RedistributionPlan } from './hwangRedistribution.ts';
 import { STAT_CATEGORIES } from './boardProgress.ts';
-import type { ApostleProgress } from './types.ts';
 
 export interface RedistributionCurvePoint {
   limit: number;
@@ -17,7 +17,7 @@ export interface RedistributionCurve {
   stages: RedistributionStageResult[];
 }
 /** 조합 탐색으로 상한 0~보유 사도 수를 계산한다. 후보안 사이에 UI에 제어권을 돌려준다. */
-export async function calculateRedistributionCurve(progress: Map<string, ApostleProgress>, options: RedistributionOptions,
+export async function calculateRedistributionCurve(progress: ProgressMap, options: RedistributionOptions,
   onProgress?: (done: number, total: number, limit: number, max: number) => void, signal?: AbortSignal): Promise<RedistributionCurve> {
   const total = new Set([...progress.values()].filter(apostle => apostle.isOwned !== false).map(apostle => apostle.apostleId)).size;
   const result: RedistributionCurve = { points: [], beforeHwang: {} as HwangStats, beforeBokr: {} as HwangStats, beforeBokrValues: [], stages: [] };

@@ -1,7 +1,8 @@
+import { renderResourceCost } from '../src/ui/common/resources.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { getSpentHwangCrayons, recommendHwangRedistribution, readHwangStats } from '../src/domain/hwangRedistribution.ts';
-import { renderRedistributionResult, renderRedistributionCost } from '../src/ui/redistribution/redistributionResult.ts';
+import { renderRedistributionResult } from '../src/ui/redistribution/redistributionResult.ts';
 
 const start = () => ({ id: 1, nodeType: 2, grid: { x: 0, y: 0 } });
 const yellow = (id, x, y, statType = 88, cost = 2) => ({ id, nodeType: 5, grid: { x, y }, requireItems: [{ item: 610004, value: cost }], stats: [{ statType, statValue: 60 }] });
@@ -100,7 +101,7 @@ test('추천 지도는 보크 모달 스프라이트와 열린 꽃잎을 사용�
 
 test('반환 재화는 크레파스 4종·물뿌리개·골드 아이콘을 수량과 대응하고 0은 생략한다', () => {
   const cost = { ultraCrayon: 2, epicCrayon: 3, averageCrayon: 4, basicCrayon: 5, wateringCan: 1, gold: 123456 };
-  const html = renderRedistributionCost(cost);
+  const html = renderResourceCost(cost);
   for (const icon of ['pastel-ultra', 'pastel-epic', 'pastel-average', 'pastel-basic', 'watering-can', 'icon-gold']) {
     assert.match(html, new RegExp(`tcbe-rd-resource-icon ${icon}`));
   }
@@ -110,7 +111,7 @@ test('반환 재화는 크레파스 4종·물뿌리개·골드 아이콘을 수�
   assert.match(html, /<span>2개<\/span>/);
   assert.match(html, /<span>123,456<\/span>/);
   assert.doesNotMatch(html, /<span>황크|<span>골드|<span>하급 크레파스/);
-  assert.equal(renderRedistributionCost({ ultraCrayon: 0, epicCrayon: 0, averageCrayon: 0, basicCrayon: 0, gold: 0 }), '없음');
+  assert.equal(renderResourceCost({ ultraCrayon: 0, epicCrayon: 0, averageCrayon: 0, basicCrayon: 0, gold: 0 }), '없음');
 });
 
 test('총 황크 기본값은 칠한 칸의 실제 비용이며 별칭·미보유·잠긴 차수는 더하지 않는다', () => {

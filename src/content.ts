@@ -1,12 +1,14 @@
-import { collectChangedCards, invalidateCardCaches } from './ui/board/mutations.ts';
-import { readCommentArt } from './ui/common/commentArt.ts';
-import { matchesApostleFilter } from './domain/filters.ts';
-import { selectApostleIds } from './domain/listSelection.ts';
 /**
  * @file content.ts
  * @description 트릭컬 노트 확장 프로그램의 콘텐츠 스크립트 (ISOLATED world) 메인 엔트리
  */
 
+import { DIALOG_EXCLUSION_SELECTOR } from './ui/common/selectors.ts';
+import { getUniqueApostles } from './domain/apostleProgress.ts';
+import { collectChangedCards, invalidateCardCaches } from './ui/board/mutations.ts';
+import { readCommentArt } from './ui/common/commentArt.ts';
+import { DEFAULT_FILTER_STATE, matchesApostleFilter } from './domain/filters.ts';
+import { selectApostleIds } from './domain/listSelection.ts';
 import { listenForBoardData } from './bridge/contentBridge.ts';
 import { TILE_APOSTLE_ID, TILE_BOARD_LEVEL, TILE_NODE_ID } from './bridge/tileIdentity.ts';
 import {
@@ -14,11 +16,10 @@ import {
   PERSONALITY_META_LIST,
   STAT_META_LIST,
 } from './domain/boardProgress.ts';
-import type { ApostleProgress, ExtractedApiData, FilterState } from './domain/types.ts';
+import type { ProgressMap, ExtractedApiData, FilterState } from './domain/types.ts';
 import { applyFilterToCards, enhanceApostleCards, setBadgesVisible } from './ui/board/boardEnhancer.ts';
 import { FilterPanelController } from './ui/board/filterPanel.ts';
-import { closeHwangRedistribution } from './ui/redistribution/hwangRedistribution.ts';
-import { closeBoardRecovery } from './ui/recovery/boardRecovery.ts';
+import { closeAllTools } from './ui/common/toolModals.ts';
 
 (() => {
   chrome.runtime.onMessage.addListener((message, sender, respond) => {
@@ -26,7 +27,7 @@ import { closeBoardRecovery } from './ui/recovery/boardRecovery.ts';
         !('type' in message) || message.type !== 'TCBE_READ_COMMENT_ART') return;
     respond({ art: readCommentArt() });
   });
-  let latestProgressMap: Map<string, ApostleProgress> | null = null;
+  let latestProgressMap: ProgressMap | null = null;
   let filterController: FilterPanelController | null = null;
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let isEnhancing = false;
@@ -134,7 +135,7 @@ import { closeBoardRecovery } from './ui/recovery/boardRecovery.ts';
    * 현재 필터 조건(보드 기준, 스탯 기준)에 따라 미완료 사도 수를 정확히 계산
    */
   function countIncompleteApostles(
-    progressMap: Map<string, ApostleProgress>,
+    progressMap: ProgressMap,
     filter: FilterState
   ): { incompleteCount: number; masterTotal: number; statName?: string; persName?: string } {
     let incompleteCount = 0;
@@ -148,9 +149,8 @@ import { closeBoardRecovery } from './ui/recovery/boardRecovery.ts';
         ? PERSONALITY_META_LIST.find((p) => p.id === filter.personality)?.nameKo
         : undefined;
 
-    const uniqueApostles = new Set<ApostleProgress>();
-    progressMap.forEach((prog) => uniqueApostles.add(prog));
-    const masterTotal = uniqueApostles.size;
+    const uniqueApostles = getUniqueApostles(progressMap);
+    const masterTotal = uniqueApostles.length;
 
     uniqueApostles.forEach((prog) => {
       if (matchesApostleFilter(prog, { ...filter, status: 'incomplete' })) incompleteCount++;
@@ -185,8 +185,7 @@ import { closeBoardRecovery } from './ui/recovery/boardRecovery.ts';
 
       // /board URL이 아니거나 사도별 탭이 아닌 경우 완전히 언마운트/숨김 처리 후 종료
       if (!isApostleTab) {
-        closeHwangRedistribution();
-        closeBoardRecovery();
+        closeAllTools();
         document.documentElement.removeAttribute('data-tcbe-board-level');
         updateVirtualGrid(false);
         if (filterController) {
@@ -205,15 +204,7 @@ import { closeBoardRecovery } from './ui/recovery/boardRecovery.ts';
 
       const filterState = filterController
         ? filterController.getState()
-        : {
-            status: 'all' as const,
-            boardLevel: 'all' as const,
-            statCategory: 'all' as const,
-            personality: 'all' as const,
-            grade: 'all' as const,
-            unlockedTier: 'all' as const,
-            sortBy: 'name_asc' as const,
-          };
+        : { ...DEFAULT_FILTER_STATE };
 
       // 1. 사도 카드에 뱃지 삽입 및 업데이트
       document.documentElement.setAttribute('data-tcbe-board-level', filterState.boardLevel);
@@ -231,7 +222,7 @@ import { closeBoardRecovery } from './ui/recovery/boardRecovery.ts';
       if (connectedCards) {
         // 전체 통계에는 카드 속성만 읽고 내부 보드와 배지는 탐색하지 않는다.
         const cards = Array.from(document.querySelectorAll<HTMLElement>('[data-tcbe-apostle-name]'))
-          .filter(card => !card.closest('[role="dialog"], [data-slot="dialog-content"], [data-slot="dialog-overlay"]') &&
+          .filter(card => !card.closest(DIALOG_EXCLUSION_SELECTOR) &&
             latestProgressMap!.has(card.getAttribute('data-tcbe-apostle-name') || ''));
         total = cards.length;
         visible = cards.filter(card => !card.classList.contains('tcbe-card-hidden')).length;
@@ -275,8 +266,7 @@ import { closeBoardRecovery } from './ui/recovery/boardRecovery.ts';
 
   listenForBoardData((data: ExtractedApiData) => {
     try {
-      closeHwangRedistribution();
-      closeBoardRecovery();
+      closeAllTools();
       latestProgressMap = calculateAllApostlesProgress(data);
       // 새로운 데이터를 수신했으므로 스탯 집계 캐시 초기화
       filterController?.clearCache();

@@ -2,7 +2,7 @@
 import { searchResetSets } from './redistributionSearch.ts';
 import { getNodeStatCategories, getStatCategoryFromStatType, isHwangNode, NODE_TYPE, STAT_CATEGORIES, STAT_META_LIST, createEmptyCostSummary } from './boardProgress.ts';
 import { extractNodeCost, findLinkedPetalNode, getApostleBoardLayout, sumCosts } from './boardPathfinder.ts';
-import type { ApostleProgress, MasterBoardNode, ResourceCostSummary, StatCategory } from './types.ts';
+import type { ProgressMap, ApostleProgress, MasterBoardNode, ResourceCostSummary, StatCategory } from './types.ts';
 
 export type HwangStats = Record<StatCategory, number>;
 export type RedistributionStat = StatCategory | 'attack';
@@ -113,15 +113,15 @@ function refundCost(entry: RedistributionNode): ResourceCostSummary {
 }
 
 /** 이름·ID 별칭과 미보유·미해금 보드를 제외하고 실제로 칠한 황크 비용을 합산한다. */
-export function getSpentHwangCrayons(progressMap: Map<string, ApostleProgress>): number {
+export function getSpentHwangCrayons(progressMap: ProgressMap): number {
   return getSpentCrayons(progressMap, 'hwang');
 }
 
-export function getSpentBokrCrayons(progressMap: Map<string, ApostleProgress>): number {
+export function getSpentBokrCrayons(progressMap: ProgressMap): number {
   return getSpentCrayons(progressMap, 'bokr');
 }
 
-function getSpentCrayons(progressMap: Map<string, ApostleProgress>, resource: 'hwang' | 'bokr'): number {
+function getSpentCrayons(progressMap: ProgressMap, resource: 'hwang' | 'bokr'): number {
   const apostles = new Map([...progressMap.values()].map(apostle => [apostle.apostleId, apostle]));
   let total = 0;
   for (const apostle of apostles.values()) {
@@ -243,7 +243,7 @@ function boardPaths(nodes: RedistributionNode[], reset: boolean, originalOnly = 
   return new Map([...boardPathOptions(nodes, reset, originalOnly, selected, allowBlocked)].map(([key, paths]) => [key, paths[0]!]));
 }
 
-function prepareNodes(progressMap: Map<string, ApostleProgress>, includeLocked = false) {
+function prepareNodes(progressMap: ProgressMap, includeLocked = false) {
   const apostles = [...new Map([...progressMap.values()].filter(item => item.isOwned !== false).map(item => [item.apostleId, item])).values()];
   const nodes: RedistributionNode[] = [];
   const groups: RedistributionNode[][] = [];
@@ -283,7 +283,7 @@ function prepareScopes(nodes: RedistributionNode[], groups: RedistributionNode[]
 }
 
 /** 입력 미리보기와 모든 초기화 후보에 같은 접근 범위·전부 목표를 적용한다. 예산 적용 전이다. */
-export function createRedistributionGoalPreview(progressMap: Map<string, ApostleProgress>) {
+export function createRedistributionGoalPreview(progressMap: ProgressMap) {
   const { nodes, groups } = prepareNodes(progressMap, true);
   const cache = new Map<string, number>();
   return (stage: RedistributionStage, stat: RedistributionStat): number => {
@@ -294,7 +294,7 @@ export function createRedistributionGoalPreview(progressMap: Map<string, Apostle
 }
 
 /** 현재 관문과 모든 관문 개방 가정의 차이. 추천 예산·작업에는 가정을 적용하지 않는다. */
-export function getAttackPathAvailability(progressMap: Map<string, ApostleProgress>) {
+export function getAttackPathAvailability(progressMap: ProgressMap) {
   const preview = createRedistributionGoalPreview(progressMap);
   const opened = new Map([...progressMap].map(([key, apostle]) => [key, { ...apostle, boards: apostle.boards.map(board => ({
     ...board, unlocked: true, stepStr: (board.masterNodes || []).map((node, index) => node.nodeType === NODE_TYPE.GATE ? '1' : board.stepStr?.[index] || '0').join(''),
@@ -306,7 +306,7 @@ export function getAttackPathAvailability(progressMap: Map<string, ApostleProgre
 }
 
 /** 이름과 ID 별칭을 중복 집계하지 않으며 입력 데이터를 변경하지 않는다. */
-export function* iterateHwangRedistribution(progressMap: Map<string, ApostleProgress>, options: RedistributionOptions, checkpoints = false): Generator<{ limit: number; plan: RedistributionPlan; pending?: boolean }, RedistributionPlan> {
+export function* iterateHwangRedistribution(progressMap: ProgressMap, options: RedistributionOptions, checkpoints = false): Generator<{ limit: number; plan: RedistributionPlan; pending?: boolean }, RedistributionPlan> {
   const stages: RedistributionStage[] = options.stages ?? (options.priorities || []).map(target => ({ targets: [{ ...target }], allowBlocked: true }));
   const validStat = (stat: RedistributionStat) => stat === 'attack' || STAT_CATEGORIES.includes(stat);
   if (!Number.isSafeInteger(options.ownedCrayons) || options.ownedCrayons < 0 ||
@@ -608,7 +608,7 @@ export function* iterateHwangRedistribution(progressMap: Map<string, ApostleProg
   return result!;
 }
 
-export function recommendHwangRedistribution(progressMap: Map<string, ApostleProgress>, options: RedistributionOptions): RedistributionPlan {
+export function recommendHwangRedistribution(progressMap: ProgressMap, options: RedistributionOptions): RedistributionPlan {
   let result: RedistributionPlan | undefined;
   for (const point of iterateHwangRedistribution(progressMap, options)) result = point.plan;
   return result!;
