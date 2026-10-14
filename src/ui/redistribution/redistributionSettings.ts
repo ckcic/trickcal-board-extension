@@ -1,9 +1,7 @@
+import { validateRedistributionStages } from '../../domain/redistributionPreset.ts';
 import type { RedistributionStage } from '../../domain/hwangRedistribution.ts';
-import { validateRedistributionStages, exportRedistributionPreset, parseRedistributionPreset } from '../../domain/redistributionPreset.ts';
 
-export { exportRedistributionPreset, parseRedistributionPreset, validateRedistributionStages };
-
-export const REDISTRIBUTION_SETTINGS_KEY = 'tcbe_redistribution_settings_v1';
+const REDISTRIBUTION_SETTINGS_KEY = 'tcbe_redistribution_settings_v1';
 export interface RedistributionSettings {
   owned: number;
   bokr: number;

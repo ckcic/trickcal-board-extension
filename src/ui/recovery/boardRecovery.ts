@@ -3,8 +3,9 @@ import { createEmptyCostSummary, NODE_TYPE, STAT_META_LIST } from '../../domain/
 import { sumCosts } from '../../domain/boardPathfinder.ts';
 import type { ApostleProgress } from '../../domain/types.ts';
 import { matchesKoreanSearch } from '../../domain/koreanSearch.ts';
-import { collectApostlePortraits, closeHwangRedistribution, renderApostleAvatar, renderRedistributionCost } from '../redistribution/hwangRedistribution.ts';
-import { getBoardNodeVisual } from '../board/boardNode.ts';
+import { closeHwangRedistribution } from '../redistribution/hwangRedistribution.ts';
+import { collectApostlePortraits, renderApostleAvatar, renderRedistributionCost } from '../redistribution/redistributionResult.ts';
+import { getBoardNodeVisual, computeBoardGridLayout, getTileGridStyle } from '../board/boardNode.ts';
 import { escapeHtml } from '../common/html.ts';
 import { createCommonModal } from '../common/commonModal.ts';
 import { copyTextWithFeedback } from '../common/clipboard.ts';
@@ -37,10 +38,8 @@ export function renderRecoveryMap(result: RecoveryResult, plan: RecoveryAlternat
     const nodes = (board.masterNodes || []).map((node, nodeIndex) => ({ node, nodeIndex }))
       .filter(({ node }) => node.nodeType !== 0 && node.grid && Number.isSafeInteger(node.grid.x) && Number.isSafeInteger(node.grid.y) && node.grid.x >= 0 && node.grid.y >= 0);
     if (!nodes.length) return `<section><h4>${boardIndex + 1}차</h4>보드 좌표 없음</section>`;
-    const xs = nodes.map(({ node }) => node.grid!.x), ys = nodes.map(({ node }) => node.grid!.y);
-    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
-    if (maxX - minX > 30 || maxY - minY > 50) return '<p>좌표 범위가 커 지도를 표시할 수 없습니다.</p>';
-    const columns = Math.max(7, maxX - minX + 1), offset = Math.floor((columns - (maxX - minX + 1)) / 2);
+    const layout = computeBoardGridLayout(nodes.map(({ node }) => node.grid!));
+    if (!layout) return '<p>좌표 범위가 커 지도를 표시할 수 없습니다.</p>';
     const visualBoard = { ...board, stepStr: (board.masterNodes || []).map((_, index) => plan.selected.has(`${boardIndex}:${index}`) ? '1' : '0').join('') };
     const tiles = nodes.map(({ node, nodeIndex }) => {
       const key = `${boardIndex}:${nodeIndex}`, entry = entries.get(key), selected = plan.selected.has(key);
@@ -51,9 +50,9 @@ export function renderRecoveryMap(result: RecoveryResult, plan: RecoveryAlternat
       const mapState = !board.unlocked ? 'empty' : entry?.picked ? selected ? 'keep' : 'remove' : selected ? 'add' : 'empty';
       const marker = { keep: '✓', add: '+', remove: '×', empty: '' }[mapState];
       const title = `${boardIndex + 1}차 #${node.id} ${visual.statName || ''} ${visual.flowering ? '만개 확장 황크' : visual.kind} · ${operation}${order.has(key) ? ` · 작업 ${order.get(key)}번` : ''}`;
-      return `<button type="button" class="tcbe-map-tile tcbe-rd-tile tcbe-rd-${mapState} tcbe-rc-tile tcbe-rc-${state}${visual.classes}" data-tile="${boardIndex}:${nodeIndex}" style="grid-column:${maxX - node.grid!.x + 1 + offset};grid-row:${maxY - node.grid!.y + 1};background-position:${visual.background} 0" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">${visual.contents}<span class="tcbe-rd-state-mark" aria-hidden="true">${marker}</span></button>`;
+      return `<button type="button" class="tcbe-map-tile tcbe-rd-tile tcbe-rd-${mapState} tcbe-rc-tile tcbe-rc-${state}${visual.classes}" data-tile="${boardIndex}:${nodeIndex}" style="${getTileGridStyle(node.grid!.x, node.grid!.y, layout)}background-position:${visual.background} 0" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">${visual.contents}<span class="tcbe-rd-state-mark" aria-hidden="true">${marker}</span></button>`;
     }).join('');
-    return `<section><h4>${boardIndex + 1}차 ${board.unlocked ? '' : '· 미해금'}</h4><div class="tcbe-rd-map" style="grid-template-columns:repeat(${columns},32px);grid-template-rows:repeat(${maxY - minY + 1},32px)">${tiles}</div></section>`;
+    return `<section><h4>${boardIndex + 1}차 ${board.unlocked ? '' : '· 미해금'}</h4><div class="tcbe-rd-map" style="grid-template-columns:repeat(${layout.columns},32px);grid-template-rows:repeat(${layout.rowCount},32px)">${tiles}</div></section>`;
   }).join('')}</div>`;
 }
 
@@ -81,8 +80,8 @@ export function openBoardRecovery(progressMap: Map<string, ApostleProgress>): vo
     title: '황크·보크 회수 계산',
     badgeText: '베타',
     tabs: [
-      { id: 'settings', label: '설정', panelId: 'tcbe-rc-settings' },
-      { id: 'results', label: '계산 결과', panelId: 'tcbe-rc-results' },
+      { id: 'settings', label: '⚙️ 설정', panelId: 'tcbe-rc-settings' },
+      { id: 'results', label: '📋 계산 결과', panelId: 'tcbe-rc-results' },
     ],
     initialTabId: 'settings',
     bodyHtml: `

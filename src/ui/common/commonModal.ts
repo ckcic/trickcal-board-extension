@@ -36,6 +36,14 @@ export interface CommonModalInstance {
  * 공통 모달 다이얼로그를 생성하여 화면에 표시합니다.
  */
 export function createCommonModal(options: CommonModalOptions): CommonModalInstance {
+  const existing = document.getElementById(options.id);
+  if (existing) {
+    if (existing instanceof HTMLDialogElement && existing.open) {
+      try { existing.close(); } catch { /* ignore */ }
+    }
+    existing.remove();
+  }
+
   const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   const dialog = document.createElement('dialog');
   dialog.id = options.id;
@@ -165,6 +173,7 @@ export function createCommonModal(options: CommonModalOptions): CommonModalInsta
   });
 
   dialog.showModal();
+  dialog.scrollTop = 0;
 
   return {
     dialog,

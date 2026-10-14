@@ -10,13 +10,13 @@ export const PRESET_TYPE = 'tcbe-redistribution-preset' as const;
 export const PRESET_VERSION = 1 as const;
 
 /** 황크 단계에서 허용되는 스탯 (공격력 통합형 + 7대 스탯) */
-export const HWANG_VALID_STATS: readonly RedistributionStat[] = [
+const HWANG_VALID_STATS: readonly RedistributionStat[] = [
   'attack',
   ...STAT_CATEGORIES.filter(c => c !== 'atk_phys' && c !== 'atk_mag'),
 ];
 
 /** 보크 단계에서 허용되는 스탯 (물공/마공 개별 포함 8대 스탯) */
-export const BOKR_VALID_STATS: readonly RedistributionStat[] = STAT_CATEGORIES;
+const BOKR_VALID_STATS: readonly RedistributionStat[] = STAT_CATEGORIES;
 
 /** 프리셋 내보내기/가져오기 표준 JSON 스키마 */
 export interface RedistributionPreset {

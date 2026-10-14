@@ -13,12 +13,7 @@ import { findCardContainer, findProgressByName } from './cardDetector.ts';
 import { createNormalStatElement } from './normalStat.ts';
 import { updateBoardTileHighlights } from './tileHighlight.ts';
 
-// --- 하위 모듈 재-export (외부 모듈의 기존 import 경로 호환) ---
-export { createBadgeElement } from './badge.ts';
-export { closeBokrModal, showBokrModal } from './bokrModal.ts';
-export { findCardContainer, findProgressByName } from './cardDetector.ts';
-export { createNormalStatElement } from './normalStat.ts';
-export { STAT_TO_POSITIONS, updateBoardTileHighlights } from './tileHighlight.ts';
+
 
 /** 사도 카드를 식별하기 위한 데이터 속성 */
 const ATTR_APOSTLE_NAME = 'data-tcbe-apostle-name';

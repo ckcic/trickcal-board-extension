@@ -46,7 +46,7 @@ test('손상되거나 지원하지 않는 설정은 무시한다', () => {
   }
 });
 
-import { renderApostleAvatar, collectApostlePortraits } from '../src/ui/redistribution/hwangRedistribution.ts';
+import { renderApostleAvatar, collectApostlePortraits } from '../src/ui/redistribution/redistributionResult.ts';
 
 test('사도 초상화 아바타를 렌더링하고 비-DOM 환경에서 안전하게 동작한다', () => {
   const map = new Map([

@@ -138,18 +138,6 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-backgroun
   flex-shrink: 0;
 }
 
-.tcbe-gold-icon-mini {
-  display: inline-block;
-  width: 13px;
-  height: 13px;
-  background-image: var(--tcbe-gold-icon);
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  vertical-align: -2px;
-  margin-right: 2px;
-  flex-shrink: 0;
-}
 
 /* --- 배지 영역은 폭이나 필터에 관계없이 두 줄 높이를 유지한다. --- */
 .tcbe-badge-row {
@@ -622,35 +610,6 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
   white-space: nowrap;
 }
 
-.tcbe-np-close-btn {
-  background: var(--tcbe-bg-subtle);
-  border: 1px solid var(--tcbe-border-default);
-  color: var(--tcbe-text-muted);
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  margin-left: 6px;
-  flex-shrink: 0;
-  transition: var(--tcbe-transition-fast);
-  box-sizing: border-box;
-}
-
-.tcbe-np-close-btn svg {
-  display: block;
-  pointer-events: none;
-}
-
-.tcbe-np-close-btn:hover {
-  background: #fee2e2;
-  border-color: #fca5a5;
-  color: #ef4444;
-  transform: scale(1.06);
-}
 
 /* 섹션 헤더 및 타이틀 공통 */
 .tcbe-np-section-header {
@@ -1023,99 +982,9 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
   background: var(--tcbe-green-bright);
 }
 
-/* --- 잔여 필요 재화(크레파스 및 골드) 요약 카드 --- */
-.tcbe-np-cost-box {
-  background: var(--tcbe-bg-muted);
-  border: 1px solid var(--tcbe-border-light);
-  border-radius: var(--tcbe-radius-lg);
-  padding: 6px 10px;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--tcbe-gap-md);
-  font-size: 11px;
-  flex-wrap: wrap;
-}
-
-.tcbe-np-cost-title {
-  font-weight: 800;
-  color: var(--tcbe-text-secondary);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  white-space: nowrap;
-}
-
-.tcbe-np-cost-title span {
-  font-weight: 600;
-  color: var(--tcbe-text-faint);
-  font-size: 10.5px;
-}
-
-.tcbe-np-cost-items {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.tcbe-cost-item {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--tcbe-gap-xs);
-  background: var(--tcbe-bg-white);
-  border: 1px solid var(--tcbe-border-default);
-  padding: 2px 7px;
-  border-radius: var(--tcbe-radius-md);
-  font-weight: 700;
-  color: var(--tcbe-text-primary);
-  font-family: var(--tcbe-font-mono);
-  font-size: 10.5px;
-  line-height: 1.2;
-}
-
-.tcbe-cost-item.tcbe-cost-gold {
-  background: #fefce8;
-  border-color: #fef08a;
-  color: #854d0e;
-}
-
-.tcbe-cost-zero {
-  color: var(--tcbe-text-faint);
-  background: var(--tcbe-bg-subtle);
-  border-color: var(--tcbe-border-light);
-}
-
-/* 툴팁 내 상급칸 잔여 필요 재화 영역 */
-.tcbe-tt-cost-box {
-  margin-top: var(--tcbe-gap-md);
-  padding-top: 7px;
-  border-top: 1px dashed var(--tcbe-border-default);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.tcbe-tt-cost-title {
-  font-weight: 800;
-  font-size: 10.5px;
-  color: var(--tcbe-text-secondary);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.tcbe-tt-cost-items {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  flex-wrap: wrap;
-}
 
 /* --- 트릭컬 공식 스타일 아코디언 필터 패널 --- */
-.tcbe-panel-container,
-.tcbe-accordion-container {
+.tcbe-panel-container {
   display: flex;
   flex-direction: column;
   margin: 10px 0 18px 0;
@@ -1134,8 +1003,7 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
 }
 
 /* 닫혔을 때 바깥 테두리 깔끔하게 처리 */
-.tcbe-panel-container:has(.tcbe-accordion-header[data-state="closed"]),
-.tcbe-accordion-container:has(.tcbe-accordion-header[data-state="closed"]) {
+.tcbe-panel-container:has(.tcbe-accordion-header[data-state="closed"]):has(.tcbe-accordion-header[data-state="closed"]) {
   border: none;
   background: transparent;
   box-shadow: none;
@@ -1241,6 +1109,38 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) .tcbe-normal-badge-cont
 
 .tcbe-accordion-content.tcbe-closed {
   display: none !important;
+}
+
+/* --- 특수 계산 도구(재분배/회수) 행 --- */
+.tcbe-tools-row {
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--tcbe-border-light);
+  margin-bottom: 2px;
+}
+
+.tcbe-btn-tool {
+  font-weight: 700;
+  padding: 4px 10px;
+  background: var(--tcbe-bg-white);
+  border: 1.5px solid #a3c48d;
+  color: #1e293b;
+  font-size: 11.5px;
+}
+
+.tcbe-btn-tool:hover {
+  background: #f0fdf4;
+  border-color: var(--tcbe-green-primary);
+  color: var(--tcbe-green-primary);
+}
+
+.tcbe-badge-tool-beta {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 8px;
+  margin-left: 3px;
 }
 
 .tcbe-panel-row {

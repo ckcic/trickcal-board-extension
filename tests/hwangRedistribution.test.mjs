@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { getSpentHwangCrayons, recommendHwangRedistribution, readHwangStats } from '../src/domain/hwangRedistribution.ts';
-import { renderRedistributionResult, renderRedistributionCost } from '../src/ui/redistribution/hwangRedistribution.ts';
+import { renderRedistributionResult, renderRedistributionCost } from '../src/ui/redistribution/redistributionResult.ts';
 
 const start = () => ({ id: 1, nodeType: 2, grid: { x: 0, y: 0 } });
 const yellow = (id, x, y, statType = 88, cost = 2) => ({ id, nodeType: 5, grid: { x, y }, requireItems: [{ item: 610004, value: cost }], stats: [{ statType, statValue: 60 }] });

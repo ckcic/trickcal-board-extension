@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { getSpentBokrCrayons, createRedistributionGoalPreview, recommendHwangRedistribution, getAttackPathAvailability } from '../src/domain/hwangRedistribution.ts';
 import { calculateRedistributionCurve, readCurveValue } from '../src/domain/redistributionCurve.ts';
-import { renderRedistributionResult } from '../src/ui/redistribution/hwangRedistribution.ts';
+import { renderRedistributionResult } from '../src/ui/redistribution/redistributionResult.ts';
 import { renderRedistributionStageEditor } from '../src/ui/redistribution/redistributionStageEditor.ts';
 import { renderRedistributionCurve } from '../src/ui/redistribution/redistributionCurve.ts';
 import { searchResetSets } from '../src/domain/redistributionSearch.ts';

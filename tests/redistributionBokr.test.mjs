@@ -3,7 +3,7 @@ import test from 'node:test';
 import { recommendHwangRedistribution, iterateHwangRedistribution, createRedistributionGoalPreview, readBokrValues, createExampleRedistributionStages } from '../src/domain/hwangRedistribution.ts';
 import { calculateRedistributionCurve, readCurveValue } from '../src/domain/redistributionCurve.ts';
 import { renderRedistributionCurve } from '../src/ui/redistribution/redistributionCurve.ts';
-import { renderRedistributionResult } from '../src/ui/redistribution/hwangRedistribution.ts';
+import { renderRedistributionResult } from '../src/ui/redistribution/redistributionResult.ts';
 import { renderRedistributionStageEditor } from '../src/ui/redistribution/redistributionStageEditor.ts';
 
 const start = { id: 1, nodeType: 2, grid: { x: 0, y: 0 } };

@@ -2,7 +2,7 @@
 import { getApostleBoardLayout, type BokrPathResult } from '../../domain/boardPathfinder.ts';
 import { getNodeStatCategories, getStatCategoryFromStatType, PERSONALITY_META_LIST, STAT_META_LIST } from '../../domain/boardProgress.ts';
 import type { ApostleProgress, MasterBoardNode, ResourceCostSummary } from '../../domain/types.ts';
-import { getBoardNodeVisual } from './boardNode.ts';
+import { getBoardNodeVisual, computeBoardGridLayout, getTileGridStyle } from './boardNode.ts';
 import { escapeHtml } from '../common/html.ts';
 import { lockPageScroll } from '../common/scrollLock.ts';
 
@@ -71,13 +71,8 @@ export function renderBokrPathCost(pathResult: BokrPathResult): string {
 export function renderBokrBoard(options: BokrModalOptions): string {
   const { progress, boardIndex, targetNode, pathResult } = options;
   const layout = getApostleBoardLayout(progress, boardIndex).filter(entry => entry.boardIndex === boardIndex);
-  if (!layout.length) return '<p>보드 위치를 확인할 수 없습니다.</p>';
-  const minX = Math.min(...layout.map(entry => entry.x));
-  const maxX = Math.max(...layout.map(entry => entry.x));
-  const maxY = Math.max(...layout.map(entry => entry.y));
-  const minY = Math.min(...layout.map(entry => entry.y));
-  const columns = Math.max(7, maxX - minX + 1);
-  const columnOffset = Math.floor((columns - (maxX - minX + 1)) / 2);
+  const gridLayout = computeBoardGridLayout(layout);
+  if (!gridLayout) return '<p>보드 위치를 확인할 수 없습니다.</p>';
   const path = new Set(pathResult.pathSteps?.map(step => `${step.boardIndex}:${step.nodeId}`));
   const tiles = layout.map(entry => {
     const node = entry.node;
@@ -85,9 +80,9 @@ export function renderBokrBoard(options: BokrModalOptions): string {
     const onPath = path.has(`${entry.boardIndex}:${node.id}`);
     const visual = getBoardNodeVisual(progress.boards[boardIndex]!, node, entry.picked);
     const label = `${entry.boardIndex + 1}차 ${visual.statName || visual.kind} ${visual.kind}${visual.flowering ? ` · 꽃잎 ${visual.petalState}` : ''}${selected ? ' · 선택한 칸' : ''}${entry.picked ? ' · 색칠 완료' : ''}`;
-    return `<div class="tcbe-map-tile ${selected ? 'tcbe-map-selected' : ''} ${onPath ? 'tcbe-map-path' : ''}${visual.classes}" data-board="${entry.boardIndex + 1}" data-node="${node.id}" style="grid-column:${maxX - entry.x + 1 + columnOffset};grid-row:${maxY - entry.y + 1};background-position:${visual.background} 0" title="${escapeHtml(label)}" role="img" aria-label="${escapeHtml(label)}">${visual.contents}</div>`;
+    return `<div class="tcbe-map-tile ${selected ? 'tcbe-map-selected' : ''} ${onPath ? 'tcbe-map-path' : ''}${visual.classes}" data-board="${entry.boardIndex + 1}" data-node="${node.id}" style="${getTileGridStyle(entry.x, entry.y, gridLayout)}background-position:${visual.background} 0" title="${escapeHtml(label)}" role="img" aria-label="${escapeHtml(label)}">${visual.contents}</div>`;
   }).join('');
-  return `<div class="tcbe-bokr-map" style="width:${columns * 32}px;aspect-ratio:${columns}/${maxY - minY + 1};grid-template-columns:repeat(${columns},1fr);grid-template-rows:repeat(${maxY - minY + 1},1fr)">${tiles}</div>`;
+  return `<div class="tcbe-bokr-map" style="width:${gridLayout.columns * 32}px;aspect-ratio:${gridLayout.columns}/${gridLayout.rowCount};grid-template-columns:repeat(${gridLayout.columns},1fr);grid-template-rows:repeat(${gridLayout.rowCount},1fr)">${tiles}</div>`;
 }
 
 export function showBokrModal(options: BokrModalOptions): void {

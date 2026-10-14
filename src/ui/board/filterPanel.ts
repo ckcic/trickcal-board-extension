@@ -5,7 +5,7 @@
 
 import { PERSONALITY_META_LIST, STAT_META_LIST } from '../../domain/boardProgress.ts';
 import { checkForUpdate } from '../../domain/updateChecker.ts';
-import { openHwangRedistribution } from '../redistribution/hwangRedistribution.ts';
+import { openHwangRedistribution, closeHwangRedistribution } from '../redistribution/hwangRedistribution.ts';
 import { closeBoardRecovery, openBoardRecovery } from '../recovery/boardRecovery.ts';
 import type {
   ApostleProgress,
@@ -156,23 +156,38 @@ export class FilterPanelController {
     panel.appendChild(header);
     panel.appendChild(content);
 
+    // ----------------------------------------------------
+    // Row 0: 특수 계산 도구 (만개·황크 재분배, 황크·보크 회수)
+    // ----------------------------------------------------
+    const toolsRow = document.createElement('div');
+    toolsRow.className = 'tcbe-panel-row tcbe-tools-row';
+
+    const toolsLabel = document.createElement('span');
+    toolsLabel.className = 'tcbe-panel-label';
+    toolsLabel.textContent = '계산 도구:';
+    toolsRow.appendChild(toolsLabel);
+
     const redistributionButton = document.createElement('button');
     redistributionButton.type = 'button';
-    redistributionButton.className = 'tcbe-btn';
-    redistributionButton.textContent = '만개·황크 재분배 (베타)';
+    redistributionButton.className = 'tcbe-btn tcbe-btn-tool';
+    redistributionButton.innerHTML = '✨ 만개·황크 재분배 <small class="tcbe-badge-tool-beta">베타</small>';
     redistributionButton.addEventListener('click', () => {
       closeBoardRecovery();
       if (this.summaryProgressMap) openHwangRedistribution(this.summaryProgressMap);
     });
-    content.appendChild(redistributionButton);
+    toolsRow.appendChild(redistributionButton);
+
     const recoveryButton = document.createElement('button');
     recoveryButton.type = 'button';
-    recoveryButton.className = 'tcbe-btn tcbe-recovery-entry';
-    recoveryButton.textContent = '황크·보크 회수 계산 (베타)';
+    recoveryButton.className = 'tcbe-btn tcbe-btn-tool';
+    recoveryButton.innerHTML = '🧹 황크·보크 회수 계산 <small class="tcbe-badge-tool-beta">베타</small>';
     recoveryButton.addEventListener('click', () => {
+      closeHwangRedistribution();
       if (this.summaryProgressMap) openBoardRecovery(this.summaryProgressMap);
     });
-    content.appendChild(recoveryButton);
+    toolsRow.appendChild(recoveryButton);
+
+    content.appendChild(toolsRow);
 
     // ----------------------------------------------------
     // Row 1: 사도 기본 속성 (성격, 초기 성급)

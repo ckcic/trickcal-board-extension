@@ -4,7 +4,7 @@
  */
 
 /** 한글 유니코드 초성 19자 목록 */
-export const KOREAN_CHOSUNG_LIST: readonly string[] = [
+const KOREAN_CHOSUNG_LIST: readonly string[] = [
   'ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ',
   'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ',
 ];
