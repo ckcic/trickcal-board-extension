@@ -3,7 +3,7 @@
  * @description 사도 카드 내부의 보드 타일에 스탯 필터 하이라이트 테두리를 적용/해제하는 모듈
  */
 
-import type { ApostleProgress, FilterState, StatCategory } from '../domain/types.ts';
+import type { ApostleProgress, FilterState, StatCategory } from '../../domain/types.ts';
 
 /**
  * 트릭컬 노트 BoardTile.webp 스프라이트의 스탯별 bg-position 매핑

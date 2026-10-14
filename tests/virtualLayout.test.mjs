@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { applyFilterToCards, applyBoardLevelVisibility } from '../src/ui/boardEnhancer.ts';
+import { applyFilterToCards, applyBoardLevelVisibility } from '../src/ui/board/boardEnhancer.ts';
 import { calculateAllApostlesProgress } from '../src/domain/boardProgress.ts';
 import { parseTrickcalApiPayload } from '../src/domain/dataParser.ts';
 

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createExampleRedistributionStages, recommendHwangRedistribution } from '../src/domain/hwangRedistribution.ts';
-import { renderRedistributionStageEditor } from '../src/ui/redistributionStageEditor.ts';
-import { renderRedistributionResult } from '../src/ui/hwangRedistribution.ts';
+import { renderRedistributionStageEditor } from '../src/ui/redistribution/redistributionStageEditor.ts';
+import { renderRedistributionResult } from '../src/ui/redistribution/hwangRedistribution.ts';
 
 const start = { id: 1, nodeType: 2, grid: { x: 0, y: 0 } };
 const node = (id, x, y, type, value = 80) => ({ id, nodeType: 5, grid: { x, y }, requireItems: [{ item: 610004, value: 2 }], stats: [{ statType: type, statValue: value }] });

@@ -1,7 +1,7 @@
 import { redistributionBoardLabel } from './redistributionResource.ts';
-import { STAT_META_LIST } from '../domain/boardProgress.ts';
-import { getHwangTargetValue, type RedistributionStat } from '../domain/hwangRedistribution.ts';
-import { readCurveValue, readBokrScopeValue, type RedistributionCurve } from '../domain/redistributionCurve.ts';
+import { STAT_META_LIST } from '../../domain/boardProgress.ts';
+import { getHwangTargetValue, type RedistributionStat } from '../../domain/hwangRedistribution.ts';
+import { readCurveValue, readBokrScopeValue, type RedistributionCurve } from '../../domain/redistributionCurve.ts';
 
 const format = (value: number) => Number(value.toFixed(1)).toLocaleString('ko-KR');
 export function renderRedistributionCurve(curve: RedistributionCurve): string {

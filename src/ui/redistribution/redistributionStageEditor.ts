@@ -1,8 +1,8 @@
 import { redistributionResourceIcon } from './redistributionResource.ts';
 /** 단계별 목표 편집 UI. 같은 스탯은 서로 다른 단계에서 반복할 수 있다. */
-import { STAT_META_LIST } from '../domain/boardProgress.ts';
-import type { RedistributionStage, RedistributionStat } from '../domain/hwangRedistribution.ts';
-import { getRedistributionStatUnit, roundRedistributionTarget, type HwangStatLimits } from '../domain/hwangStatLimits.ts';
+import { STAT_META_LIST } from '../../domain/boardProgress.ts';
+import type { RedistributionStage, RedistributionStat } from '../../domain/hwangRedistribution.ts';
+import { getRedistributionStatUnit, roundRedistributionTarget, type HwangStatLimits } from '../../domain/hwangStatLimits.ts';
 
 const stats: Array<[RedistributionStat, string]> = [
   ['attack', '공격력 (물공·마공)'],
@@ -16,7 +16,7 @@ export function renderStageTargetHint(stat: RedistributionStat, bokr: boolean, l
 }
 
 /** 목표 행의 상한·단위 안내 문구. 편집기 전체 재렌더 없이 행 단위로 갱신할 때도 같은 문구를 사용한다. */
-export function renderStageTargetLimit(stage: RedistributionStage, target: RedistributionStage['targets'][number], scope?: HwangStatLimits,
+function renderStageTargetLimit(stage: RedistributionStage, target: RedistributionStage['targets'][number], scope?: HwangStatLimits,
   allGoal?: (stage: RedistributionStage, stat: RedistributionStat) => number): string {
   const bokr = stage.resource === 'bokr';
   return `${renderStageTargetHint(target.stat, bokr, scope, bokr ? stage.boardThrough ?? stage.boardIndex ?? 0 : undefined)}${bokr ? ` · 목표 +${((target.target ?? allGoal?.(stage, target.stat) ?? 0) * (STAT_META_LIST.find(meta => meta.key === target.stat)?.valuePerNode ?? 0)).toLocaleString('ko-KR')} (기본 수치)` : ''}`;

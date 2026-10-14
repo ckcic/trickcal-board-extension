@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { loadRedistributionSettings, saveRedistributionSettings, parseRedistributionSettings } from '../src/ui/redistributionSettings.ts';
+import { loadRedistributionSettings, saveRedistributionSettings, parseRedistributionSettings } from '../src/ui/redistribution/redistributionSettings.ts';
 
 test('재분배 예산과 단계 설정을 저장하고 다시 읽는다', () => {
   const data = new Map();
@@ -46,7 +46,7 @@ test('손상되거나 지원하지 않는 설정은 무시한다', () => {
   }
 });
 
-import { renderApostleAvatar, collectApostlePortraits } from '../src/ui/hwangRedistribution.ts';
+import { renderApostleAvatar, collectApostlePortraits } from '../src/ui/redistribution/hwangRedistribution.ts';
 
 test('사도 초상화 아바타를 렌더링하고 비-DOM 환경에서 안전하게 동작한다', () => {
   const map = new Map([

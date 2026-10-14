@@ -3,7 +3,7 @@ import test from 'node:test';
 import vm from 'node:vm';
 import { build } from 'esbuild';
 
-const bundled = await build({ entryPoints: ['src/ui/scrollLock.ts'], bundle: true, write: false, format: 'iife', globalName: 'scrollLock' });
+const bundled = await build({ entryPoints: ['src/ui/common/scrollLock.ts'], bundle: true, write: false, format: 'iife', globalName: 'scrollLock' });
 
 function setup({ width = 1200, clientWidth = 1185, gutter = '', gutterPriority = '', computedGutter = 'auto', overflow = '', overflowPriority = '', margin = '', marginPriority = '', computedMargin = '0px' } = {}) {
   const changes = [];

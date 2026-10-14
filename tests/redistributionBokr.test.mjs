@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { recommendHwangRedistribution, iterateHwangRedistribution, createRedistributionGoalPreview, readBokrValues, createExampleRedistributionStages } from '../src/domain/hwangRedistribution.ts';
 import { calculateRedistributionCurve, readCurveValue } from '../src/domain/redistributionCurve.ts';
-import { renderRedistributionCurve } from '../src/ui/redistributionCurve.ts';
-import { renderRedistributionResult } from '../src/ui/hwangRedistribution.ts';
-import { renderRedistributionStageEditor } from '../src/ui/redistributionStageEditor.ts';
+import { renderRedistributionCurve } from '../src/ui/redistribution/redistributionCurve.ts';
+import { renderRedistributionResult } from '../src/ui/redistribution/hwangRedistribution.ts';
+import { renderRedistributionStageEditor } from '../src/ui/redistribution/redistributionStageEditor.ts';
 
 const start = { id: 1, nodeType: 2, grid: { x: 0, y: 0 } };
 const bokr = (id, x, y, stat = 3, cost = 3) => ({ id, nodeType: 4, grid: { x, y }, requireItems: [{ item: 610003, value: cost }], stats: [{ statType: stat, statValue: 13 }] });

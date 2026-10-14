@@ -14,7 +14,9 @@
 #tcbe-recovery-dialog legend { font-weight: 700; padding: 0 5px; }
 #tcbe-recovery-dialog input[type=checkbox], #tcbe-recovery-dialog input[type=radio] { accent-color: #15803d; margin-right: 7px; }
 #tcbe-recovery-dialog input[type=number] { width: 70px; }
-#tcbe-recovery-dialog input[type=number], #tcbe-recovery-dialog select { padding: 6px; border: 1px solid #94a3b8; border-radius: 5px; color: #1e293b; background: white; }
+#tcbe-recovery-dialog input[type=search] { min-width: 200px; padding: 6px 10px; }
+#tcbe-recovery-dialog input[type=number], #tcbe-recovery-dialog input[type=search], #tcbe-recovery-dialog select { padding: 6px 8px; border: 1px solid #94a3b8; border-radius: 6px; color: #1e293b; background: white; font-size: 13px; }
+#tcbe-recovery-dialog input[type=search]:focus { border-color: #2563eb; outline: 2px solid #2563eb; }
 .tcbe-rc-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 12px 0; }
 .tcbe-rc-check-row { padding: 10px 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 10px; }
 .tcbe-rc-check-row > button { margin-left: 12px; }

@@ -153,7 +153,7 @@ export function readHwangStats(node: MasterBoardNode): HwangStats {
 }
 
 /** 보크는 물공·마공을 구분한 스탯별 칸 수로 목표를 설정한다. */
-export function readBokrCounts(node: MasterBoardNode): HwangStats {
+function readBokrCounts(node: MasterBoardNode): HwangStats {
   const result = emptyStats();
   if (node.nodeType === NODE_TYPE.BOKR) for (const stat of getNodeStatCategories(node)) result[stat] = 1;
   return result;

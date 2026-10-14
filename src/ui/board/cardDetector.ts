@@ -3,7 +3,7 @@
  * @description 트릭컬 노트 사도 카드 DOM 요소를 탐색하고, 텍스트/이미지로부터 사도 진행도 데이터를 매칭하는 모듈
  */
 
-import type { ApostleProgress } from '../domain/types.ts';
+import type { ApostleProgress } from '../../domain/types.ts';
 
 /**
  * 텍스트 또는 이미지 alt로부터 사도 진행도 데이터를 검색 (스킨명 괄호 접미사 지원)

@@ -1,5 +1,5 @@
-import type { RedistributionStage } from '../domain/hwangRedistribution.ts';
-import { validateRedistributionStages, exportRedistributionPreset, parseRedistributionPreset } from '../domain/redistributionPreset.ts';
+import type { RedistributionStage } from '../../domain/hwangRedistribution.ts';
+import { validateRedistributionStages, exportRedistributionPreset, parseRedistributionPreset } from '../../domain/redistributionPreset.ts';
 
 export { exportRedistributionPreset, parseRedistributionPreset, validateRedistributionStages };
 

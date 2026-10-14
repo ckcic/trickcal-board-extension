@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { getHwangStatLimits, getRedistributionStatUnit, roundRedistributionTarget } from '../src/domain/hwangStatLimits.ts';
-import { renderHwangStatLimits, renderRedistributionStageEditor } from '../src/ui/redistributionStageEditor.ts';
+import { renderHwangStatLimits, renderRedistributionStageEditor } from '../src/ui/redistribution/redistributionStageEditor.ts';
 
 const attack = { id: 1, nodeType: 5, stats: [{ statType: 88, statValue: 60 }, { statType: 89, statValue: 60 }] };
 const hp = { id: 142, nodeType: 6, prevId: 41, requireItems: [{ item: 610004, value: 2 }], stats: [{ statType: 95, statValue: 80 }] };

@@ -5,7 +5,7 @@ import { build } from 'esbuild';
 import { parseTrickcalApiPayload } from '../src/domain/dataParser.ts';
 import { calculateAllApostlesProgress } from '../src/domain/boardProgress.ts';
 import { matchesApostleFilter } from '../src/domain/filters.ts';
-import { isSiteMutation, invalidateChangedCards, collectChangedCards } from '../src/ui/mutations.ts';
+import { isSiteMutation, invalidateChangedCards, collectChangedCards } from '../src/ui/board/mutations.ts';
 import { mockHeroInfo, mockMasterBoard, mockText, mockUserApostles } from './fixtures/sanitizedData.mjs';
 
 const payload = () => structuredClone({ apostles: mockUserApostles, board: mockMasterBoard, heroInfo: mockHeroInfo, text: mockText });
@@ -206,7 +206,7 @@ test('배열로 전달되는 보드 차수도 객체 차수와 동일하게 계�
 
 test('같은 필터의 새 진행도는 배지를 갱신하고 동일 데이터는 행을 재사용한다', async () => {
   const bundled = await build({
-    entryPoints: ['src/ui/boardEnhancer.ts'], bundle: true, write: false, format: 'iife', globalName: 'enhancer',
+    entryPoints: ['src/ui/board/boardEnhancer.ts'], bundle: true, write: false, format: 'iife', globalName: 'enhancer',
     plugins: [{ name: '배지 렌더러 대역', setup(builder) {
       builder.onLoad({ filter: /badge\.ts$/ }, () => ({ contents: 'export function createBadgeElement(progress) { return { picked: progress.bokr.picked }; }' }));
       builder.onLoad({ filter: /normalStat\.ts$/ }, () => ({ contents: 'export function createNormalStatElement() { return {}; }' }));
@@ -327,7 +327,7 @@ test('변경 범위는 카드 내부에 한정하고 목록 교체와 탭 변경
 });
 
 test('API 표시 이름의 태그와 따옴표를 HTML로 실행하지 않는다', async () => {
-  const { escapeHtml } = await import('../src/ui/html.ts');
+  const { escapeHtml } = await import('../src/ui/common/html.ts');
   assert.equal(escapeHtml('<img title="가짜">&'), '&lt;img title=&quot;가짜&quot;&gt;&amp;');
 });
 
@@ -348,7 +348,7 @@ test('카드 내부 교체와 텍스트 변경은 캐시를 한 번 해제하고
 });
 
 test('요약 DOM은 동일 조건에서 재사용하고 데이터·필터·컨테이너 변경 시 갱신한다', async () => {
-  const bundled = await build({ entryPoints: ['src/ui/filterPanel.ts'], bundle: true, write: false, format: 'iife', globalName: 'panel' });
+  const bundled = await build({ entryPoints: ['src/ui/board/filterPanel.ts'], bundle: true, write: false, format: 'iife', globalName: 'panel' });
   let created = 0;
   const makeElement = () => {
     created++;

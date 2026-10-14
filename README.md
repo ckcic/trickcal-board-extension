@@ -54,7 +54,21 @@
 - 보크 칸을 클릭하면 선택한 차수의 위치 보드, 선택 칸의 비용과 색칠 경로의 추가 비용을 표시합니다.
 - 이미 칠한 칸과 열린 관문의 비용은 다시 더하지 않으며, 닫힌 선행 꽃잎의 물뿌리개·골드를 반영합니다.
 - 황크·만개 칸은 원본 모달을 유지합니다. 작은 창에서도 카드와 팝업이 원본 고정 메뉴를 가리지 않습니다.
-- 자세한 변경 사항은 [1.0.9 릴리스 노트](RELEASE_NOTES.md)를 참고하세요.
+
+### 9. 🔄 만개·황크 재분배 시뮬레이터 (베타)
+- **3단 탭 네비게이션:** `[⚙️ 목표·예산 설정]`, `[📋 추천 결과 & 작업 순서]`, `[📈 인원별 비교 그래프]` 탭 분리로 최적화된 UX 제공.
+- **사도별 바로가기 빠른 이동 목차 (TOC):** 한글 초성 검색(`ㄱㄴㄷ`) 및 완성형 혼합 검색 지원, 2열 분할 레이아웃으로 135명 사도를 쾌적하게 탐색.
+- **사복(스킨) 자동 매핑 미니 아바타:** 유저가 착용한 사복 스킨의 공식 CDN 초상화를 100% 자동 적용하여 목차·작업 순서·지도 헤더에 표시.
+- **우선순위 단계 설정 & 프리셋 공유:** 단계별 목표/스탯/보크 누적 범위 설정, 드래그 앤 드롭 순서 변경, 표준 JSON 프리셋 클립보드 복사 및 파일 다운로드/불러오기 지원.
+- **작업 순서 텍스트 원클릭 복사:** 초기화 대상 및 차수별 색칠 계획을 텍스트로 한 번에 복사하여 게임 플레이 시 간편하게 참조.
+- **국룰 최적화 알고리즘:** 사도 초기화 시 불필요한 일반칸을 강제 복구하지 않는 **클린 슬레이트 최소 복구** 및 황크 경로에서의 **보크 회피** 규칙 적용.
+
+### 10. 🧹 황크·보크 회수 계산기 (베타)
+- **차수별·스탯별 제거 조건 매트릭스:** 1~3차 보드별로 지우고 싶은 황크·보크 스탯을 체크표로 자유롭게 설정.
+- **미선택 황크·보크 100% 보존:** 제거 대상으로 지정하지 않은 기존 황크·보크는 온전히 보존하며, 필수 연결 일반칸만 최소 복구.
+- **기본안 vs 만개 허용안 비교:** 닫힌 꽃잎을 열지 않는 기본 복구안과 만개 물뿌리개로 확장 황크를 우회하여 보크를 극대화 회수하는 만개안을 동시 비교.
+- **사도별 순위 & 누적 회수량:** 황크 또는 보크 기준 정렬, 상위 N명 누적 순회수량, 전체 보드 지도(✓ 유지/복구, + 신규, × 지움) 및 단계별 복구 순서 제공.
+- **설정 자동 저장:** 브라우저 로컬 저장소를 통해 제거 체크 및 만개 옵션을 영구 보존·복원.
 
 ---
 
@@ -120,22 +134,48 @@ src/
 ├── bridge/          # MAIN world와 ISOLATED world 간 안전한 통신 및 Virtuoso 가상 목록 연동
 │   ├── interceptor.ts   # fetch/XHR API 응답 데이터 가로채기
 │   ├── contentBridge.ts # postMessage 통신 브리지
+│   ├── tileIdentity.ts  # 보드 타일 실제 식별자 및 React Fiber 추출 브리지
 │   └── virtualGrid.ts   # react-virtuoso 가상 목록 필터/정렬 어댑터
 ├── domain/          # 순수 비즈니스 로직 및 스탯/진행도 계산 (Chrome API 독립)
 │   ├── boardProgress.ts # 보크/황크/일반칸 진행도 계산
 │   ├── normalStatValues.ts # 태생 성급별 일반칸 고정 스탯 상승량 테이블
+│   ├── boardPathfinder.ts # 보크 칸 최단 경로 및 필요 비용 계산
+│   ├── boardRecovery.ts # 황크·보크 회수 계산 도메인
+│   ├── hwangRedistribution.ts # 만개·황크 재분배 최적화 알고리즘
+│   ├── redistributionSearch.ts # 재분배 빔 탐색 및 조합 최적화
+│   ├── redistributionCurve.ts # 인원별 진행도 곡선 산출
+│   ├── redistributionPreset.ts # 재분배 프리셋 검증 및 직렬화
+│   ├── koreanSearch.ts  # 한글 초성 검색(ㄱㄴㄷ) 엔진
+│   ├── hwangStatLimits.ts # 스탯별 상한 분석
 │   ├── filters.ts       # 다차원 필터 판정 로직
 │   ├── listSelection.ts # 가상 목록 정렬 및 사도 ID 선별
 │   ├── updateChecker.ts # 신규 릴리스 버전 확인
 │   └── types.ts         # TypeScript 타입 정의
-├── ui/              # DOM 하이라이팅, 뱃지 주입, 필터 패널 오케스트레이션
-│   ├── boardEnhancer.ts # 사도 카드 뱃지 주입 및 가시성 제어
-│   ├── filterPanel.ts   # 4단 필터/정렬 컨트롤 패널 및 스탯 요약 바
-│   ├── normalStat.ts    # 일반칸 상세 진행도 팝업 및 고정(Pin) 모달
-│   ├── badge.ts         # 보크 뱃지 및 전역 포털 툴팁
-│   ├── tileHighlight.ts # 보드 타일 실시간 테두리 하이라이트
-│   └── styles.css       # 네임스페이스 격리 스타일시트
-└── content.ts       # ISOLATED world 엔트리포인트 및 DOM MutationObserver
+├── ui/              # 루트 스타일 및 4개 기능별 서브디렉토리
+│   ├── common/          # 공통 모달(commonModal), 클립보드 복사(clipboard), 스크롤 락, HTML 유틸
+│   ├── board/           # 인게임 DOM 조작, 카드 뱃지 주입, 필터 패널, 타일 하이라이트, 보크 상세 모달
+│   │   ├── boardEnhancer.ts # 사도 카드 뱃지 주입 및 가시성 제어
+│   │   ├── filterPanel.ts   # 4단 필터/정렬 컨트롤 패널 및 스탯 요약 바
+│   │   ├── normalStat.ts    # 일반칸 상세 진행도 팝업 및 고정(Pin) 모달
+│   │   ├── badge.ts         # 보크 뱃지 및 전역 포털 툴팁
+│   │   ├── tileHighlight.ts # 보드 타일 실시간 테두리 하이라이트
+│   │   ├── cardDetector.ts  # 사도 카드 DOM 감지
+│   │   ├── boardNode.ts     # 보드 노드 시각화 정보 추출
+│   │   ├── mutations.ts     # MutationObserver 변경 감지
+│   │   └── bokrModal.ts     # 보크 상세 모달 및 경로 강조
+│   ├── redistribution/  # 만개·황크 재분배 시뮬레이터
+│   │   ├── hwangRedistribution.ts # 재분배 메인 모달 (3단 탭, TOC)
+│   │   ├── redistributionStageEditor.ts # 단계 편집기 및 드래그 앤 드롭
+│   │   ├── redistributionSummary.ts # 결과 요약 렌더러
+│   │   ├── redistributionCurve.ts # 인원별 그래프 렌더러
+│   │   ├── redistributionPresetModal.ts # 프리셋 JSON/파일 입출력 모달
+│   │   ├── redistributionSettings.ts # 재분배 설정 저장/복원
+│   │   └── redistributionResource.ts # 재화 아이콘 및 범위 라벨
+│   ├── recovery/        # 황크·보크 회수 계산기
+│   │   ├── boardRecovery.ts # 회수 계산 메인 모달 (초성 검색, 순회수 필터)
+│   │   └── boardRecoverySettings.ts # 회수 설정 저장/복원
+│   └── styles.css       # 네임스페이스 격리 메인 스타일시트
+└── content.ts       # ISOLATED world 엔트리포인트 및 레이어 간 오케스트레이션
 ```
 
 ---

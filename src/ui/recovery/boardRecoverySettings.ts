@@ -1,5 +1,5 @@
-import { STAT_META_LIST } from '../domain/boardProgress.ts';
-import type { RecoveryResource, RecoverySelection } from '../domain/boardRecovery.ts';
+import { STAT_META_LIST } from '../../domain/boardProgress.ts';
+import type { RecoveryResource, RecoverySelection } from '../../domain/boardRecovery.ts';
 
 export const RECOVERY_SETTINGS_KEY = 'tcbe_recovery_settings_v1';
 export interface RecoverySettings { picks: string[]; compareFlowering: boolean }

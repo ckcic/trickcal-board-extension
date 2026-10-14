@@ -1,0 +1,106 @@
+/**
+ * @file tokens.css
+ * @description 트릭컬 보드 확장 프로그램 공통 디자인 토큰 (CSS 변수)
+ */
+
+:root {
+  /* ── 원본 게임 에셋 URL (서버 및 CDN 참조) ── */
+  --tcbe-stat-sprite: url('https://note.trickcal.com/UI/Stat.webp');
+  --tcbe-personality-sprite: url('https://note.trickcal.com/UI/Common_UnitPersonality.webp');
+  --tcbe-gate-icon: url('https://note.trickcal.com/UI/Gate.webp');
+
+  /* ── 크레파스 및 재화 아이콘 (서버 에셋) ── */
+  --tcbe-pastel-basic: url('https://note.trickcal.com/UI/basic_pastel.webp');
+  --tcbe-pastel-average: url('https://note.trickcal.com/UI/average_pastel.webp');
+  --tcbe-pastel-epic: url('https://note.trickcal.com/UI/epic_pastel.webp');
+  --tcbe-pastel-ultra: url('https://note.trickcal.com/UI/ultra_pastel.webp');
+  --tcbe-gold-icon: url('https://note.trickcal.com/UI/gold.webp');
+
+  /* ── 배경 및 표면 색상 ── */
+  --tcbe-bg-white: #ffffff;
+  --tcbe-bg-muted: #f8fafc;
+  --tcbe-bg-subtle: #f1f5f9;
+  --tcbe-backdrop: rgb(15 23 42 / 55%);
+
+  /* ── 텍스트 색상 ── */
+  --tcbe-text-heading: #0f172a;
+  --tcbe-text-primary: #1e293b;
+  --tcbe-text-secondary: #475569;
+  --tcbe-text-muted: #64748b;
+  --tcbe-text-faint: #94a3b8;
+
+  /* ── 테두리(보더) 색상 ── */
+  --tcbe-border-default: #cbd5e1;
+  --tcbe-border-light: #e2e8f0;
+  --tcbe-border-subtle: #f1f5f9;
+
+  /* ── 브랜드 및 상태 색상 ── */
+  /* 그린 계열 (보크/성공/완료/메인 액션) */
+  --tcbe-green-primary: #15803d;
+  --tcbe-green-accent: #86efac;
+  --tcbe-green-text: #15803d;
+  --tcbe-green-text-dark: #276749;
+  --tcbe-green-icon: #16a34a;
+  --tcbe-green-bright: #22c55e;
+  --tcbe-green-bg: #dcfce7;
+  --tcbe-green-bg-soft: #f0fdf4;
+
+  /* 블루 계열 (일반칸/선택/정보/포커스) */
+  --tcbe-blue-primary: #3b82f6;
+  --tcbe-blue-dark: #1d4ed8;
+  --tcbe-blue-text: #2563eb;
+  --tcbe-blue-light: #93c5fd;
+  --tcbe-blue-accent: #60a5fa;
+  --tcbe-blue-bg: #eff6ff;
+  --tcbe-blue-sky: #0284c7;
+
+  /* 오렌지 계열 (잔여/주의/경고) */
+  --tcbe-orange-text: #ea580c;
+  --tcbe-orange-badge: #f97316;
+  --tcbe-orange-bg: #ffedd5;
+  --tcbe-orange-border: #fed7aa;
+
+  /* 레드 계열 (하이라이트/위험/취소) */
+  --tcbe-red-primary: #ef4444;
+  --tcbe-red-dark: #dc2626;
+  --tcbe-red-bg: #fee2e2;
+
+  /* 퍼플 계열 (힌트/추천) */
+  --tcbe-purple-text: #6b21a8;
+  --tcbe-purple-bg: #f3e8ff;
+
+  /* 트릭컬 테마 패널 (부드러운 연두색) */
+  --tcbe-panel-bg: #f4f6ea;
+  --tcbe-panel-border: #e2e8d5;
+  --tcbe-panel-border-dark: #cbd5b8;
+
+  /* ── 간격 및 여백 토큰 ── */
+  --tcbe-gap-xs: 4px;
+  --tcbe-gap-sm: 6px;
+  --tcbe-gap-md: 10px;
+  --tcbe-gap-lg: 14px;
+  --tcbe-gap-xl: 20px;
+
+  /* ── 둥글기(반지름) 토큰 ── */
+  --tcbe-radius-sm: 4px;
+  --tcbe-radius-md: 6px;
+  --tcbe-radius-lg: 8px;
+  --tcbe-radius-xl: 12px;
+  --tcbe-radius-2xl: 16px;
+  --tcbe-radius-badge: 7px;
+  --tcbe-radius-full: 9999px;
+
+  /* ── 그림자 토큰 ── */
+  --tcbe-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --tcbe-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --tcbe-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --tcbe-shadow-dialog: 0 20px 25px -5px rgba(15, 23, 42, 0.2), 0 10px 10px -5px rgba(15, 23, 42, 0.08);
+
+  /* ── 전환 효과 토큰 ── */
+  --tcbe-transition-fast: all 0.15s ease;
+  --tcbe-transition-normal: all 0.2s ease;
+
+  /* ── 타이포그래피 토큰 ── */
+  --tcbe-font-stack: inherit, "Pretendard", "SUIT", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --tcbe-font-mono: "Pretendard", "Consolas", monospace, sans-serif;
+}

@@ -173,6 +173,9 @@
 #tcbe-redistribution-dialog .tcbe-rd-copy-status { font-size: 12px; color: #166534; font-weight: 600; }
 #tcbe-redistribution-dialog .tcbe-rd-preset-btn { font-weight: 600; color: #2563eb; border-color: #bfdbfe; background: #eff6ff; }
 #tcbe-redistribution-dialog .tcbe-rd-preset-btn:hover { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
+#tcbe-redistribution-dialog .tcbe-rd-chip { padding: 4px 10px; font-size: 12px; font-weight: 500; border-radius: 20px; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569; cursor: pointer; transition: all .15s ease; }
+#tcbe-redistribution-dialog .tcbe-rd-chip:hover { background: #f1f5f9; border-color: #94a3b8; color: #0f172a; }
+#tcbe-redistribution-dialog .tcbe-rd-chip.tcbe-rd-chip-active { background: #3b82f6; border-color: #2563eb; color: #fff; font-weight: 600; }
 
 /* 단계 설정 프리셋 내보내기/가져오기 서브 모달 */
 .tcbe-rd-modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); display: flex; align-items: center; justify-content: center; z-index: 10000; padding: 20px; animation: tcbe-fade-in .15s ease-out; backdrop-filter: blur(2px); }

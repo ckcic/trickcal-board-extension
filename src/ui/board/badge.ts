@@ -1,11 +1,11 @@
-import { escapeHtml } from './html.ts';
+import { escapeHtml } from '../common/html.ts';
 /**
  * @file badge.ts
  * @description 사도 카드에 삽입되는 상급칸(보크) 진행도 뱃지 및 상세 툴팁 포털 DOM 생성 모듈
  */
 
-import { PERSONALITY_META_LIST, STAT_META_LIST } from '../domain/boardProgress.ts';
-import type { ApostleProgress, FilterState } from '../domain/types.ts';
+import { PERSONALITY_META_LIST, STAT_META_LIST } from '../../domain/boardProgress.ts';
+import type { ApostleProgress, FilterState } from '../../domain/types.ts';
 
 /**
  * 상급칸(보크) 상세 현황 툴팁 내부 HTML 생성

@@ -1,5 +1,5 @@
-import { collectChangedCards, invalidateCardCaches } from './ui/mutations.ts';
-import { readCommentArt } from './ui/commentArt.ts';
+import { collectChangedCards, invalidateCardCaches } from './ui/board/mutations.ts';
+import { readCommentArt } from './ui/common/commentArt.ts';
 import { matchesApostleFilter } from './domain/filters.ts';
 import { selectApostleIds } from './domain/listSelection.ts';
 /**
@@ -15,10 +15,10 @@ import {
   STAT_META_LIST,
 } from './domain/boardProgress.ts';
 import type { ApostleProgress, ExtractedApiData, FilterState } from './domain/types.ts';
-import { applyFilterToCards, enhanceApostleCards, setBadgesVisible } from './ui/boardEnhancer.ts';
-import { FilterPanelController } from './ui/filterPanel.ts';
-import { closeHwangRedistribution } from './ui/hwangRedistribution.ts';
-import { closeBoardRecovery } from './ui/boardRecovery.ts';
+import { applyFilterToCards, enhanceApostleCards, setBadgesVisible } from './ui/board/boardEnhancer.ts';
+import { FilterPanelController } from './ui/board/filterPanel.ts';
+import { closeHwangRedistribution } from './ui/redistribution/hwangRedistribution.ts';
+import { closeBoardRecovery } from './ui/recovery/boardRecovery.ts';
 
 (() => {
   chrome.runtime.onMessage.addListener((message, sender, respond) => {

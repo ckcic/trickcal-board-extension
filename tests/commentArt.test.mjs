@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import vm from 'node:vm';
 import { build } from 'esbuild';
-import { selectCommentArt } from '../src/ui/commentArt.ts';
+import { selectCommentArt } from '../src/ui/common/commentArt.ts';
 
 test('짧은 주석은 제외하고 문자 아트의 공백과 줄바꿈은 보존한다', () => {
   const art = '\n' + Array(10).fill('   ..::xxOOxx::..      ..::xxOOxx::..').join('\n') + '   \n';

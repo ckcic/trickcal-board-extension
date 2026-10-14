@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { calculateApostleRecovery, getBestRecoveryAlternative, getRecoveryNodes, getRecoveryTargets } from '../src/domain/boardRecovery.ts';
-import { getRecoveryDisplayAlternatives, renderRecoveryMap } from '../src/ui/boardRecovery.ts';
+import { getRecoveryDisplayAlternatives, renderRecoveryMap } from '../src/ui/recovery/boardRecovery.ts';
 
 const start = () => ({ id: 1, nodeType: 2, grid: { x: 0, y: 0 } });
 const normal = (id, x, y) => ({ id, nodeType: 3, grid: { x, y }, requireGold: 10, requireItems: [{ item: 610001, value: 1 }] });

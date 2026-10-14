@@ -3,21 +3,19 @@
  * @description 트릭컬 노트의 사도별 탭 상단에 배치되는 스탯/성격/성급/보드차수별 필터 컨트롤 패널 및 스탯별 총 칸 수/수치 통계 바
  */
 
-import { PERSONALITY_META_LIST, STAT_META_LIST } from '../domain/boardProgress.ts';
-import { checkForUpdate } from '../domain/updateChecker.ts';
-import { openHwangRedistribution } from './hwangRedistribution.ts';
-import { closeBoardRecovery, openBoardRecovery } from './boardRecovery.ts';
+import { PERSONALITY_META_LIST, STAT_META_LIST } from '../../domain/boardProgress.ts';
+import { checkForUpdate } from '../../domain/updateChecker.ts';
+import { openHwangRedistribution } from '../redistribution/hwangRedistribution.ts';
+import { closeBoardRecovery, openBoardRecovery } from '../recovery/boardRecovery.ts';
 import type {
   ApostleProgress,
   BoardFilterLevel,
   BokrFilterStatus,
   FilterState,
   GradeFilterTarget,
-  PersonalityFilterTarget,
   StatCategory,
-  StatFilterTarget,
   UnlockedTierFilter,
-} from '../domain/types.ts';
+} from '../../domain/types.ts';
 
 export interface FilterChangeCallback {
   (newState: FilterState): void;
@@ -548,7 +546,7 @@ export class FilterPanelController {
 
   public updateStats(
     visible: number,
-    totalCards: number,
+    _totalCards: number,
     masterTotal: number,
     incompleteCount: number,
     statName?: string,

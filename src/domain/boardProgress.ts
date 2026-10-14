@@ -12,7 +12,6 @@ import type {
   HeroInfo,
   MasterBoardNode,
   NodeStat,
-  NormalBoardProgress,
   NormalStatDetail,
   PersonalityMeta,
   PersonalityType,
@@ -65,15 +64,15 @@ export const STAT_CATEGORIES: StatCategory[] = [
 
 /** 스탯 메타데이터 정의 (spriteIndex: Stat.webp의 0~8번에 대응, valuePerNode: 보크 1칸당 증가 수치) */
 export const STAT_META_LIST: StatMeta[] = [
-  { key: 'hp', nameKo: '체력', iconChar: '💚', color: '#22c55e', spriteIndex: 0, valuePerNode: 199 },
-  { key: 'atk_phys', nameKo: '물공', iconChar: '⚔️', color: '#f97316', spriteIndex: 1, valuePerNode: 13 },
-  { key: 'atk_mag', nameKo: '마공', iconChar: '🪄', color: '#38bdf8', spriteIndex: 2, valuePerNode: 13 },
-  { key: 'def_phys', nameKo: '물방', iconChar: '🛡️', color: '#fb923c', spriteIndex: 3, valuePerNode: 20 },
-  { key: 'def_mag', nameKo: '마방', iconChar: '🔮', color: '#a855f7', spriteIndex: 4, valuePerNode: 20 },
-  { key: 'crit', nameKo: '치명', iconChar: '💥', color: '#f43f5e', spriteIndex: 5, valuePerNode: 15 },
-  { key: 'crit_dmg', nameKo: '치피', iconChar: '🔥', color: '#ef4444', spriteIndex: 6, valuePerNode: 15 },
-  { key: 'crit_res', nameKo: '치저', iconChar: '🔰', color: '#06b6d4', spriteIndex: 7, valuePerNode: 15 },
-  { key: 'crit_dmg_res', nameKo: '치피저', iconChar: '🧱', color: '#ec4899', spriteIndex: 8, valuePerNode: 15 },
+  { key: 'hp', nameKo: '체력', color: '#22c55e', spriteIndex: 0, valuePerNode: 199 },
+  { key: 'atk_phys', nameKo: '물공', color: '#f97316', spriteIndex: 1, valuePerNode: 13 },
+  { key: 'atk_mag', nameKo: '마공', color: '#38bdf8', spriteIndex: 2, valuePerNode: 13 },
+  { key: 'def_phys', nameKo: '물방', color: '#fb923c', spriteIndex: 3, valuePerNode: 20 },
+  { key: 'def_mag', nameKo: '마방', color: '#a855f7', spriteIndex: 4, valuePerNode: 20 },
+  { key: 'crit', nameKo: '치명', color: '#f43f5e', spriteIndex: 5, valuePerNode: 15 },
+  { key: 'crit_dmg', nameKo: '치피', color: '#ef4444', spriteIndex: 6, valuePerNode: 15 },
+  { key: 'crit_res', nameKo: '치저', color: '#06b6d4', spriteIndex: 7, valuePerNode: 15 },
+  { key: 'crit_dmg_res', nameKo: '치피저', color: '#ec4899', spriteIndex: 8, valuePerNode: 15 },
 ];
 
 /** 성격(Personality) 메타데이터 정의 (spriteIndex: Common_UnitPersonality.webp의 0~5번에 대응) */
@@ -156,7 +155,7 @@ export function getNodeStatCategories(node: MasterBoardNode): StatCategory[] {
 }
 
 /** 빈 스탯 카운트 맵 생성 (STAT_CATEGORIES 배열 기반 자동 생성) */
-export function createEmptyStatCountMap(): Record<StatCategory, StatCountSummary> {
+function createEmptyStatCountMap(): Record<StatCategory, StatCountSummary> {
   return Object.fromEntries(
     STAT_CATEGORIES.map(cat => [cat, { total: 0, picked: 0, remaining: 0 }])
   ) as Record<StatCategory, StatCountSummary>;
@@ -165,7 +164,7 @@ export function createEmptyStatCountMap(): Record<StatCategory, StatCountSummary
 /**
  * 빈 일반칸 스탯 수치 집계 맵 생성 (STAT_CATEGORIES 배열 기반 자동 생성)
  */
-export function createEmptyNormalStatMap(): Record<StatCategory, NormalStatDetail> {
+function createEmptyNormalStatMap(): Record<StatCategory, NormalStatDetail> {
   return Object.fromEntries(
     STAT_CATEGORIES.map(cat => [cat, {
       valuesKnown: true,
@@ -193,7 +192,7 @@ export function createEmptyCostSummary(): ResourceCostSummary {
 /**
  * 노드의 필요 재화(크레파스 및 골드)를 대상 누적 객체에 합산
  */
-export function addNodeCost(target: ResourceCostSummary, node: MasterBoardNode): void {
+function addNodeCost(target: ResourceCostSummary, node: MasterBoardNode): void {
   if (node.requireGold && typeof node.requireGold === 'number') {
     target.gold += node.requireGold;
   }
@@ -247,7 +246,7 @@ export function isHwangNode(node: MasterBoardNode): boolean {
 /**
  * 텍스트 테이블을 참조하여 사도의 실제 이름을 가져옴
  */
-export function resolveApostleName(
+function resolveApostleName(
   apostleId: number,
   heroInfoMap: ExtractedApiData['heroInfo'],
   textMap: ExtractedApiData['text']

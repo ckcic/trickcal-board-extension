@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import test, { describe } from 'node:test';
 import { calculateApostleProgress, isLargeNormalNode } from '../src/domain/boardProgress.ts';
-import { formatGold } from '../src/ui/boardEnhancer.ts';
+import { formatGold } from '../src/ui/board/boardEnhancer.ts';
 
 describe('일반칸(nodeType 3)의 진행도 및 스탯 집계 테스트', () => {
   // 테스트용 목 데이터:

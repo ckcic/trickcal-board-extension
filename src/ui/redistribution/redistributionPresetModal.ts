@@ -1,9 +1,9 @@
 /**
  * 단계별 우선순위 설정 내보내기/가져오기 모달 UI
  */
-import type { RedistributionStage } from '../domain/hwangRedistribution.ts';
-import { exportRedistributionPreset, parseRedistributionPreset } from '../domain/redistributionPreset.ts';
-import { escapeHtml } from './html.ts';
+import type { RedistributionStage } from '../../domain/hwangRedistribution.ts';
+import { exportRedistributionPreset, parseRedistributionPreset } from '../../domain/redistributionPreset.ts';
+import { escapeHtml } from '../common/html.ts';
 
 /**
  * 단계 설정 내보내기 모달을 엽니다.

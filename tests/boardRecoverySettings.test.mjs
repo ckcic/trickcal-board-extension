@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { expandRecoveryPicks, getRecoveryStatOptions, loadRecoverySettings, normalizeRecoveryPicks, RECOVERY_SETTINGS_KEY, saveRecoverySettings } from '../src/ui/boardRecoverySettings.ts';
+import { expandRecoveryPicks, getRecoveryStatOptions, loadRecoverySettings, normalizeRecoveryPicks, RECOVERY_SETTINGS_KEY, saveRecoverySettings } from '../src/ui/recovery/boardRecoverySettings.ts';
 
 test('황크 공격력은 하나의 선택으로 두 공격 범주를 전달하고 보크는 분리한다', () => {
   const options = getRecoveryStatOptions('hwang');

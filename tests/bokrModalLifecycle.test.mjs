@@ -3,7 +3,7 @@ import test from 'node:test';
 import vm from 'node:vm';
 import { build } from 'esbuild';
 
-const bundled = await build({ entryPoints: ['src/ui/bokrModal.ts'], bundle: true, write: false, format: 'iife', globalName: 'modal' });
+const bundled = await build({ entryPoints: ['src/ui/board/bokrModal.ts'], bundle: true, write: false, format: 'iife', globalName: 'modal' });
 
 function setup(reducedMotion = false) {
   const timers = new Map();

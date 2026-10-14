@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { renderBokrBoard, renderBokrPathCost } from '../src/ui/bokrModal.ts';
+import { renderBokrBoard, renderBokrPathCost } from '../src/ui/board/bokrModal.ts';
 import { findApostlePathToBokr, getApostleBoardLayout } from '../src/domain/boardPathfinder.ts';
 
 const progress = { boards: [

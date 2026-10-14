@@ -1,11 +1,11 @@
-import { escapeHtml } from './html.ts';
+import { escapeHtml } from '../common/html.ts';
 /**
  * @file normalStat.ts
  * @description 사도 카드에 삽입되는 일반칸(nodeType: 3)의 상세 진행도 팝업 및 스탯 테이블 DOM 생성 모듈
  */
 
-import { PERSONALITY_META_LIST, STAT_META_LIST } from '../domain/boardProgress.ts';
-import type { ApostleProgress } from '../domain/types.ts';
+import { PERSONALITY_META_LIST, STAT_META_LIST } from '../../domain/boardProgress.ts';
+import type { ApostleProgress } from '../../domain/types.ts';
 
 /**
  * 일반칸(nodeType: 3)의 상세 진행도 및 스탯 표시용 버튼 & 팝업 DOM 요소 생성

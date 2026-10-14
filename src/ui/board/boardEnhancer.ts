@@ -1,12 +1,12 @@
-import { matchesApostleFilter } from '../domain/filters.ts';
+import { matchesApostleFilter } from '../../domain/filters.ts';
 /**
  * @file boardEnhancer.ts
  * @description 트릭컬 노트의 사도 카드 DOM을 감지하여 뱃지/하이라이트/필터/정렬 및 보크 타일 경로 탐색을 오케스트레이션하는 진입점 모듈
  */
 
-import { findApostlePathToBokr } from '../domain/boardPathfinder.ts';
-import { TILE_APOSTLE_ID, TILE_BOARD_LEVEL, TILE_NODE_ID } from '../bridge/tileIdentity.ts';
-import type { ApostleProgress, FilterState } from '../domain/types.ts';
+import { findApostlePathToBokr } from '../../domain/boardPathfinder.ts';
+import { TILE_APOSTLE_ID, TILE_BOARD_LEVEL, TILE_NODE_ID } from '../../bridge/tileIdentity.ts';
+import type { ApostleProgress, FilterState } from '../../domain/types.ts';
 import { createBadgeElement } from './badge.ts';
 import { closeBokrModal, showBokrModal } from './bokrModal.ts';
 import { findCardContainer, findProgressByName } from './cardDetector.ts';
@@ -21,9 +21,9 @@ export { createNormalStatElement } from './normalStat.ts';
 export { STAT_TO_POSITIONS, updateBoardTileHighlights } from './tileHighlight.ts';
 
 /** 사도 카드를 식별하기 위한 데이터 속성 */
-export const ATTR_APOSTLE_NAME = 'data-tcbe-apostle-name';
-export const ATTR_APOSTLE_ID = 'data-tcbe-apostle-id';
-export const ATTR_ENHANCED = 'data-tcbe-enhanced';
+const ATTR_APOSTLE_NAME = 'data-tcbe-apostle-name';
+const ATTR_APOSTLE_ID = 'data-tcbe-apostle-id';
+const ATTR_ENHANCED = 'data-tcbe-enhanced';
 
 /** 분리된 행은 자동 해제하고 새 API 데이터는 객체 참조로 구분한다. */
 const renderedProgress = new WeakMap<Element, ApostleProgress>();
@@ -65,7 +65,7 @@ export function formatGold(gold: number): string {
 /**
  * 보크 배지와 일반칸 버튼을 포함하는 행 컨테이너 생성
  */
-export function createApostleEnhanceRow(
+function createApostleEnhanceRow(
   progress: ApostleProgress,
   activeFilter?: FilterState
 ): HTMLElement {
@@ -90,7 +90,7 @@ const activePathHighlightedTiles = new Set<HTMLElement>();
 /**
  * 현재 적용된 보크 경로 하이라이트(.tcbe-path-highlight)를 모두 제거
  */
-export function clearPathHighlights(): void {
+function clearPathHighlights(): void {
   activePathHighlightedTiles.forEach((el) => {
     el.classList.remove('tcbe-path-highlight');
   });
@@ -145,7 +145,7 @@ export function getBoardCols(card: HTMLElement): {
 /**
  * 특정 보드 열 내부의 타일(div[class*="--img-board-rect"]) 엘리먼트 배열 반환
  */
-export function getBoardTiles(col: HTMLElement | null): HTMLElement[] {
+function getBoardTiles(col: HTMLElement | null): HTMLElement[] {
   if (!col) return [];
   const tiles = Array.from(col.querySelectorAll<HTMLElement>('div[class*="--img-board-rect"]'));
   if (tiles.length > 0) return tiles;

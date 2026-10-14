@@ -1,7 +1,7 @@
 /** 보크 모달과 재분배 지도에서 같은 노드 스프라이트와 꽃잎 상태를 사용한다. */
-import { findLinkedPetalNode } from '../domain/boardPathfinder.ts';
-import { getNodeStatCategories, isBokrNode, isHwangNode, NODE_TYPE, STAT_META_LIST } from '../domain/boardProgress.ts';
-import type { BoardProgress, MasterBoardNode } from '../domain/types.ts';
+import { findLinkedPetalNode } from '../../domain/boardPathfinder.ts';
+import { getNodeStatCategories, isBokrNode, isHwangNode, NODE_TYPE, STAT_META_LIST } from '../../domain/boardProgress.ts';
+import type { BoardProgress, MasterBoardNode } from '../../domain/types.ts';
 import { STAT_TO_POSITIONS } from './tileHighlight.ts';
 
 export function getBoardNodeVisual(board: BoardProgress, node: MasterBoardNode, picked: boolean) {

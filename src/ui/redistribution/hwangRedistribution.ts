@@ -1,19 +1,20 @@
 import { redistributionResourceIcon as resourceIcon } from './redistributionResource.ts';
 import { loadRedistributionSettings, saveRedistributionSettings } from './redistributionSettings.ts';
-import { findProgressByName } from './cardDetector.ts';
-import { STAT_META_LIST, NODE_TYPE, isHwangNode } from '../domain/boardProgress.ts';
+import { findProgressByName } from '../board/cardDetector.ts';
+import { STAT_META_LIST, NODE_TYPE, isHwangNode } from '../../domain/boardProgress.ts';
 import { openExportPresetModal, openImportPresetModal } from './redistributionPresetModal.ts';
-import { getSpentHwangCrayons, getSpentBokrCrayons, getAttackPathAvailability, getHwangTargetValue, createRedistributionGoalPreview, readBokrValues, createExampleRedistributionStages, iterateHwangRedistribution, type RedistributionNode, type RedistributionStat, type RedistributionPlan, type RedistributionOptions, type RedistributionAction } from '../domain/hwangRedistribution.ts';
-import type { ApostleProgress, ResourceCostSummary, StatCategory } from '../domain/types.ts';
-import { escapeHtml } from './html.ts';
-import { lockPageScroll } from './scrollLock.ts';
-import { getBoardNodeVisual } from './boardNode.ts';
+import { getSpentHwangCrayons, getSpentBokrCrayons, getAttackPathAvailability, getHwangTargetValue, createRedistributionGoalPreview, readBokrValues, createExampleRedistributionStages, iterateHwangRedistribution, type RedistributionNode, type RedistributionStat, type RedistributionPlan, type RedistributionOptions, type RedistributionAction } from '../../domain/hwangRedistribution.ts';
+import type { ApostleProgress, ResourceCostSummary, StatCategory } from '../../domain/types.ts';
+import { escapeHtml } from '../common/html.ts';
+import { lockPageScroll } from '../common/scrollLock.ts';
+import { getBoardNodeVisual } from '../board/boardNode.ts';
 import { renderRedistributionStageEditor, readRedistributionStages, renderHwangStatLimits, getRedistributionStageStats, renderStageTargetHint } from './redistributionStageEditor.ts';
 import { renderRedistributionSummary } from './redistributionSummary.ts';
-import { calculateRedistributionCurve } from '../domain/redistributionCurve.ts';
+import { calculateRedistributionCurve } from '../../domain/redistributionCurve.ts';
 import { renderRedistributionCurve } from './redistributionCurve.ts';
-import { getHwangStatLimits, getRedistributionStatUnit, roundRedistributionTarget } from '../domain/hwangStatLimits.ts';
-import { matchesKoreanSearch } from '../domain/koreanSearch.ts';
+import { getHwangStatLimits, getRedistributionStatUnit, roundRedistributionTarget } from '../../domain/hwangStatLimits.ts';
+import { matchesKoreanSearch } from '../../domain/koreanSearch.ts';
+import { copyTextWithFeedback } from '../common/clipboard.ts';
 
 let dispose: (() => void) | null = null;
 export function closeHwangRedistribution(): void { dispose?.(); }
@@ -193,7 +194,15 @@ export function renderRedistributionResult(plan: RedistributionPlan, options: Re
     <details class="tcbe-rd-method"><summary>계산 기준·제한</summary><p class="tcbe-rd-notice">${plan.notes.map(escapeHtml).join(' ')} 관문 개방을 켠 단계만 새 관문 비용을 포함하며, 미개방 꽃잎은 물뿌리개·골드를 준비해 엽니다. 초기화한 사도는 목표 도달에 필수적인 최소 일반칸만 연결 복구하며(클린 슬레이트 최적화), 보크는 연결과 설정한 목표에 필요한 만큼 다시 칠합니다. 황크는 백분율, 보크는 스탯별 칸 수로 평가합니다. 일반칸 스탯은 평가하지 않습니다.</p></details>
     ${renderRedistributionSummary(plan, summaries)}
     <h3 id="tcbe-sec-orders">3. 작업 순서</h3>
-    <div class="tcbe-rd-orders-tools"><button type="button" class="tcbe-rd-copy-btn" data-copy-orders>📋 작업 순서 텍스트 복사</button><span class="tcbe-rd-copy-status" data-copy-status aria-live="polite"></span></div>
+    <div class="tcbe-rd-orders-tools">
+      <button type="button" class="tcbe-rd-copy-btn" data-copy-orders>📋 작업 순서 텍스트 복사</button>
+      <span class="tcbe-rd-copy-status" data-copy-status aria-live="polite"></span>
+      <div class="tcbe-rd-filter-chips" style="display:flex;gap:6px;margin-left:auto;">
+        <button type="button" class="tcbe-rd-chip tcbe-rd-chip-active" data-action-filter="all">전체 (${plan.actions.length}명)</button>
+        <button type="button" class="tcbe-rd-chip" data-action-filter="reset">초기화 대상만 (${plan.actions.filter(a => a.reset).length}명)</button>
+        <button type="button" class="tcbe-rd-chip" data-action-filter="add">추가 색칠만 (${plan.actions.filter(a => !a.reset).length}명)</button>
+      </div>
+    </div>
     <p>① ${plan.actions.filter(action => action.reset).map(action => escapeHtml(action.apostle.name)).join(', ') || '초기화 대상 없음'}${plan.resetCount ? '의 초기화를 먼저 모두 진행하세요.' : ''}<br>② 필요한 추가 재화를 준비한 뒤, 아래 순서로 사도별 최소 연결 복구 및 추가 색칠을 진행하세요. 칸 번호는 원본 데이터 ID이며 지도에 마우스를 올려 확인할 수 있습니다.</p>
     ${renderActionTable(plan, portraitMap)}<h3 id="tcbe-sec-maps">사도별 보드 지도</h3><p>사도 이름을 누르면 지도를 펼칠 수 있습니다. 테두리와 우측 위 기호로 변경 내용을 구분합니다.</p><p class="tcbe-rd-legend"><span class="tcbe-rd-keep">✓ 유지·복구</span><span class="tcbe-rd-add">+ 새로 칠함</span><span class="tcbe-rd-remove">× 지움</span><span class="tcbe-rd-empty">미선택</span></p>${maps || '<p>현재 설정에서 변경할 칸이 없습니다.</p>'}
 `;
@@ -226,7 +235,7 @@ function renderActionTable(plan: RedistributionPlan, portraitMap?: Map<number | 
       return `<div><b class="tcbe-rd-badge">${board + 1}차</b> ${parts.join(' / ')}</div>`;
     }).join('');
     const avatar = renderApostleAvatar(action.apostle.apostleId, action.apostle.name, portraitMap);
-    return `<tr><td>${index + 1}</td><th><button type="button" data-show-map="${action.apostle.apostleId}">${avatar}<span>${escapeHtml(action.apostle.name)}</span></button></th><td>${action.reset ? '초기화 후 색칠' : '추가 색칠'}</td><td>${boards || '유지'}</td><td>${renderRedistributionCost(action.refund)}</td><td>${renderRedistributionCost(action.spend)}</td><td>${format(action.balance)}</td></tr>`;
+    return `<tr data-action-row="${action.reset ? 'reset' : 'add'}"><td>${index + 1}</td><th><button type="button" data-show-map="${action.apostle.apostleId}">${avatar}<span>${escapeHtml(action.apostle.name)}</span></button></th><td>${action.reset ? '초기화 후 색칠' : '추가 색칠'}</td><td>${boards || '유지'}</td><td>${renderRedistributionCost(action.refund)}</td><td>${renderRedistributionCost(action.spend)}</td><td>${format(action.balance)}</td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
 
@@ -410,7 +419,6 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
     });
   }
 
-  let currentTocPlan: RedistributionPlan | null = null;
   const renderTocApostles = (actions: RedistributionAction[]) => {
     const apostlesContainer = dialog.querySelector<HTMLElement>('[data-toc-apostles]');
     if (!apostlesContainer) return;
@@ -443,7 +451,6 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
   };
 
   const updateToc = (plan: RedistributionPlan) => {
-    currentTocPlan = plan;
     const tocContainer = dialog.querySelector<HTMLElement>('[data-toc-container]');
     const countEl = dialog.querySelector<HTMLElement>('[data-toc-count]');
     const searchInput = dialog.querySelector<HTMLInputElement>('[data-toc-search]');
@@ -767,19 +774,21 @@ export function openHwangRedistribution(progressMap: Map<string, ApostleProgress
     }
   }, true);
   dialog.addEventListener('click', async event => {
+    const filterBtn = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-action-filter]') : null;
+    if (filterBtn) {
+      const filter = filterBtn.dataset.actionFilter;
+      const chips = dialog.querySelectorAll<HTMLButtonElement>('[data-action-filter]');
+      chips.forEach(chip => chip.classList.toggle('tcbe-rd-chip-active', chip === filterBtn));
+      dialog.querySelectorAll<HTMLTableRowElement>('tr[data-action-row]').forEach(row => {
+        row.hidden = filter !== 'all' && row.dataset.actionRow !== filter;
+      });
+      return;
+    }
     const copyButton = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-copy-orders]') : null;
     if (copyButton && currentCalculatedPlan) {
       const statusEl = dialog.querySelector<HTMLElement>('[data-copy-status]');
       const text = generateOrdersText(currentCalculatedPlan);
-      try {
-        await navigator.clipboard.writeText(text);
-        if (statusEl) {
-          statusEl.textContent = '✓ 복사 완료';
-          setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 2500);
-        }
-      } catch {
-        if (statusEl) statusEl.textContent = '복사 실패 (권한 필요)';
-      }
+      await copyTextWithFeedback(text, statusEl, '✓ 복사되었습니다.');
       return;
     }
     const curveButton = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-curve]') : null;

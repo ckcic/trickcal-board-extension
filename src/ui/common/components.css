@@ -1,0 +1,312 @@
+/**
+ * @file components.css
+ * @description 트릭컬 보드 확장 프로그램 공통 UI 컴포넌트 및 유틸리티 스타일
+ */
+
+/* ── 공통 모달 다이얼로그 (Common Dialog) ── */
+dialog[id^="tcbe-"],
+.tcbe-common-dialog {
+  box-sizing: border-box;
+  width: min(1100px, calc(100vw - 24px));
+  max-height: 92dvh;
+  margin: auto;
+  padding: 22px;
+  border: 1px solid var(--tcbe-border-default);
+  border-radius: var(--tcbe-radius-2xl);
+  background: var(--tcbe-bg-white);
+  color: var(--tcbe-text-primary);
+  font: 14px/1.6 var(--tcbe-font-stack);
+  overflow: auto;
+  box-shadow: var(--tcbe-shadow-dialog);
+}
+
+dialog[id^="tcbe-"]::backdrop,
+.tcbe-common-dialog::backdrop {
+  background: var(--tcbe-backdrop);
+  backdrop-filter: blur(2px);
+}
+
+dialog[id^="tcbe-"] [hidden],
+.tcbe-common-dialog [hidden] {
+  display: none !important;
+}
+
+/* ── 모달 헤더 영역 ── */
+dialog[id^="tcbe-"] header,
+.tcbe-common-dialog header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+dialog[id^="tcbe-"] h2,
+.tcbe-common-dialog h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--tcbe-text-heading);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+dialog[id^="tcbe-"] h2 small,
+.tcbe-common-dialog h2 small {
+  padding: 3px 8px;
+  font-size: 12px;
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: var(--tcbe-radius-xl);
+  font-weight: 600;
+}
+
+/* ── WAI-ARIA 메인 탭바 (Main Tabs) ── */
+nav.tcbe-rd-main-tabs,
+nav.tcbe-tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 2px solid var(--tcbe-border-light);
+  margin: 0 0 16px 0;
+}
+
+nav.tcbe-rd-main-tabs button,
+nav.tcbe-tabs button {
+  padding: 9px 16px;
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tcbe-text-secondary);
+  cursor: pointer;
+  transition: var(--tcbe-transition-fast);
+  margin-bottom: -2px;
+}
+
+nav.tcbe-rd-main-tabs button:hover,
+nav.tcbe-tabs button:hover {
+  color: var(--tcbe-text-primary);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+nav.tcbe-rd-main-tabs button[aria-selected="true"],
+nav.tcbe-tabs button[aria-selected="true"] {
+  color: var(--tcbe-green-primary);
+  border-bottom-color: var(--tcbe-green-primary);
+  font-weight: 700;
+}
+
+.tcbe-rd-tab-badge,
+.tcbe-tab-badge {
+  margin-left: 6px;
+  padding: 2px 7px;
+  font-size: 11px;
+  border-radius: var(--tcbe-radius-full);
+  background: var(--tcbe-border-light);
+  color: var(--tcbe-text-secondary);
+  font-weight: 600;
+}
+
+nav.tcbe-rd-main-tabs button[aria-selected="true"] .tcbe-rd-tab-badge,
+nav.tcbe-tabs button[aria-selected="true"] .tcbe-tab-badge {
+  background: var(--tcbe-green-bg);
+  color: var(--tcbe-green-text);
+}
+
+/* ── 버튼 공통 (Buttons) ── */
+dialog[id^="tcbe-"] button,
+.tcbe-common-dialog button {
+  padding: 7px 12px;
+  border: 1px solid var(--tcbe-border-default);
+  border-radius: 7px;
+  background-color: var(--tcbe-bg-muted);
+  color: var(--tcbe-text-primary);
+  font-family: var(--tcbe-font-stack);
+  font-size: 13px;
+  cursor: pointer;
+  transition: var(--tcbe-transition-fast);
+}
+
+dialog[id^="tcbe-"] button:hover,
+.tcbe-common-dialog button:hover {
+  background-color: var(--tcbe-bg-subtle);
+  border-color: #94a3b8;
+}
+
+dialog[id^="tcbe-"] button:disabled,
+.tcbe-common-dialog button:disabled {
+  opacity: .5;
+  cursor: default;
+  pointer-events: none;
+}
+
+dialog[id^="tcbe-"] :focus-visible,
+.tcbe-common-dialog :focus-visible {
+  outline: 3px solid var(--tcbe-blue-text);
+  outline-offset: 2px;
+}
+
+/* 주요 실행 버튼 (녹색 강조) */
+dialog[id^="tcbe-"] [data-calculate],
+dialog[id^="tcbe-"] [aria-pressed="true"],
+.tcbe-btn-primary {
+  background: var(--tcbe-green-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--tcbe-green-primary) !important;
+  font-weight: 700 !important;
+}
+
+dialog[id^="tcbe-"] [data-calculate]:hover,
+.tcbe-btn-primary:hover {
+  filter: brightness(1.1);
+}
+
+/* ── 폼 컨트롤 (Inputs, Selects, Radios, Checkboxes) ── */
+dialog[id^="tcbe-"] input[type=number],
+dialog[id^="tcbe-"] input[type=search],
+dialog[id^="tcbe-"] input[type=text],
+dialog[id^="tcbe-"] select,
+.tcbe-input,
+.tcbe-select {
+  padding: 6px 10px;
+  border: 1px solid #94a3b8;
+  border-radius: 6px;
+  color: var(--tcbe-text-primary);
+  background: #ffffff;
+  font-size: 13px;
+  font-family: var(--tcbe-font-stack);
+  box-sizing: border-box;
+}
+
+dialog[id^="tcbe-"] input[type=number] {
+  width: 70px;
+}
+
+dialog[id^="tcbe-"] input[type=search] {
+  min-width: 200px;
+}
+
+dialog[id^="tcbe-"] input:focus,
+dialog[id^="tcbe-"] select:focus,
+.tcbe-input:focus,
+.tcbe-select:focus {
+  border-color: var(--tcbe-blue-text);
+  outline: 2px solid var(--tcbe-blue-text);
+  outline-offset: -1px;
+}
+
+dialog[id^="tcbe-"] input[type=checkbox],
+dialog[id^="tcbe-"] input[type=radio] {
+  accent-color: var(--tcbe-green-primary);
+  margin-right: 7px;
+  cursor: pointer;
+}
+
+dialog[id^="tcbe-"] fieldset {
+  margin: 14px 0;
+  padding: 12px;
+  border: 1px solid var(--tcbe-border-default);
+  border-radius: 10px;
+}
+
+dialog[id^="tcbe-"] legend {
+  font-weight: 700;
+  padding: 0 5px;
+}
+
+/* ── 공통 툴바 및 알림 박스 ── */
+.tcbe-toolbar,
+.tcbe-rd-toolbar,
+.tcbe-rc-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.tcbe-notice,
+.tcbe-rd-notice,
+.tcbe-rc-notice {
+  background: var(--tcbe-green-bg-soft);
+  border: 1px solid #bbf7d0;
+  padding: 12px;
+  border-radius: var(--tcbe-radius-lg);
+  font-size: 13px;
+  color: var(--tcbe-text-secondary);
+  line-height: 1.5;
+}
+
+.tcbe-total,
+.tcbe-rc-total {
+  background: var(--tcbe-green-bg-soft);
+  border: 1px solid #bbf7d0;
+  padding: 12px;
+  border-radius: var(--tcbe-radius-lg);
+  font-size: 14px;
+  color: var(--tcbe-text-primary);
+}
+
+.tcbe-total strong,
+.tcbe-rc-total strong {
+  font-size: 20px;
+  color: var(--tcbe-text-heading);
+}
+
+.tcbe-hint,
+.tcbe-rc-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: var(--tcbe-purple-bg);
+  color: var(--tcbe-purple-text);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tcbe-copy-status,
+.tcbe-rd-copy-status {
+  font-size: 12px;
+  color: var(--tcbe-green-text);
+  font-weight: 700;
+  margin-left: 8px;
+}
+
+/* ── 사도 미니 아바타 및 헤더 정보 ── */
+.tcbe-apostle-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  object-fit: contain;
+  vertical-align: middle;
+  background: var(--tcbe-bg-subtle);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.tcbe-summary-main,
+.tcbe-rd-summary-main,
+.tcbe-rc-summary-main {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  vertical-align: middle;
+}
+
+/* ── 재화 비용 칩 ── */
+.tcbe-cost-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--tcbe-bg-muted);
+  border: 1px solid var(--tcbe-border-default);
+}

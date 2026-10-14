@@ -1,8 +1,8 @@
 import { redistributionResourceIcon, redistributionBoardLabel } from './redistributionResource.ts';
 /** 단계는 묶어서, 최종 배치는 스탯당 한 줄로 보여준다. */
-import { STAT_META_LIST, NODE_TYPE } from '../domain/boardProgress.ts';
-import { getHwangTargetValue, readBokrValues, type RedistributionPlan, type RedistributionStageResult, type RedistributionStat } from '../domain/hwangRedistribution.ts';
-import { getRedistributionStatUnit } from '../domain/hwangStatLimits.ts';
+import { STAT_META_LIST } from '../../domain/boardProgress.ts';
+import { getHwangTargetValue, readBokrValues, type RedistributionPlan, type RedistributionStageResult, type RedistributionStat } from '../../domain/hwangRedistribution.ts';
+import { getRedistributionStatUnit } from '../../domain/hwangStatLimits.ts';
 
 const format = (value: number) => Number(value.toFixed(1)).toLocaleString('ko-KR');
 const names = new Map<RedistributionStat, string>(STAT_META_LIST.map(meta => [meta.key, meta.nameKo]));

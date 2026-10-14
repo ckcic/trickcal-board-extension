@@ -32,7 +32,6 @@ export interface PersonalityMeta {
 export interface StatMeta {
   key: StatCategory;
   nameKo: string;
-  iconChar: string;
   color: string;
   spriteIndex: number;
   valuePerNode: number; // 1칸당 증가 수치 (체력: 199, 물마공: 13, 물마방: 20, 치명/치피/치저/치피저: 15)

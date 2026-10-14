@@ -1,10 +1,10 @@
 /** 보크 클릭 모달에서 실제 위치, 목표 비용, 경로 비용을 안내한다. */
-import { getApostleBoardLayout, type BokrPathResult } from '../domain/boardPathfinder.ts';
-import { getNodeStatCategories, getStatCategoryFromStatType, PERSONALITY_META_LIST, STAT_META_LIST } from '../domain/boardProgress.ts';
-import type { ApostleProgress, MasterBoardNode, ResourceCostSummary } from '../domain/types.ts';
+import { getApostleBoardLayout, type BokrPathResult } from '../../domain/boardPathfinder.ts';
+import { getNodeStatCategories, getStatCategoryFromStatType, PERSONALITY_META_LIST, STAT_META_LIST } from '../../domain/boardProgress.ts';
+import type { ApostleProgress, MasterBoardNode, ResourceCostSummary } from '../../domain/types.ts';
 import { getBoardNodeVisual } from './boardNode.ts';
-import { escapeHtml } from './html.ts';
-import { lockPageScroll } from './scrollLock.ts';
+import { escapeHtml } from '../common/html.ts';
+import { lockPageScroll } from '../common/scrollLock.ts';
 
 export interface BokrModalOptions {
   progress: ApostleProgress;

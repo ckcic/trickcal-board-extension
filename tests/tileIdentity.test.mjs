@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { findTileIdentity, TILE_APOSTLE_ID, TILE_BOARD_LEVEL, TILE_NODE_ID } from '../src/bridge/tileIdentity.ts';
-import { attachBokrTileClickListener, getBoardCols, resolveBokrTile } from '../src/ui/boardEnhancer.ts';
+import { attachBokrTileClickListener, getBoardCols, resolveBokrTile } from '../src/ui/board/boardEnhancer.ts';
 
 const tile = (nodeId, level = 1, apostleId = 123) => {
   const attrs = new Map([[TILE_NODE_ID, String(nodeId)], [TILE_BOARD_LEVEL, String(level)],
