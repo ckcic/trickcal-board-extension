@@ -6,6 +6,10 @@ import { escapeHtml } from '../common/html.ts';
 
 import { PERSONALITY_META_LIST, STAT_META_LIST } from '../../domain/boardProgress.ts';
 import type { ApostleProgress } from '../../domain/types.ts';
+import { getPopupLeft } from './popupPosition.ts';
+
+// 제거된 카드가 전역 리스너에 남지 않도록 약한 참조로 위치 갱신 함수를 보관한다.
+const popupPositionUpdates = new WeakMap<Element, () => void>();
 
 /**
  * 일반칸(nodeType: 3)의 상세 진행도 및 스탯 표시용 버튼 & 팝업 DOM 요소 생성
@@ -311,21 +315,13 @@ export function createNormalStatElement(progress: ApostleProgress): HTMLElement 
   const updatePopupPosition = () => {
     const p = ensurePopup();
     const rect = container.getBoundingClientRect();
-    const screenWidth = window.innerWidth;
+    const screenWidth = document.documentElement.clientWidth;
     const screenHeight = window.innerHeight;
 
-    // 1. 좌우 위치 조절
-    if (rect.left + rect.width / 2 > screenWidth / 2) {
-      p.style.left = 'auto';
-      p.style.right = '-6px';
-      p.style.setProperty('--np-chevron-left', 'auto');
-      p.style.setProperty('--np-chevron-right', '28px');
-    } else {
-      p.style.left = '-6px';
-      p.style.right = 'auto';
-      p.style.setProperty('--np-chevron-left', '28px');
-      p.style.setProperty('--np-chevron-right', 'auto');
-    }
+    // 1. 실제 팝업 폭을 기준으로 양쪽 화면 경계를 넘지 않도록 보정한다.
+    p.style.setProperty('--tcbe-np-viewport-width', `${screenWidth}px`);
+    p.style.right = 'auto';
+    p.style.left = `${getPopupLeft(rect.left, rect.width, p.getBoundingClientRect().width, screenWidth)}px`;
 
     // 2. 상하 위치 조절 (상단 헤더 잘림 방지: 위쪽 공간 부족 시 아래쪽으로 자동 전개)
     // 물리적 틈새 0px(100%) 밀착 배치 - 시각적 8px 간격은 내부 투명 패딩으로 완벽 보장
@@ -343,6 +339,7 @@ export function createNormalStatElement(progress: ApostleProgress): HTMLElement 
       p.classList.remove('tcbe-popup-bottom');
     }
   };
+  popupPositionUpdates.set(container, updatePopupPosition);
 
   // 호버 열기/닫기 이벤트 (물리적으로 0px 밀착되었으므로 지연 타이머 없이 즉시 열고 닫음)
   container.addEventListener('mouseenter', () => {
@@ -385,8 +382,13 @@ export function createNormalStatElement(progress: ApostleProgress): HTMLElement 
   return container;
 }
 
-// 외부 클릭 시 열려 있거나 핀 고정된 일반칸 팝업 전체 닫기
+// 창 크기 변경 시 열린 팝업 위치 갱신 및 외부 클릭 시 전체 닫기
 if (typeof document !== 'undefined') {
+  window.addEventListener('resize', () => {
+    document.querySelectorAll('.tcbe-normal-badge-container.tcbe-open').forEach((el) => {
+      popupPositionUpdates.get(el)?.();
+    });
+  });
   document.addEventListener('click', (e) => {
     const target = e.target as Node | null;
     document.querySelectorAll('.tcbe-normal-badge-container').forEach((el) => {

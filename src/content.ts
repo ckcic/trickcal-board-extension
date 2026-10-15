@@ -10,6 +10,9 @@ import { readCommentArt } from './ui/common/commentArt.ts';
 import { DEFAULT_FILTER_STATE, matchesApostleFilter } from './domain/filters.ts';
 import { selectApostleIds } from './domain/listSelection.ts';
 import { listenForBoardData } from './bridge/contentBridge.ts';
+import { listenForVirtualGridStats, type VirtualGridStats } from './bridge/virtualGridStats.ts';
+import { createPageDetector } from './ui/board/pageDetector.ts';
+import { BOARD_SPRITE_ASSETS } from './ui/board/assets.ts';
 import { TILE_APOSTLE_ID, TILE_BOARD_LEVEL, TILE_NODE_ID } from './bridge/tileIdentity.ts';
 import {
   calculateAllApostlesProgress,
@@ -34,18 +37,14 @@ import { closeAllTools } from './ui/common/toolModals.ts';
   const pendingCards = new Set<HTMLElement>();
   let pendingFullRefresh = false;
   let gridSelectionKey = '';
-  let gridStats: { visible: number; total: number; key: string } | null = null;
+  let gridStats: VirtualGridStats | null = null;
+  const pageDetector = createPageDetector(document, window.location, () => filterController?.hasIntegratedSearch() ?? false);
 
-  window.addEventListener('message', (event: MessageEvent) => {
-    const data = event.data;
-    if (event.source !== window || event.origin !== window.location.origin ||
-        data?.type !== 'TCBE_GRID_STATS' || data.source !== 'tcbe-main-interceptor' ||
-        data.key !== gridSelectionKey || !Number.isSafeInteger(data.visible) || !Number.isSafeInteger(data.total) ||
-        data.visible < 0 || data.total < data.visible) return;
-    if (gridStats && gridStats.visible === data.visible && gridStats.total === data.total && gridStats.key === data.key) return;
-    gridStats = { visible: data.visible, total: data.total, key: data.key };
+  listenForVirtualGridStats(() => gridSelectionKey, stats => {
+    if (gridStats && gridStats.visible === stats.visible && gridStats.total === stats.total && gridStats.key === stats.key) return;
+    gridStats = stats;
     scheduleRefresh(50);
-  });
+  }, window);
 
   function updateVirtualGrid(active: boolean, filter?: FilterState) {
     const ids = active && latestProgressMap && filter ? selectApostleIds(latestProgressMap, filter) : [];
@@ -58,77 +57,9 @@ import { closeAllTools } from './ui/common/toolModals.ts';
 
   /** 화면에서 사용하는 원본 및 CDN WebP 주소만 주입한다. */
   function injectSpriteStyles() {
-    const assets: Record<string, string> = {
-      '--tcbe-stat-sprite': 'https://note.trickcal.com/UI/Stat.webp',
-      '--tcbe-personality-sprite': 'https://note.trickcal.com/UI/Common_UnitPersonality.webp',
-      '--tcbe-gate-icon': 'https://note.trickcal.com/UI/Gate.webp',
-      '--tcbe-pastel-basic': 'https://cdn.note.trickcal.com/Materials/aSidEcauOucIZOMZV_ilvVhKEpMIog9hK.webp',
-      '--tcbe-pastel-average': 'https://cdn.note.trickcal.com/Materials/aXi__OXRlprdJ2aKDSV7RDndcgNnTjV4o.webp',
-      '--tcbe-pastel-epic': 'https://cdn.note.trickcal.com/Materials/a1QwfDWjjHCxQv7K-KJLBtxDFxWM1CERq.webp',
-      '--tcbe-pastel-ultra': 'https://cdn.note.trickcal.com/Materials/aekAKPsosli3qEanhqzUxly-2E_PXu1kV.webp',
-      '--tcbe-gold-icon': 'https://cdn.note.trickcal.com/Materials/aJ3ElQvrIrOM6vPr2fJb_v79A_RC2YX6_.webp',
-    };
-    for (const [name, url] of Object.entries(assets)) {
+    for (const [name, url] of Object.entries(BOARD_SPRITE_ASSETS)) {
       document.documentElement.style.setProperty(name, `url("${url}")`);
     }
-  }
-
-  /**
-   * 현재 URL이 '/board'인지 확인
-   */
-  function isBoardPage(): boolean {
-    const pathname = window.location.pathname;
-    return pathname === '/board' || pathname.startsWith('/board/');
-  }
-
-  /**
-   * 현재 화면이 '사도별' 탭인지 판별
-   * (스탯별 화면이나 다른 URL인 경우 false 반환)
-   */
-  function isApostleTabActive(): boolean {
-    // 1. URL이 /board 이외인 경우 즉시 비활성화
-    if (!isBoardPage()) {
-      return false;
-    }
-
-    // 2. 확장 프로그램 DOM을 제외한 사이트 본래의 전환 버튼 탐색 (불필요한 span 전체 탐색 제거)
-    const navButtons = Array.from(document.querySelectorAll<HTMLElement>('button, a, div[role="button"]'))
-      .filter((el) => !el.closest('#tcbe-filter-panel') && !el.closest('.tcbe-badge-container') && !el.closest('.tcbe-badge-row'));
-
-    // '사도별' 전환 버튼이 존재하는 경우 (= 현재 스탯별 화면에 위치함)
-    const hasSwitchToApostleBtn = navButtons.some((el) => {
-      const txt = el.textContent?.trim();
-      return txt === '사도별';
-    });
-    if (hasSwitchToApostleBtn) {
-      return false;
-    }
-
-    // 3. 스탯별 화면 특유의 전체 스탯 헤더 존재 확인
-    const hasStatHeaders = navButtons.some((el) => {
-      const txt = el.textContent?.trim() || '';
-      return (
-        txt.startsWith('전체 HP') ||
-        txt.startsWith('전체 물리') ||
-        txt.startsWith('전체 마법') ||
-        txt.startsWith('전체 치명') ||
-        txt.startsWith('전체 치피') ||
-        txt.startsWith('전체 치저')
-      );
-    });
-    if (hasStatHeaders) {
-      return false;
-    }
-
-    // 4. 사도명 검색창 존재 확인 (통합된 상태인 경우도 허용)
-    const searchInput = document.querySelector('input[placeholder*="사도"]');
-    const isSearchIntegrated = filterController ? filterController.hasIntegratedSearch() : false;
-
-    if (!searchInput && !isSearchIntegrated) {
-      return false;
-    }
-
-    return true;
   }
 
   /**
@@ -180,8 +111,7 @@ import { closeAllTools } from './ui/common/toolModals.ts';
     isEnhancing = true;
 
     try {
-      const isBoard = isBoardPage();
-      const isApostleTab = isBoard && isApostleTabActive();
+      const isApostleTab = pageDetector.isApostleTabActive();
 
       // /board URL이 아니거나 사도별 탭이 아닌 경우 완전히 언마운트/숨김 처리 후 종료
       if (!isApostleTab) {
@@ -218,26 +148,25 @@ import { closeAllTools } from './ui/common/toolModals.ts';
       }
 
       // 2. 필터 및 정렬 적용
-      let { total, visible } = applyFilterToCards(filterState, latestProgressMap, connectedCards);
+      let { visible } = applyFilterToCards(filterState, latestProgressMap, connectedCards);
       if (connectedCards) {
         // 전체 통계에는 카드 속성만 읽고 내부 보드와 배지는 탐색하지 않는다.
         const cards = Array.from(document.querySelectorAll<HTMLElement>('[data-tcbe-apostle-name]'))
           .filter(card => !card.closest(DIALOG_EXCLUSION_SELECTOR) &&
             latestProgressMap!.has(card.getAttribute('data-tcbe-apostle-name') || ''));
-        total = cards.length;
         visible = cards.filter(card => !card.classList.contains('tcbe-card-hidden')).length;
       }
 
       // 3. 통계 정보 및 스탯별 총 칸수/수치 요약 갱신
       if (gridStats?.key === gridSelectionKey && document.querySelector('[data-testid="virtuoso-item-list"]')) {
-        ({ total, visible } = gridStats);
+        visible = gridStats.visible;
       }
       if (filterController) {
         const { incompleteCount, masterTotal, statName, persName } = countIncompleteApostles(
           latestProgressMap,
           filterState
         );
-        filterController.updateStats(visible, total, masterTotal, incompleteCount, statName, persName);
+        filterController.updateStats(visible, masterTotal, incompleteCount, statName, persName);
         filterController.updateStatSummaryGrid(latestProgressMap, filterState);
       }
     } finally {
@@ -279,6 +208,8 @@ import { closeAllTools } from './ui/common/toolModals.ts';
   const observer = new MutationObserver((mutations) => {
     const changes = collectChangedCards(mutations);
     if (!changes.changed) return;
+    // 카드 부분 변경도 원본 DOM 변경이므로 페이지 판별 캐시를 보수적으로 무효화한다.
+    pageDetector.invalidate();
     changes.cards.forEach(card => pendingCards.add(card));
     if (latestProgressMap) scheduleRefresh(150, changes.fullRefresh ? undefined : changes.cards);
   });
@@ -289,17 +220,20 @@ import { closeAllTools } from './ui/common/toolModals.ts';
     characterData: true,
     attributes: true,
     attributeOldValue: true,
-    attributeFilter: ['class', 'alt', TILE_APOSTLE_ID, TILE_BOARD_LEVEL, TILE_NODE_ID],
+    attributeFilter: ['class', 'alt', 'placeholder', TILE_APOSTLE_ID, TILE_BOARD_LEVEL, TILE_NODE_ID],
   });
 
   // 탭 전환 버튼 등 클릭 시 신속하게 재판별
   document.addEventListener('click', (e) => {
     const target = e.target instanceof Element ? e.target : null;
     if (target && !target.closest('#tcbe-filter-panel, #tcbe-bokr-modal-container, #tcbe-redistribution-dialog, #tcbe-recovery-dialog')) {
+      pageDetector.invalidate();
       scheduleRefresh(50);
     }
   });
 
-  window.addEventListener('popstate', () => scheduleRefresh(50));
-  window.addEventListener('hashchange', () => scheduleRefresh(50));
+  const refreshPageState = () => { pageDetector.invalidate(); scheduleRefresh(50); };
+  window.addEventListener('popstate', refreshPageState);
+  window.addEventListener('hashchange', refreshPageState);
+  window.addEventListener('pageshow', refreshPageState);
 })();

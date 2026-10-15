@@ -56,6 +56,9 @@ export function renderRedistributionTemplate(spentCrayons: number, spentBokr: nu
             </div>
           </nav>
         </div>
+        <div class="tcbe-rd-mobile-top" data-mobile-top-container hidden>
+          <button type="button" class="tcbe-rd-toc-top" data-mobile-top>↑ 맨 위로</button>
+        </div>
       </section>
       <section role="tabpanel" id="tcbe-panel-curve" aria-labelledby="tcbe-tab-curve" class="tcbe-rd-panel" hidden>
         <div class="tcbe-rd-curve-preview">

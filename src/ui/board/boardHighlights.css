@@ -1,0 +1,22 @@
+/** 카드 숨김과 보드 타일 하이라이트 */
+
+/* 필터링되어 숨겨진 사도 카드 */
+.tcbe-card-hidden {
+  display: none !important;
+}
+
+/* --- 보드 타일 스탯 하이라이트 테두리 (진한 빨간색 고정) --- */
+.tcbe-tile-highlight-rem,
+.tcbe-tile-highlight-done {
+  position: relative;
+  outline: 3.5px solid var(--tcbe-red-primary) !important;
+  outline-offset: -1px !important;
+  border-radius: var(--tcbe-radius-md) !important;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.95), inset 0 0 4px rgba(239, 68, 68, 0.5) !important;
+  z-index: 20 !important;
+}
+
+.tcbe-tile-highlight-done {
+  outline: 3.5px solid var(--tcbe-red-dark) !important;
+  box-shadow: 0 0 10px rgba(220, 38, 38, 1), inset 0 0 6px rgba(220, 38, 38, 0.6) !important;
+}

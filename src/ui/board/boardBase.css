@@ -1,0 +1,136 @@
+/** 보드 공통 아이콘과 카드 쌓임 순서 */
+
+/* --- 관문 아이콘 --- */
+.tcbe-icon-gate {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-image: var(--tcbe-gate-icon);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* 탭 전환 시（사도별 탭이 아닐 때） 확장 프로그램 요소 숨김 */
+.tcbe-hidden-by-tab {
+  display: none !important;
+}
+
+/* 카드 내부 배지와 강조 타일을 격리해 원본 고정 메뉴(z-20)를 덮지 않게 한다. */
+[data-slot="card"][data-tcbe-enhanced],
+div.bg-dialog-background[data-tcbe-enhanced]:not([role="dialog"]):not([data-slot="dialog-content"]):not([data-slot="dialog-overlay"]) {
+  position: relative;
+  z-index: 0;
+}
+
+/* 고정 팝업은 다른 카드보다 앞에 두되 원본 메뉴와 모달 아래에 유지한다. */
+[data-slot="card"]:has(.tcbe-normal-badge-container.tcbe-pinned),
+div.bg-dialog-background[data-tcbe-enhanced]:not([role="dialog"]):not([data-slot="dialog-content"]):not([data-slot="dialog-overlay"]):has(.tcbe-normal-badge-container.tcbe-pinned) {
+  z-index: 15;
+  position: relative;
+}
+
+/* 일반칸 팝업을 사용할 때만 카드를 올리고 카드 본체의 단순 호버는 유지한다. */
+body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) [data-slot="card"]:has(.tcbe-normal-badge-container:hover),
+body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) [data-slot="card"]:has(.tcbe-normal-badge-container.tcbe-open),
+body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-background[data-tcbe-enhanced]:not([role="dialog"]):not([data-slot="dialog-content"]):not([data-slot="dialog-overlay"]):has(.tcbe-normal-badge-container:hover),
+body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-background[data-tcbe-enhanced]:not([role="dialog"]):not([data-slot="dialog-content"]):not([data-slot="dialog-overlay"]):has(.tcbe-normal-badge-container.tcbe-open) {
+  z-index: 10;
+  position: relative;
+}
+
+/* --- 스프라이트 아이콘 기본 스타일 --- */
+.tcbe-sprite-stat {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  background-image: var(--tcbe-stat-sprite);
+  background-size: 216px 18px; /* 12개 * 18px = 216px */
+  background-repeat: no-repeat;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.tcbe-sprite-stat-0 { background-position: 0px 0; }        /* 체력 */
+.tcbe-sprite-stat-1 { background-position: -18px 0; }       /* 물공 */
+.tcbe-sprite-stat-2 { background-position: -36px 0; }       /* 마공 */
+.tcbe-sprite-stat-3 { background-position: -54px 0; }       /* 물방 */
+.tcbe-sprite-stat-4 { background-position: -72px 0; }       /* 마방 */
+.tcbe-sprite-stat-5 { background-position: -90px 0; }       /* 치명 */
+.tcbe-sprite-stat-6 { background-position: -108px 0; }      /* 치피 */
+.tcbe-sprite-stat-7 { background-position: -126px 0; }      /* 치저 */
+.tcbe-sprite-stat-8 { background-position: -144px 0; }      /* 치피저 */
+
+.tcbe-sprite-pers {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  background-image: var(--tcbe-personality-sprite);
+  background-size: 108px 18px; /* 6개 * 18px = 108px */
+  background-repeat: no-repeat;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.tcbe-sprite-pers-0 { background-position: 0px 0; }         /* 순수 */
+.tcbe-sprite-pers-1 { background-position: -18px 0; }        /* 냉정 */
+.tcbe-sprite-pers-2 { background-position: -36px 0; }        /* 광기 */
+.tcbe-sprite-pers-3 { background-position: -54px 0; }        /* 활발 */
+.tcbe-sprite-pers-4 { background-position: -72px 0; }        /* 우울 */
+.tcbe-sprite-pers-5 { background-position: -90px 0; }        /* 공명 */
+
+/* --- 크레파스(파스텔) 아이콘 스타일 --- */
+.tcbe-pastel-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.tcbe-pastel-basic {
+  background-image: var(--tcbe-pastel-basic);
+}
+
+.tcbe-pastel-average {
+  background-image: var(--tcbe-pastel-average);
+}
+
+.tcbe-pastel-epic {
+  background-image: var(--tcbe-pastel-epic);
+}
+
+.tcbe-pastel-ultra {
+  background-image: var(--tcbe-pastel-ultra);
+}
+
+/* 칩 및 텍스트 내부용 미니 크레파스 아이콘 */
+.tcbe-pastel-icon-mini {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  vertical-align: -1px;
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+/* --- 골드 아이콘 스타일 --- */
+.tcbe-gold-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-image: var(--tcbe-gold-icon);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  vertical-align: middle;
+  flex-shrink: 0;
+}

@@ -6,7 +6,7 @@
 import { DEFAULT_FILTER_STATE } from '../../domain/filters.ts';
 import { aggregateBokrStats, type StatAggregates } from '../../domain/statAggregates.ts';
 import { PERSONALITY_META_LIST, STAT_META_LIST } from '../../domain/boardProgress.ts';
-import { checkForUpdate } from '../../domain/updateChecker.ts';
+import { showUpdateBadge } from './updateBadge.ts';
 import { openHwangRedistribution } from '../redistribution/hwangRedistribution.ts';
 import { openBoardRecovery } from '../recovery/boardRecovery.ts';
 import type {
@@ -20,6 +20,7 @@ export interface FilterChangeCallback {
 }
 
 type ToggleFilterKey = 'personality' | 'grade' | 'status' | 'boardLevel' | 'unlockedTier';
+const PANEL_OPEN_STORAGE_KEY = 'tcbe_panel_open';
 interface ToggleOption<T> { key: T; label: string; }
 
 /** 생성과 갱신에서 같은 기본 방향·라벨·도움말을 사용한다. */
@@ -99,7 +100,7 @@ export class FilterPanelController {
     header.type = 'button';
     header.className = 'tcbe-accordion-header';
 
-    let isOpen = localStorage.getItem('tcbe_panel_open') !== 'false';
+    let isOpen = localStorage.getItem(PANEL_OPEN_STORAGE_KEY) !== 'false';
     header.setAttribute('data-state', isOpen ? 'open' : 'closed');
     header.setAttribute('aria-expanded', String(isOpen));
 
@@ -114,28 +115,7 @@ export class FilterPanelController {
     `;
 
     // 최신 버전 업데이트 감지 비동기 실행 (신규 버전 존재 시에만 뱃지 노출)
-    try {
-      // 설치 버전을 읽지 못하면 이전 버전으로 추측하여 알림을 띄우지 않는다.
-      const currentVer = chrome.runtime?.getManifest?.()?.version;
-      if (currentVer) checkForUpdate(currentVer).then((updateInfo) => {
-        if (updateInfo?.hasUpdate) {
-          const slot = document.getElementById('tcbe-update-badge-slot') || header.querySelector('#tcbe-update-badge-slot');
-          if (slot) {
-            const link = document.createElement('a');
-            link.href = 'https://github.com/ckcic/trickcal-board-extension/releases/latest';
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            link.className = 'tcbe-update-badge';
-            link.title = '새 버전 다운로드 페이지로 이동';
-            link.textContent = '🚀 v' + updateInfo.latestVersion + ' 업데이트';
-            link.addEventListener('click', (event) => event.stopPropagation());
-            slot.replaceChildren(link);
-          }
-        }
-      });
-    } catch {
-      // 무시
-    }
+    void showUpdateBadge(header);
 
     const content = document.createElement('div');
     content.className = `tcbe-accordion-content ${isOpen ? 'tcbe-open' : 'tcbe-closed'}`;
@@ -143,7 +123,7 @@ export class FilterPanelController {
 
     header.addEventListener('click', () => {
       isOpen = !isOpen;
-      localStorage.setItem('tcbe_panel_open', String(isOpen));
+      localStorage.setItem(PANEL_OPEN_STORAGE_KEY, String(isOpen));
       const stateStr = isOpen ? 'open' : 'closed';
       header.setAttribute('data-state', stateStr);
       header.setAttribute('aria-expanded', String(isOpen));
@@ -389,7 +369,6 @@ export class FilterPanelController {
 
   public updateStats(
     visible: number,
-    _totalCards: number,
     masterTotal: number,
     incompleteCount: number,
     statName?: string,
@@ -463,7 +442,7 @@ export class FilterPanelController {
       tooltip.innerHTML = `
         <div class="tcbe-tt-header">
           <span><span class="tcbe-sprite-stat tcbe-sprite-stat-${meta.spriteIndex}"></span> ${meta.nameKo} 보크 현황</span>
-          <span style="color: #38bdf8;">1칸당 +${meta.valuePerNode}</span>
+          <span class="tcbe-sum-tt-per-node">1칸당 +${meta.valuePerNode}</span>
         </div>
         <div class="tcbe-sum-tt-body">
           <div class="tcbe-sum-tt-row">

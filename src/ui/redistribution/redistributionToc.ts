@@ -41,6 +41,8 @@ export function setupRedistributionToc(dialog: HTMLElement, getPortraitMap: () =
     const countEl = dialog.querySelector<HTMLElement>('[data-toc-count]');
     const searchInput = dialog.querySelector<HTMLInputElement>('[data-toc-search]');
     if (!tocContainer) return;
+    const mobileTop = dialog.querySelector<HTMLElement>('[data-mobile-top-container]');
+    if (mobileTop) mobileTop.hidden = !plan.actions.length;
     if (!plan.actions.length) {
       tocContainer.hidden = true;
       return;
@@ -56,9 +58,15 @@ export function setupRedistributionToc(dialog: HTMLElement, getPortraitMap: () =
   });
 
   const resultContent = dialog.querySelector<HTMLElement>('.tcbe-rd-result-content') || dialog.querySelector<HTMLElement>('[data-result]');
-  dialog.querySelector('[data-toc-top]')?.addEventListener('click', () => {
-    resultContent?.scrollTo({ top: 0, behavior: 'smooth' });
-  });
+  const scrollToTop = () => {
+    // 좁은 화면에서는 목차와 본문을 감싼 컨테이너가 스크롤을 담당한다.
+    const scrollContainer = window.matchMedia('(max-width: 960px)').matches
+      ? dialog.querySelector<HTMLElement>('.tcbe-rd-result-container')
+      : resultContent;
+    scrollContainer?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  dialog.querySelector('[data-toc-top]')?.addEventListener('click', scrollToTop);
+  dialog.querySelector('[data-mobile-top]')?.addEventListener('click', scrollToTop);
   dialog.querySelector('[data-toc-container]')?.addEventListener('click', event => {
     const button = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-toc-target]') : null;
     if (!button) return;

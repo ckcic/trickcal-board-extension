@@ -78,9 +78,10 @@ test('드래그 종료·창 닫기는 프레임과 이벤트를 정리하고 잘
 test('목차는 초성·혼합 검색 시 항목을 재생성하지 않고 결과 없음과 전체 복귀를 처리한다', () => {
   const items = ['에르핀', '코미'].map(name => Object.assign(new Element(), { dataset: { apostleName: name } }));
   const empty = new Element(), container = new Element(), search = new Element(), count = new Element();
-  const toc = new Element(), top = new Element(), result = new Element();
+  const toc = new Element(), top = new Element(), result = new Element(), mobileTopContainer = new Element();
   const fields = { '[data-toc-apostles]': container, '[data-toc-search]': search, '[data-toc-count]': count,
-    '[data-toc-container]': toc, '[data-toc-top]': top, '.tcbe-rd-result-content': result };
+    '[data-toc-container]': toc, '[data-toc-top]': top, '.tcbe-rd-result-content': result,
+    '[data-mobile-top-container]': mobileTopContainer };
   let htmlWrites = 0;
   Object.defineProperty(container, 'innerHTML', { set(value) { htmlWrites++; this.html = value; } });
   container.querySelectorAll = () => items;
@@ -91,6 +92,7 @@ test('목차는 초성·혼합 검색 시 항목을 재생성하지 않고 결�
   const update = context.feature.setupRedistributionToc(dialog, () => new Map());
   update({ actions: items.map((item, index) => ({ apostle: { apostleId: index, name: item.dataset.apostleName }, reset: index === 0 })) });
   assert.equal(toc.hidden, false);
+  assert.equal(mobileTopContainer.hidden, false);
   assert.equal(count.textContent, '2명');
   const writes = htmlWrites;
   for (const query of ['ㅇㄹㅍ', '에ㄹ']) {
@@ -106,6 +108,29 @@ test('목차는 초성·혼합 검색 시 항목을 재생성하지 않고 결�
   assert.equal(htmlWrites, writes);
   update({ actions: [] });
   assert.equal(toc.hidden, true);
+  assert.equal(mobileTopContainer.hidden, true);
+});
+
+test('목차의 맨 위 이동은 창 크기에 맞는 스크롤 영역을 사용한다', () => {
+  const top = new Element(), result = new Element(), container = new Element(), mobileTop = new Element();
+  const calls = [];
+  result.scrollTo = options => calls.push(['본문', options.top]);
+  container.scrollTo = options => calls.push(['전체', options.top]);
+  let narrow = false;
+  const fields = { '[data-toc-top]': top, '.tcbe-rd-result-content': result,
+    '.tcbe-rd-result-container': container, '[data-mobile-top]': mobileTop };
+  const context = vm.createContext({ Element, window: { matchMedia: query => {
+    assert.equal(query, '(max-width: 960px)');
+    return { matches: narrow };
+  } } });
+  vm.runInContext(tocSource, context);
+  context.feature.setupRedistributionToc({ querySelector: selector => fields[selector] ?? null }, () => new Map());
+  top.emit('click');
+  narrow = true;
+  mobileTop.emit('click');
+  narrow = false;
+  top.emit('click');
+  assert.deepEqual(calls, [['본문', 0], ['전체', 0], ['본문', 0]]);
 });
 
 test('설정 도움말 탭은 누락 패널에 안전하고 닫을 때 지연 분석을 취소한다', () => {

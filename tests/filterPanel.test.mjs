@@ -79,6 +79,15 @@ for (const [field, attr, value] of [
   });
 }
 
+test('통계는 카드 수 인자 없이 전체 사도 수와 필터별 미완료 수를 표시한다', () => {
+  const { controller, root, walk } = setup();
+  const counter = walk(root).find(node => node.id === 'tcbe-stats-counter');
+  controller.updateStats(12, 100, 7, '체력', '순수');
+  assert.equal(counter.textContent, '표시: 12명 / 전체 100명 ([순수 체력] 미완료 7명)');
+  controller.updateStats(23, 100, 4);
+  assert.equal(counter.textContent, '표시: 23명 / 전체 100명 (미완료 4명)');
+});
+
 test('정렬 버튼은 기본 방향·양방향 전환·활성 표시·다른 기준 복귀를 유지한다', () => {
   const { controller, button, changes } = setup();
   for (const [key, initial, alternate] of [

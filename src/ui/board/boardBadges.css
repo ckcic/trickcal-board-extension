@@ -1,0 +1,256 @@
+/** 보크 배지와 포털 툴팁 및 가상 카드 기본 높이 */
+
+/* --- 배지 영역은 폭이나 필터에 관계없이 두 줄 높이를 유지한다. --- */
+.tcbe-badge-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  flex-wrap: nowrap;
+  height: 62px;
+  min-height: 62px;
+  margin: 4px 0 6px 0;
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* 새 가상 카드에도 배지 공간을 먼저 확보하여 주입 전후 측정 높이를 유지한다. */
+html[data-tcbe-board-level] .virtuoso-grid-item > :is([data-slot="card"], .bg-dialog-background) > .flex.flex-row.gap-2 {
+  min-height: 122px;
+}
+
+/* 차수 필터는 지연된 배지 갱신과 독립적으로 새 카드의 첫 측정부터 적용한다. */
+html:is([data-tcbe-board-level="1"], [data-tcbe-board-level="2"]) .virtuoso-grid-item > :is([data-slot="card"], .bg-dialog-background) > .items-center > :nth-child(2),
+html[data-tcbe-board-level="3"] .virtuoso-grid-item > :is([data-slot="card"], .bg-dialog-background) > .items-center > :nth-child(1),
+html[data-tcbe-board-level="1"] .virtuoso-grid-item > :is([data-slot="card"], .bg-dialog-background) > .items-center > :nth-child(1) > :nth-child(2),
+html[data-tcbe-board-level="2"] .virtuoso-grid-item > :is([data-slot="card"], .bg-dialog-background) > .items-center > :nth-child(1) > :nth-child(1) {
+  display: none;
+}
+
+/* --- 뱃지 컨테이너 (사도 카드 위의 보크 현황 뱃지 - 트릭컬 공식 스타일) --- */
+.tcbe-badge-container {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tcbe-gap-sm);
+  min-height: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0 var(--tcbe-gap-md);
+  background: #f1f5e8;
+  border: 1.5px solid #d5e0ca;
+  border-radius: var(--tcbe-radius-badge);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--tcbe-text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  user-select: none;
+  cursor: pointer;
+  position: relative;
+  z-index: 25;
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  font-family: var(--tcbe-font-stack);
+  transition: var(--tcbe-transition-fast);
+}
+
+.tcbe-badge-container:hover {
+  border-color: var(--tcbe-green-accent);
+  background: #f8faf2;
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.3);
+  z-index: 100 !important;
+}
+
+.tcbe-badge-bokr-tag {
+  color: var(--tcbe-green-text-dark);
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tcbe-gap-xs);
+}
+
+.tcbe-badge-counts {
+  color: var(--tcbe-text-primary);
+  font-weight: 800;
+}
+
+.tcbe-badge-remaining {
+  background: var(--tcbe-orange-badge);
+  color: var(--tcbe-bg-white);
+  padding: 1px 6px;
+  border-radius: var(--tcbe-radius-sm);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.tcbe-badge-complete {
+  background: var(--tcbe-green-bg);
+  border-color: var(--tcbe-green-accent);
+}
+
+.tcbe-badge-complete .tcbe-badge-bokr-tag {
+  color: var(--tcbe-green-text);
+}
+
+.tcbe-badge-complete-icon {
+  background: var(--tcbe-green-icon);
+  color: var(--tcbe-bg-white);
+  padding: 1px 6px;
+  border-radius: var(--tcbe-radius-sm);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+/* 선택된 스탯 미니 뱃지 표시 (사도 카드 내 스탯별 현황) */
+.tcbe-stat-highlight-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tcbe-gap-xs);
+  height: 22px;
+  padding: 0 7px;
+  background: #e0f2fe;
+  border: 1.5px solid #7dd3fc;
+  border-radius: var(--tcbe-radius-md);
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #0369a1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  margin-left: 4px;
+  box-sizing: border-box;
+}
+
+.tcbe-stat-highlight-tag.tcbe-stat-done {
+  background: var(--tcbe-green-bg);
+  border-color: var(--tcbe-green-accent);
+  color: var(--tcbe-green-text);
+}
+
+/* --- 사도 카드 상급칸 전역 포털 툴팁 (어떤 카드/모달 쌓임 맥락에도 가려지지 않는 최상위 레이어) --- */
+.tcbe-portal-tooltip {
+  display: none;
+  position: fixed;
+  padding-bottom: 8px;
+  padding-top: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  /* 원본 고정 메뉴보다 아래, 일반칸 팝업과 카드보다 위에 표시한다. */
+  z-index: 18;
+  pointer-events: auto !important;
+  cursor: default;
+  box-sizing: border-box;
+}
+
+.tcbe-portal-tooltip.tcbe-popup-bottom {
+  padding-bottom: 0;
+  padding-top: 8px;
+}
+
+.tcbe-portal-tooltip-inner {
+  position: relative;
+  background: var(--tcbe-bg-white);
+  border: 2px solid var(--tcbe-green-accent);
+  border-radius: var(--tcbe-radius-xl);
+  padding: var(--tcbe-gap-lg) 16px;
+  font-size: 12px;
+  width: max-content;
+  min-width: 350px;
+  max-width: min(440px, calc(100vw - 32px));
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
+  color: var(--tcbe-text-primary);
+  line-height: 1.5;
+  box-sizing: border-box;
+  font-family: "ONE-Mobile-POP", var(--font-one-mobile-pop), "Pretendard", "SUIT", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  letter-spacing: -0.2px;
+}
+
+.tcbe-portal-tooltip-inner::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: var(--chevron-left, 28px);
+  right: var(--chevron-right, auto);
+  margin-left: -6px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: var(--tcbe-green-accent) transparent transparent transparent;
+}
+
+/* 상단 공간 부족 시 아래쪽으로 전개될 때 꼭짓점 화살표 반전 */
+.tcbe-portal-tooltip.tcbe-popup-bottom .tcbe-portal-tooltip-inner::after {
+  top: auto;
+  bottom: 100%;
+  border-color: transparent transparent var(--tcbe-green-accent) transparent;
+}
+
+.tcbe-tt-header {
+  font-weight: 800;
+  color: var(--tcbe-green-text);
+  border-bottom: 2px solid #f1f5e8;
+  padding-bottom: 6px;
+  margin-bottom: var(--tcbe-gap-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12.5px;
+}
+
+.tcbe-tt-board-row {
+  margin-bottom: var(--tcbe-gap-md);
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--tcbe-panel-border);
+}
+
+.tcbe-tt-board-row:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.tcbe-tt-board-title {
+  font-weight: 800;
+  color: var(--tcbe-green-text-dark);
+  margin-bottom: var(--tcbe-gap-sm);
+  font-size: 12px;
+}
+
+.tcbe-tt-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px 12px;
+  font-size: 11.5px;
+  margin-top: 2px;
+}
+
+.tcbe-tt-stat-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.tcbe-tt-stat-name {
+  color: var(--tcbe-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: 700;
+}
+
+.tcbe-tt-stat-val {
+  font-weight: 800;
+  color: var(--tcbe-text-heading);
+}
+
+.tcbe-tt-stat-done {
+  color: var(--tcbe-green-icon);
+}
+
+.tcbe-tt-stat-rem {
+  color: var(--tcbe-orange-text);
+}

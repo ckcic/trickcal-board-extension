@@ -73,6 +73,7 @@ export function setupRedistributionCalculation(context: CalculationContext) {
         switchTab('result');
         const resultContent = dialog.querySelector<HTMLElement>('.tcbe-rd-result-content');
         if (resultContent) resultContent.scrollTo({ top: 0, behavior: 'smooth' });
+        dialog.querySelector<HTMLElement>('.tcbe-rd-result-container')?.scrollTo({ top: 0, behavior: 'smooth' });
       }
       catch (error) { status.textContent = error instanceof Error ? error.message : '계산에 실패했습니다.'; }
       finally { calculationController = null; restoreControls(); }

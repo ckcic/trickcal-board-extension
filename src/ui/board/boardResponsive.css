@@ -1,0 +1,35 @@
+/** 좁은 화면의 보드 필터 반응형 레이아웃 */
+
+/* --- 화면이 좁을 때 가로 스크롤 방지 및 반응형 레이아웃 --- */
+@media (max-width: 900px) {
+  .tcbe-panel-row {
+    gap: 6px;
+  }
+
+  .tcbe-stats-info {
+    margin-left: 0;
+    width: 100%;
+    text-align: center;
+    box-sizing: border-box;
+  }
+
+  .tcbe-search-slot {
+    margin-left: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .tcbe-search-slot input {
+    width: 100%;
+  }
+
+  .tcbe-stat-summary-items {
+    gap: 4px;
+  }
+
+  .tcbe-summary-card {
+    padding: 2px 6px;
+    font-size: 11px;
+  }
+}
