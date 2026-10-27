@@ -156,6 +156,13 @@ export function createCommonModal(options: CommonModalOptions): CommonModalInsta
     close();
   });
 
+  // 아바타 이미지 로드 실패 시 인라인 이벤트 핸들러(CSP 위반) 대신 캡처 단계에서 숨김 처리
+  dialog.addEventListener('error', event => {
+    if (event.target instanceof HTMLImageElement && event.target.classList.contains('tcbe-rd-avatar')) {
+      event.target.style.display = 'none';
+    }
+  }, true);
+
   // 백드롭(바깥 영역) 터치/클릭 시 닫기
   dialog.addEventListener('click', event => {
     if (event.target === dialog) {

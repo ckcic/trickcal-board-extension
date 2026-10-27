@@ -7,7 +7,7 @@ import { getRecoveryDisplayAlternatives, renderRecoveryResults } from '../src/ui
 
 const yellow = (id, x, type) => ({ id, nodeType: 5, grid: { x, y: 0 },
   stats: [{ statType: type, statValue: 80 }], requireItems: [{ item: 610004, value: 2 }] });
-const apostle = { apostleId: 7, name: '<가명사도>', isOwned: true,
+const apostle = { apostleId: 7, name: '<가명사도>', personality: 3, isOwned: true,
   boards: [{ unlocked: true, stepStr: '111', masterNodes: [
     { id: 1, nodeType: 2, grid: { x: 0, y: 0 } }, yellow(2, 1, 95), yellow(3, 2, 88),
   ] }] };
@@ -42,6 +42,7 @@ test('회수 결과는 선택 경로·누적 도구·지도 슬롯·복구 순�
   assert.match(html, /data-apostle-name="&lt;가명사도&gt;"/);
   assert.match(html, /&quot;&gt;&lt;script&gt;/);
   assert.ok(!html.includes('<script>'));
+  assert.match(html, /data-personality="3"/);
   assert.match(html, /HeroIcons\/test\.webp/);
   assert.match(html, /data-map/);
   assert.match(html, /data-copy-apostle="7"/);

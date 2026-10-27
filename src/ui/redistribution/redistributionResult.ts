@@ -92,7 +92,7 @@ function renderActionTable(plan: RedistributionPlan, portraitMap?: Map<number | 
       if (petals) parts.push(`꽃잎 개방 ${petals}`);
       return `<div><b class="tcbe-rd-badge">${board + 1}차</b> ${parts.join(' / ')}</div>`;
     }).join('');
-    const avatar = renderApostleAvatar(action.apostle.apostleId, action.apostle.name, portraitMap);
+    const avatar = renderApostleAvatar(action.apostle.apostleId, action.apostle.name, portraitMap, action.apostle.personality);
     return `<tr data-action-row="${action.reset ? 'reset' : 'add'}"><td>${index + 1}</td><th><button type="button" data-show-map="${action.apostle.apostleId}">${avatar}<span>${escapeHtml(action.apostle.name)}</span></button></th><td>${action.reset ? '초기화 후 색칠' : '추가 색칠'}</td><td>${boards || '유지'}</td><td>${renderResourceCost(action.refund)}</td><td>${renderResourceCost(action.spend)}</td><td>${formatNumber(action.balance)}</td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
@@ -141,7 +141,7 @@ export function renderRedistributionResult(plan: RedistributionPlan, options: Re
       const bokrStat = entry.node.nodeType === NODE_TYPE.BOKR ? Object.entries(entry.bokrStats).filter(([, count]) => count > 0).map(([key]) => `${names.get(key as StatCategory)} +${formatNumber(readBokrValues(entry.node)[key as StatCategory])}`).join('/') : '';
       return `<li>${entry.boardIndex + 1}차 #${entry.node.id} ${stat || (entry.node.nodeType === NODE_TYPE.BOKR ? `${bokrStat} 보크` : entry.node.nodeType === NODE_TYPE.PETAL ? '꽃잎 개방' : entry.node.nodeType === NODE_TYPE.GATE ? '관문 개방' : '일반칸 복구·경로')} <span class="tcbe-rd-paint-cost">${renderResourceCost(entry.cost)} ${renderGateItems(entry)}</span></li>`;
     }).join('');
-    const avatar = renderApostleAvatar(action.apostle.apostleId, action.apostle.name, portraitMap);
+    const avatar = renderApostleAvatar(action.apostle.apostleId, action.apostle.name, portraitMap, action.apostle.personality);
     return `<details class="tcbe-rd-apostle" id="tcbe-rd-map-${action.apostle.apostleId}"><summary>${avatar}<span>${escapeHtml(action.apostle.name)} · ${action.reset ? '초기화 후 복구·재배치' : '추가 색칠'} · 황크 ${action.spend.ultraCrayon}개 · 보크 ${action.spend.epicCrayon}개</span></summary>
       <p>환급: ${renderResourceCost(action.refund)}<br>다시 사용: ${renderResourceCost(action.spend)}<br>이 사도 작업 후 황크: ${formatNumber(action.balance)}개</p>
       <div class="tcbe-rd-maps">${boards}</div><details><summary>칠할 칸 순서 (${action.paint.length}칸)</summary><ol>${paint || '<li>추가로 칠할 칸 없음</li>'}</ol></details></details>`;

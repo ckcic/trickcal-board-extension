@@ -92,7 +92,7 @@ function renderRecoveryApostle(result: RecoveryResult, index: number, plan: Reco
   const extraBokr = plan ? Math.max(0, ...alternatives.map(p => p.net.epicCrayon - plan.net.epicCrayon)) : 0;
   const isPositive = Boolean(plan && (plan.net.ultraCrayon > 0 || plan.net.epicCrayon > 0));
   return `<details class="tcbe-rc-apostle" data-apostle="${id}" data-apostle-name="${escapeHtml(result.apostle.name)}" data-net-positive="${isPositive}">
-            <summary><span class="tcbe-rc-summary-main">${index + 1}. ${renderApostleAvatar(id, result.apostle.name, portraits)} <span>${escapeHtml(result.apostle.name)}</span> ${plan ? `${netLabel(plan)}${plan.net.ultraCrayon <= 0 && plan.net.epicCrayon <= 0 ? ' · 회수 효과 없음' : ''}` : '· 계산 확인 필요'}${extraBokr ? `<span class="tcbe-rc-hint">다른 경로로 ${resourceIcon('bokr')} ${extraBokr}개 추가 회수 가능</span>` : ''}</span></summary>
+            <summary><span class="tcbe-rc-summary-main">${index + 1}. ${renderApostleAvatar(id, result.apostle.name, portraits, result.apostle.personality)} <span>${escapeHtml(result.apostle.name)}</span> ${plan ? `${netLabel(plan)}${plan.net.ultraCrayon <= 0 && plan.net.epicCrayon <= 0 ? ' · 회수 효과 없음' : ''}` : '· 계산 확인 필요'}${extraBokr ? `<span class="tcbe-rc-hint">다른 경로로 ${resourceIcon('bokr')} ${extraBokr}개 추가 회수 가능</span>` : ''}</span></summary>
             <div data-detail>${plan ? renderRecoveryPlan(result, plan, alternatives) : `<p>${escapeHtml(result.error || '계획을 찾지 못했습니다.')}</p>`}</div></details>`;
 }
 

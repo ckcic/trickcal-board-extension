@@ -15,7 +15,7 @@ export function setupRedistributionToc(dialog: HTMLElement, getPortraitMap: () =
     apostlesContainer.innerHTML = actions.map(action => {
       const badgeClass = action.reset ? 'tcbe-rd-toc-badge-reset' : 'tcbe-rd-toc-badge-add';
       const badgeText = action.reset ? '초기화' : '추가';
-      const avatar = renderApostleAvatar(action.apostle.apostleId, action.apostle.name, getPortraitMap());
+      const avatar = renderApostleAvatar(action.apostle.apostleId, action.apostle.name, getPortraitMap(), action.apostle.personality);
       return `<button type="button" class="tcbe-rd-toc-item tcbe-rd-toc-apostle-item" data-toc-target="tcbe-rd-map-${action.apostle.apostleId}" data-apostle-name="${escapeHtml(action.apostle.name)}">${avatar}<span class="tcbe-rd-toc-name" title="${escapeHtml(action.apostle.name)}">${escapeHtml(action.apostle.name)}</span><span class="tcbe-rd-toc-badge ${badgeClass}">${badgeText}</span></button>`;
     }).join('') + '<div class="tcbe-rd-toc-empty" style="color:#94a3b8;padding:8px 4px;text-align:center;display:none;">검색 결과 없음</div>';
   };

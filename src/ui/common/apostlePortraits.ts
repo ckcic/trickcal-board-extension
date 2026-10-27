@@ -1,5 +1,6 @@
 import { getUniqueApostles } from '../../domain/apostleProgress.ts';
 import { findProgressByName } from '../../domain/apostleLookup.ts';
+import { PERSONALITY_META_LIST } from '../../domain/constants.ts';
 import type { ProgressMap } from '../../domain/types.ts';
 import { escapeHtml } from './html.ts';
 
@@ -58,9 +59,10 @@ export function collectApostlePortraits(progressMap?: ProgressMap): Map<number |
 /**
  * 사도 미니 아바타 렌더링
  */
-export function renderApostleAvatar(apostleId: number | string, name: string, portraitMap?: Map<number | string, string>): string {
+export function renderApostleAvatar(apostleId: number | string, name: string, portraitMap?: Map<number | string, string>, personality?: number): string {
   if (!portraitMap) return '';
   const url = portraitMap.get(apostleId) || portraitMap.get(name);
   if (!url) return '';
-  return `<img class="tcbe-rd-avatar" src="${escapeHtml(url)}" alt="" aria-hidden="true" loading="lazy" onerror="this.style.display='none'">`;
+  const personalityId = PERSONALITY_META_LIST.find(meta => meta.id === personality)?.id ?? 0;
+  return `<img class="tcbe-rd-avatar" data-personality="${personalityId}" src="${escapeHtml(url)}" alt="" aria-hidden="true" loading="lazy">`;
 }

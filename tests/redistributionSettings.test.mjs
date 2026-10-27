@@ -55,13 +55,14 @@ test('사도 초상화 아바타를 렌더링하고 비-DOM 환경에서 안전�
   ]);
 
   // ID 매칭
-  const erpinHtml = renderApostleAvatar(1001, '에르핀', map);
-  assert.match(erpinHtml, /<img class="tcbe-rd-avatar"/);
+  const erpinHtml = renderApostleAvatar(1001, '에르핀', map, 2);
+  assert.match(erpinHtml, /<img class="tcbe-rd-avatar" data-personality="2"/);
+  assert.doesNotMatch(erpinHtml, /\bonerror=/i);
   assert.match(erpinHtml, /src="https:\/\/cdn\.note\.trickcal\.com\/hero\/erpin\.webp"/);
 
   // 이름 매칭 (ID가 없을 때 fallback)
-  const nerHtml = renderApostleAvatar(9999, '네르', map);
-  assert.match(nerHtml, /src="https:\/\/cdn\.note\.trickcal\.com\/hero\/ner\.webp"/);
+  const nerHtml = renderApostleAvatar(9999, '네르', map, 4);
+  assert.match(nerHtml, /data-personality="4" src="https:\/\/cdn\.note\.trickcal\.com\/hero\/ner\.webp"/);
 
   // 없는 사도 또는 portraitMap 미제공 시 빈 문자열
   assert.equal(renderApostleAvatar(1234, '미등록사도', map), '');

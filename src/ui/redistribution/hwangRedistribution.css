@@ -29,6 +29,12 @@
 .tcbe-rd-toc-item { display: flex; align-items: center; justify-content: space-between; width: 100%; text-align: left; padding: 5px 8px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: #334155; cursor: pointer; font-size: 12px; transition: all 0.12s ease; gap: 6px; }
 .tcbe-rd-toc-item:hover { background: #e2e8f0; color: #0f172a; }
 .tcbe-rd-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1.5px solid #cbd5e1; background-color: #f1f5f9; box-shadow: 0 1px 3px rgba(0,0,0,0.08); vertical-align: middle; }
+.tcbe-rd-avatar[data-personality="0"] { background-color: oklch(73.608% .13429 149.845); }
+.tcbe-rd-avatar[data-personality="1"] { background-color: oklch(77.013% .09175 247.218); }
+.tcbe-rd-avatar[data-personality="2"] { background-color: oklch(73.294% .12955 5.345); }
+.tcbe-rd-avatar[data-personality="3"] { background-color: oklch(88.861% .11028 99.237); }
+.tcbe-rd-avatar[data-personality="4"] { background-color: oklch(71.961% .16023 312.162); }
+.tcbe-rd-avatar[data-personality="5"] { background-image: url('https://note.trickcal.com/UI/Common_ResonanceTex_BG.webp'); background-size: cover; }
 .tcbe-rd-toc-apostles { flex: 1; min-height: 0; max-height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; padding-right: 4px; scrollbar-width: thin; scrollbar-color: #cbd5e1 #f1f5f9; }
 .tcbe-rd-toc-apostles::-webkit-scrollbar { width: 6px; }
 .tcbe-rd-toc-apostles::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
