@@ -16,6 +16,12 @@ export { createExampleRedistributionStages } from './redistributionStages.ts';
 export { getHwangTargetValue, getSpentHwangCrayons, getSpentBokrCrayons, readHwangStats, readBokrValues } from './redistributionModel.ts';
 export { createRedistributionGoalPreview, getAttackPathAvailability } from './redistributionPaths.ts';
 
+function getGroupSelectionMask(group: RedistributionNode[], selected: Set<string>): string {
+  let mask = '';
+  for (let i = 0; i < group.length; i++) mask += selected.has(group[i]!.key) ? '1' : '0';
+  return mask;
+}
+
 /** 이름과 ID 별칭을 중복 집계하지 않으며 입력 데이터를 변경하지 않는다. */
 export function* iterateHwangRedistribution(progressMap: ProgressMap, options: RedistributionOptions, checkpoints = false): Generator<{ limit: number; plan: RedistributionPlan; pending?: boolean }, RedistributionPlan> {
   const stages: RedistributionStage[] = options.stages ?? (options.priorities || []).map(target => ({ targets: [{ ...target }], allowBlocked: true }));
@@ -62,7 +68,7 @@ export function* iterateHwangRedistribution(progressMap: ProgressMap, options: R
   const moveCache = new Map<string, Move[]>();
   let cachedMoveCount = 0;
   const stagePathsFor = (group: RedistributionNode[], reset: boolean, selected: Set<string>, allowBlocked: boolean, allowGates = false) => {
-    const key = `${group[0]?.apostleId}/${reset}/${allowBlocked}/${allowGates}/${group.map(entry => selected.has(entry.key) ? '1' : '0').join('')}`;
+    const key = `${group[0]?.apostleId}/${reset}/${allowBlocked}/${allowGates}/${getGroupSelectionMask(group, selected)}`;
     const cached = pathCache.get(key);
     if (cached) { pathCache.delete(key); pathCache.set(key, cached); return cached; }
     const paths = boardPathOptions(group, reset, false, selected, allowBlocked, 8, allowGates);
@@ -131,7 +137,7 @@ export function* iterateHwangRedistribution(progressMap: ProgressMap, options: R
         candidatesByApostle.get(candidate.apostleId)!.push(candidate);
       }
       const refreshMoves = (apostleId: number) => {
-        const signature = `${stageIndex}/${apostleId}/${resetIds.has(apostleId)}/${groupById.get(apostleId)!.map(entry => selected.has(entry.key) ? '1' : '0').join('')}`;
+        const signature = `${stageIndex}/${apostleId}/${resetIds.has(apostleId)}/${getGroupSelectionMask(groupById.get(apostleId)!, selected)}`;
         const cached = moveCache.get(signature);
         if (cached) {
           moveCache.delete(signature); moveCache.set(signature, cached);
@@ -149,8 +155,17 @@ export function* iterateHwangRedistribution(progressMap: ProgressMap, options: R
             const cost = createEmptyCostSummary(), gain = emptyStats();
             for (const key of path) {
               const entry = byKey.get(key)!;
-              for (const resource of Object.keys(cost) as Array<keyof ResourceCostSummary>) cost[resource] = (cost[resource] || 0) + (entry.cost[resource] || 0);
-              if (scopeKeys.has(key)) for (const stat of STAT_CATEGORIES) gain[stat] += metric(entry)[stat];
+              const ec = entry.cost;
+              cost.basicCrayon += ec.basicCrayon;
+              cost.averageCrayon += ec.averageCrayon;
+              cost.epicCrayon += ec.epicCrayon;
+              cost.ultraCrayon += ec.ultraCrayon;
+              cost.wateringCan = (cost.wateringCan || 0) + (ec.wateringCan || 0);
+              cost.gold += ec.gold;
+              if (scopeKeys.has(key)) {
+                const m = metric(entry);
+                for (const stat of STAT_CATEGORIES) gain[stat] += m[stat];
+              }
             }
             entries.push({ path, cost, gain, score: [] });
           }

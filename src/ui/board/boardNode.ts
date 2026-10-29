@@ -4,15 +4,35 @@ import { getNodeStatCategories, isBokrNode, isHwangNode, NODE_TYPE, STAT_META_LI
 import type { BoardProgress, MasterBoardNode } from '../../domain/types.ts';
 import { STAT_TO_POSITIONS } from './tileHighlight.ts';
 
+const statMetaByKey = new Map(STAT_META_LIST.map(stat => [stat.key, stat]));
+const boardPetalMapCache = new WeakMap<MasterBoardNode[], Map<MasterBoardNode, { petal: MasterBoardNode; index: number } | null>>();
+
+function getCachedLinkedPetal(masterNodes: MasterBoardNode[], node: MasterBoardNode) {
+  if (node.nodeType !== NODE_TYPE.HWANG_EXT) return null;
+  let map = boardPetalMapCache.get(masterNodes);
+  if (!map) {
+    map = new Map();
+    boardPetalMapCache.set(masterNodes, map);
+  }
+  let cached = map.get(node);
+  if (cached === undefined) {
+    const petal = findLinkedPetalNode(masterNodes, node);
+    cached = petal ? { petal, index: masterNodes.indexOf(petal) } : null;
+    map.set(node, cached);
+  }
+  return cached;
+}
+
 export function getBoardNodeVisual(board: BoardProgress, node: MasterBoardNode, picked: boolean) {
   const categories = getNodeStatCategories(node);
   const key = categories[0];
-  const meta = STAT_META_LIST.find(stat => stat.key === key);
+  const meta = key ? statMetaByKey.get(key) : undefined;
   const combinedAttack = categories.includes('atk_phys') && categories.includes('atk_mag');
   const combinedDefense = categories.includes('def_phys') && categories.includes('def_mag');
   const statName = combinedAttack ? '물마공' : combinedDefense ? '물마방' : meta?.nameKo;
-  const petal = findLinkedPetalNode(board.masterNodes || [], node);
-  const petalIndex = petal ? board.masterNodes!.indexOf(petal) : -1;
+  const linkedPetal = getCachedLinkedPetal(board.masterNodes || [], node);
+  const petal = linkedPetal?.petal;
+  const petalIndex = linkedPetal?.index ?? -1;
   const petalOpen = petal && board.unlocked !== false && board.stepStr?.[petalIndex] === '1';
   const flowering = node.nodeType === NODE_TYPE.HWANG_EXT;
   // 시작 칸과 관문은 원본의 고정 테두리를 사용하며 색칠 기록을 변경하지 않는다.
@@ -72,4 +92,3 @@ export function computeBoardGridLayout(points: Array<{ x: number; y: number }>, 
 export function getTileGridStyle(x: number, y: number, layout: BoardGridLayout): string {
   return `grid-column:${layout.maxX - x + 1 + layout.columnOffset};grid-row:${layout.maxY - y + 1};`;
 }
-

@@ -24,6 +24,7 @@ import {
   readRedistributionStages,
   getRedistributionStageStats,
   renderStageTargetHint,
+  updateStageTargetRowElement,
 } from './redistributionStageEditor.ts';
 import {
   getHwangStatLimits,
@@ -48,6 +49,7 @@ export function openHwangRedistribution(progressMap: ProgressMap): void {
   let stages = savedSettings?.stages ?? createExampleRedistributionStages();
 
   let saveSettingsTimer: ReturnType<typeof setTimeout> | null = null;
+  let deferredAllGoalTimer: ReturnType<typeof setTimeout> | null = null;
 
   const bodyHtml = renderRedistributionTemplate(spentCrayons, spentBokr, ownedCount, limits, bokrLimits);
 
@@ -71,6 +73,10 @@ export function openHwangRedistribution(progressMap: ProgressMap): void {
       disposeDrag();
       disposeSettingsTabs();
       calculation.dispose();
+      if (deferredAllGoalTimer !== null) {
+        clearTimeout(deferredAllGoalTimer);
+        deferredAllGoalTimer = null;
+      }
       if (saveSettingsTimer !== null) {
         clearTimeout(saveSettingsTimer);
         saveSettings();
@@ -130,15 +136,33 @@ export function openHwangRedistribution(progressMap: ProgressMap): void {
     const status = dialog.querySelector('[data-status]');
     if (status) status.textContent = ' 설정을 변경했습니다. 다시 계산해 주세요.';
   };
-  const renderTargets = () => {
-    targetList.innerHTML = renderRedistributionStageEditor(stages, limits, bokrLimits, allGoal);
+  const renderTargets = (useAllGoal = true) => {
+    targetList.innerHTML = renderRedistributionStageEditor(stages, limits, bokrLimits, useAllGoal ? allGoal : undefined);
     for (const selector of ['[data-add-stage]', '[data-add-bokr-stage]']) {
       const button = dialog.querySelector<HTMLButtonElement>(selector);
       if (button) button.disabled = stages.length >= 30;
     }
   };
   const readTargets = () => { stages = readRedistributionStages(targetList); };
-  renderTargets();
+  // 모달 오픈 클릭 핸들러의 동기 지연을 줄이기 위해 초기 렌더에서는 '전부' 범위 계산을 다음 틱으로 지연한다.
+  renderTargets(false);
+  if (stages.some(stage => stage.targets.some(target => target.target === null))) {
+    deferredAllGoalTimer = setTimeout(() => {
+      deferredAllGoalTimer = null;
+      const stageElements = targetList.querySelectorAll<HTMLElement>('[data-stage]');
+      stageElements.forEach((stageEl, stageIdx) => {
+        const stage = stages[stageIdx];
+        if (!stage) return;
+        const rows = stageEl.querySelectorAll<HTMLElement>('[data-target]');
+        rows.forEach((row, targetIdx) => {
+          const target = stage.targets[targetIdx];
+          if (target?.target === null) {
+            updateStageTargetRowElement(row, stage, target, limits, bokrLimits, allGoal);
+          }
+        });
+      });
+    }, 0);
+  }
   invalidateResult();
   const status = dialog.querySelector('[data-status]');
   if (status) status.textContent = '';
@@ -189,7 +213,7 @@ export function openHwangRedistribution(progressMap: ProgressMap): void {
       renderTargets(); invalidateResult(); return;
     }
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement) {
-      const row = event.target.closest('[data-target]');
+      const row = event.target.closest<HTMLElement>('[data-target]');
       if (row) {
         const statSelect = row.querySelector<HTMLSelectElement>('[data-stat]');
         const resource = row.closest('[data-stage]')?.querySelector<HTMLInputElement>('[data-resource]:checked');
@@ -209,7 +233,21 @@ export function openHwangRedistribution(progressMap: ProgressMap): void {
       if (!input) return;
       input.disabled = event.target.value === 'all'; input.required = !input.disabled;
     }
-    readTargets(); renderTargets(); invalidateResult();
+    readTargets();
+    // 개별 행이나 체크박스/드롭다운 조작 시에는 전체 편집기 DOM을 파괴하지 않고 해당 단계의 목표 행들만 제자리 갱신한다.
+    const changedStageEl = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-stage]') : null;
+    const changedStageIdx = changedStageEl ? Number(changedStageEl.dataset.stage) : -1;
+    const changedStage = changedStageIdx >= 0 ? stages[changedStageIdx] : undefined;
+    if (changedStageEl && changedStage) {
+      const rows = changedStageEl.querySelectorAll<HTMLElement>('[data-target]');
+      rows.forEach((row, targetIdx) => {
+        const target = changedStage.targets[targetIdx];
+        if (target) updateStageTargetRowElement(row, changedStage, target, limits, bokrLimits, allGoal);
+      });
+    } else {
+      renderTargets();
+    }
+    invalidateResult();
   });
   targetList.addEventListener('click', event => {
     const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-stage-action]') : null;

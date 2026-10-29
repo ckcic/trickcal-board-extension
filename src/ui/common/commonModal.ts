@@ -56,11 +56,11 @@ export function createCommonModal(options: CommonModalOptions): CommonModalInsta
   const tabsHtml = options.tabs && options.tabs.length > 0 ? `
     <nav class="tcbe-rd-main-tabs" role="tablist" aria-label="${escapeHtml(options.title)} 메뉴">
       ${options.tabs.map((tab, idx) => {
-        const isSelected = options.initialTabId ? tab.id === options.initialTabId : idx === 0;
-        const panelId = tab.panelId || `${options.id}-panel-${tab.id}`;
-        const badge = tab.badge ? ` <span class="tcbe-rd-tab-badge" data-tab-badge="${tab.id}" ${tab.badgeHidden ? 'hidden' : ''}>${escapeHtml(tab.badge)}</span>` : '';
-        return `<button type="button" role="tab" id="${options.id}-tab-${tab.id}" data-tab="${tab.id}" aria-controls="${panelId}" aria-selected="${isSelected}" tabindex="${isSelected ? 0 : -1}">${tab.label}${badge}</button>`;
-      }).join('')}
+    const isSelected = options.initialTabId ? tab.id === options.initialTabId : idx === 0;
+    const panelId = tab.panelId || `${options.id}-panel-${tab.id}`;
+    const badge = tab.badge ? ` <span class="tcbe-rd-tab-badge" data-tab-badge="${tab.id}" ${tab.badgeHidden ? 'hidden' : ''}>${escapeHtml(tab.badge)}</span>` : '';
+    return `<button type="button" role="tab" id="${options.id}-tab-${tab.id}" data-tab="${tab.id}" aria-controls="${panelId}" aria-selected="${isSelected}" tabindex="${isSelected ? 0 : -1}">${tab.label}${badge}</button>`;
+  }).join('')}
     </nav>` : '';
 
   dialog.innerHTML = `
@@ -73,8 +73,8 @@ export function createCommonModal(options: CommonModalOptions): CommonModalInsta
     ${options.bodyHtml}
   `;
 
-  document.body.appendChild(dialog);
   const unlockScroll = lockPageScroll();
+  document.body.appendChild(dialog);
 
   let isClosed = false;
   const close = () => {
@@ -180,7 +180,6 @@ export function createCommonModal(options: CommonModalOptions): CommonModalInsta
   });
 
   dialog.showModal();
-  dialog.scrollTop = 0;
 
   return {
     dialog,

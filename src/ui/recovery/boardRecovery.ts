@@ -1,7 +1,7 @@
 import { renderRecoveryTemplate } from './recoveryTemplate.ts';
 import { getRecoveryDisplayAlternatives, renderRecoveryMap, renderRecoveryResults, signed, planKey } from './recoveryResult.ts';
 import type { ProgressMap } from '../../domain/types.ts';
-import { calculateApostleRecovery, getRecoveryNodes, getRecoveryTargets, subtractRecoveryCost, type RecoveryResource, type RecoveryResult, type RecoverySelection } from '../../domain/boardRecovery.ts';
+import { calculateApostleRecovery, getRecoveryNodes, getRecoveryTargets, subtractRecoveryCost, type RecoveryNode, type RecoveryResource, type RecoveryResult, type RecoverySelection } from '../../domain/boardRecovery.ts';
 import { createEmptyCostSummary, NODE_TYPE } from '../../domain/boardProgress.ts';
 import { sumCosts } from '../../domain/boardPathfinder.ts';
 import { matchesKoreanSearch } from '../../domain/koreanSearch.ts';
@@ -21,6 +21,16 @@ export function openBoardRecovery(progressMap: ProgressMap): void {
   const savedSettings = loadRecoverySettings();
   const apostles = [...new Map([...progressMap.values()].filter(a => a.isOwned !== false).map(a => [a.apostleId, a])).values()];
   const portraits = collectApostlePortraits(progressMap);
+  // 모달이 열려 있는 동안 사도별 노드 레이아웃·비용을 캐시하여 체크박스 변경 및 계산 시 재사용한다.
+  const cachedNodesByApostle = new Map<number, RecoveryNode[]>();
+  const getCachedNodes = (apostle: (typeof apostles)[number]): RecoveryNode[] => {
+    let cached = cachedNodesByApostle.get(apostle.apostleId);
+    if (!cached) {
+      cached = getRecoveryNodes(apostle);
+      cachedNodesByApostle.set(apostle.apostleId, cached);
+    }
+    return cached;
+  };
 
   let generation = 0, closed = false, results: RecoveryResult[] = [], priority: RecoveryResource = 'hwang', limit = 0;
   let searchQuery = '', onlyPositive = false;
@@ -60,13 +70,15 @@ export function openBoardRecovery(progressMap: ProgressMap): void {
     const selections = read();
     const counts = { hwang: selectedInputs().filter(input => input.dataset.pick!.startsWith('hwang:')).length, bokr: selectedInputs().filter(input => input.dataset.pick!.startsWith('bokr:')).length };
     let heroes = 0, tiles = 0, invested = createEmptyCostSummary();
-    for (const apostle of apostles) {
-      try {
-        const nodes = getRecoveryNodes(apostle), targets = getRecoveryTargets(nodes, selections);
-        if (targets.size) heroes++;
-        tiles += targets.size;
-        for (const entry of nodes) if (targets.has(entry.key)) invested = sumCosts(invested, entry.cost);
-      } catch { /* 계산 시 사도별 데이터 오류는 별도로 표시 */ }
+    if (selections.length) {
+      for (const apostle of apostles) {
+        try {
+          const nodes = getCachedNodes(apostle), targets = getRecoveryTargets(nodes, selections);
+          if (targets.size) heroes++;
+          tiles += targets.size;
+          for (const entry of nodes) if (targets.has(entry.key)) invested = sumCosts(invested, entry.cost);
+        } catch { /* 계산 시 사도별 데이터 오류는 별도로 표시 */ }
+      }
     }
     dialog.querySelector<HTMLElement>('[data-selection-summary]')!.textContent = `동시 적용: 황크 ${counts.hwang}항목 · 보크 ${counts.bokr}항목 | 대상 ${heroes}명 · ${tiles}칸 | 대상 투자량: 황크 ${invested.ultraCrayon}개 · 보크 ${invested.epicCrayon}개`;
     calculate.disabled = !selections.length;
@@ -241,12 +253,21 @@ export function openBoardRecovery(progressMap: ProgressMap): void {
     const token = ++generation, compareFlowering = dialog.querySelector<HTMLInputElement>('[data-flowering]')!.checked;
     calculate.disabled = true; cancel.hidden = false; results = []; output.replaceChildren();
     dialog.querySelector<HTMLElement>('[data-empty]')!.hidden = true;
+    let lastYieldTime = 0;
     for (let index = 0; index < apostles.length; index++) {
-      status.textContent = `회수 계획 계산 중 ${index + 1}/${apostles.length}`;
-      await new Promise(resolve => setTimeout(resolve, 0));
-      if (closed || token !== generation) return;
+      const now = Date.now();
+      if (index === 0 || now - lastYieldTime >= 16) {
+        status.textContent = `회수 계획 계산 중 ${index + 1}/${apostles.length}`;
+        lastYieldTime = now;
+        await new Promise(resolve => setTimeout(resolve, 0));
+        if (closed || token !== generation) return;
+      }
       const apostle = apostles[index]!;
-      try { const result = calculateApostleRecovery(apostle, selections, compareFlowering); if (result.targets.size) results.push(result); }
+      try {
+        const nodes = getCachedNodes(apostle);
+        const result = calculateApostleRecovery(apostle, selections, compareFlowering, nodes);
+        if (result.targets.size) results.push(result);
+      }
       catch (error) { results.push({ apostle, nodes: [], targets: new Set(), alternatives: [], error: error instanceof Error ? error.message : '데이터를 확인할 수 없습니다.' }); }
     }
     choices.clear(); limit = results.length;

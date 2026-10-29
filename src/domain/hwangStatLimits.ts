@@ -21,18 +21,22 @@ export function roundRedistributionTarget(value: number, stat: RedistributionSta
 export function getHwangStatLimits(progressMap: ProgressMap, resource: 'hwang' | 'bokr' = 'hwang'): HwangStatLimits {
   const result = Object.fromEntries(['attack', ...STAT_CATEGORIES].map(stat =>
     [stat, { byBoard: [0, 0, 0], total: 0, unlocked: 0 }])) as HwangStatLimits;
-  const apostles = new Map([...progressMap.values()].map(apostle => [apostle.apostleId, apostle]));
-  for (const apostle of apostles.values()) {
+  const seenApostles = new Set<number>();
+  for (const apostle of progressMap.values()) {
+    if (seenApostles.has(apostle.apostleId)) continue;
+    seenApostles.add(apostle.apostleId);
     if (apostle.isOwned === false) continue;
     apostle.boards.forEach((board, boardIndex) => {
       const nodes = board.masterNodes || [];
       for (const node of nodes) {
         if (resource === 'bokr' ? node.nodeType !== NODE_TYPE.BOKR : !isHwangNode(node) && node.nodeType !== NODE_TYPE.HWANG_EXT) continue;
-        const categories: RedistributionStat[] = getNodeStatCategories(node);
+        const categories: RedistributionStat[] = [...getNodeStatCategories(node)];
         if (categories.includes('atk_phys') || categories.includes('atk_mag')) categories.push('attack');
-        const petal = findLinkedPetalNode(nodes, node);
-        const available = board.unlocked && (node.nodeType !== NODE_TYPE.HWANG_EXT ||
-          (petal && board.stepStr?.[nodes.indexOf(petal)] === '1'));
+        let available = Boolean(board.unlocked);
+        if (available && node.nodeType === NODE_TYPE.HWANG_EXT) {
+          const petal = findLinkedPetalNode(nodes, node);
+          available = Boolean(petal && board.stepStr?.[nodes.indexOf(petal)] === '1');
+        }
         for (const stat of new Set(categories)) {
           const limit = result[stat];
           limit.byBoard[boardIndex] = (limit.byBoard[boardIndex] || 0) + 1;

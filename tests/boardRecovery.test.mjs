@@ -205,3 +205,22 @@ test('만개 허용 여부나 탐색 우선순위만 다르고 색칠 계획이 
   assert.equal(result.alternatives.length, 4);
   assert.equal(getRecoveryDisplayAlternatives(result).length, 1);
 });
+
+
+test('사전 계산된 노드(precomputedNodes) 전달 시 동일 결과를 반환하고 닫힌 꽃잎이 없으면 만개안도 동일 계획을 생성한다', () => {
+  const a = floweringApostle();
+  const selections = [pick('bokr', 'crit_res')];
+  const precomputed = getRecoveryNodes(a);
+  const direct = calculateApostleRecovery(a, selections, true);
+  const cached = calculateApostleRecovery(a, selections, true, precomputed);
+  assert.deepEqual(cached, direct);
+
+  // 닫힌 꽃잎이 없는 사도에서 compareFlowering=true 시 기본안과 만개안이 동일한 색칠 경로를 갖는지 검증
+  const noClosedPetal = apostle([start(), yellow(2, 1, 0), bokr(3, 2, 0)]);
+  const noPetalResult = calculateApostleRecovery(noClosedPetal, [pick()], true, getRecoveryNodes(noClosedPetal));
+  const basePlan = best(noPetalResult, false, 'hwang');
+  const flowerPlan = best(noPetalResult, true, 'hwang');
+  assert.equal(flowerPlan.flowering, true);
+  assert.deepEqual(flowerPlan.paint, basePlan.paint);
+  assert.deepEqual(flowerPlan.net, basePlan.net);
+});

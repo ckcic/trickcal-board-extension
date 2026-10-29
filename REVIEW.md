@@ -1,6 +1,6 @@
 # 🎨 Trickcal Board Extension 코드 리뷰, 최적화 분석 및 기술 검토 보고서
 
-최종 갱신: 2026-10-15
+최종 갱신: 2026-10-29
 작업 브랜치: `dev`
 
 ---
@@ -14,10 +14,40 @@
 
 # 🧹 0. 리팩토링 후보 목록 (2026-10-14)
 
-상태: **R1~R12 리팩토링 완료.** 각 항목은 기능 변경 없는 구조 개선이 목적이며, 진행 시 `node scripts/build.mjs`와 `node --test tests/*.test.mjs`로 회귀를 확인한다. 현재 전체 테스트는 273개다.
+상태: **R1~R12 리팩토링 및 추가 최적화 완료.** 각 항목은 기능 변경 없는 구조 개선이 목적이며, 진행 시 `node scripts/build.mjs`와 `node --test tests/*.test.mjs`로 회귀를 확인한다. 현재 전체 테스트는 274개다.
 
 **권장 진행 순서:** R3 → R6 → R1 → R2 → R5 → R4 → 나머지
 (R3·R6은 작은 변경으로 정렬 불일치 같은 버그 위험을 먼저 없애고, 이후 큰 파일 정리를 쉽게 만든다.)
+
+## 2026-10-29 도메인·UI 추가 최적화 및 문서 동기화
+
+- **황크·보크 회수 계산(`src/domain/boardRecovery.ts`) 약 6.7배 가속 (`3,652ms` → `547ms` / 135명 3차 보드 기준):**
+  - **사도별 불변 데이터 1회 사전 추출**: 기존에 대안 조합(`(flowering, priority, allowNewBokr)` 최대 8회)마다 반복 계산하던 `petalsByKey`, `retained`, `mandatory`, `refund`, 노드별 황크/보크 스탯을 사도당 1회만 계산하고 정수 인덱스(`0..nLen-1`) 및 `Uint8Array` 비트마스크(`selectedMask`, `mandatoryMask`)로 변환.
+  - **그래프 생성 중복 제거 및 만개 단락 평가(Short-circuit)**: `buildRecoveryGraph`를 `(flowering, allowNewBokr)` 쌍당 1회만 생성하도록 호이스팅하고, 사도에 미선택 닫힌 꽃잎(`HWANG_EXT`) 후보가 없을 때는 `flowering = true` 재탐색을 생략하고 `flowering = false` 결과를 복제(`clonePlanWithFlowering`).
+  - **경로 탐색(`solve`) 부모 포인터 트리 & 선형 최솟값 스캔**: 간선 완화마다 `path` 배열 복제·필터링 및 `pending.sort()`를 수행하던 병목을 부모 포인터 연결 리스트(`PathLabel`)와 선형 최솟값 추출(Stale 라벨 즉시 스왑 제거)로 교체하고, `newBokr` 카운트를 $O(1)$ 증분 갱신으로 전환.
+  - **`getRecoveryTargets` & `stats()` 할당 최적화**: `getNodeStatCategories`를 노드당 1회만 호출하고 `Object.fromEntries(STAT_CATEGORIES.map(...))`를 정적 객체 리터럴로 교체.
+- **회수 모달 UI 반응성 개선 (`src/ui/recovery/boardRecovery.ts`):**
+  - 모달 열람 중 사도별 `getRecoveryNodes(apostle)` 결과를 `cachedNodesByApostle`에 캐싱하여 체크박스 토글(`updateSelection`) 시 노드 재파싱을 제거하고 계산 시 `calculateApostleRecovery(..., precomputedNodes)`로 전달.
+  - 135명 순회 시 매 사도마다 `setTimeout(..., 0)`을 호출해 발생하던 브라우저 타이머 최소 지연(~500ms)을 16ms 프레임 단위 스로틀링으로 개선.
+- **재분배 도메인 핫루프 미세 최적화 (`src/domain/redistributionModel.ts`, `redistributionPaths.ts`, `hwangRedistribution.ts`, `redistributionSearch.ts`, `hwangStatLimits.ts`):**
+  - `emptyStats()`를 정적 객체 리터럴로 교체하여 빔 서치 중 수만 회 발생하는 `Object.fromEntries` 배열·콜백 할당 제거.
+  - `prepareNodes`에서 `HWANG_EXT` 노드의 선행 꽃잎을 `WeakMap`(`linkedPetalCache`)에 캐싱하여 `boardPathOptions` 다익스트라 탐색 중 반복되던 `findLinkedPetalNode` 선형 스캔 제거.
+  - `createRedistributionGoalPreview`를 지연 초기화(Lazy `prepareNodes`) + `(allowBlocked, allowGates)` 도달 범위 공유 캐시 구조로 개편하여 모달 오픈 및 `'전부'` 목표 조회 시 중복 경로 탐색 제거.
+  - `readBokrValues` 및 `getBoardNodeVisual`에 `WeakMap` 캐시를 적용하여 결과 요약·지도 렌더링 시 수천 개 노드에 대한 반복 선형 탐색 제거.
+  - `searchResetSets`에서 `limit = 0` 기준선 평가 직후 `pending` 체크포인트를 추가하여 초기 탐색과 이후 후보 탐색의 단일 타임슬라이스 병합 방지.
+- **재분배·공통 모달 UI Long-Task 및 Forced Reflow 제거 (`src/ui/common/commonModal.ts`, `src/ui/redistribution/hwangRedistribution.ts`, `redistributionStageEditor.ts`, `redistributionCalculation.ts`):**
+  - `createCommonModal`에서 `document.body.appendChild(dialog)` 이전에 `lockPageScroll()`을 먼저 수행하고 불필요한 `dialog.scrollTop = 0`을 제거하여 모달 오픈 시 발생하던 55ms Forced Reflow 해소.
+  - `openHwangRedistribution` 오픈 시 `'전부'`(`target === null`) 범위 계산을 다음 매크로태스크(`setTimeout(..., 0)`)로 분리하고, 단계 내 스탯·방식·체크박스 변경 시 전체 편집기 `innerHTML` 재작성 대신 해당 단계 행만 제자리 부분 갱신(`updateStageTargetRowElement`)하도록 개선(`'click' handler 200ms` 해소).
+  - `redistributionCalculation`에서 진행도 양보를 16ms 프레임 단위로 스로틀링하고, 계산 완료 직후 결과 DOM 파싱(`result.innerHTML = renderRedistributionResult(...)`) 전에 이벤트 루프에 한 번 양보하여 단일 `setTimeout` 핸들러 지연(`331ms`) 분리.
+  - `556457b` 커밋에서 `commonModal.ts`에 캡처 단계 `.tcbe-rd-avatar` 에러 핸들러가 통합됨에 따라, `redistributionCalculation.ts`에 남아 있던 동일 `dialog` 대상 중복 이벤트 리스너를 제거.
+- **검증:** `tests/boardRecovery.test.mjs`에 `precomputedNodes` 동등성 및 닫힌 꽃잎 부재 시 만개 단락 평가 검증 테스트 추가. 타입 검사·개발 빌드 성공, 전체 **274개 단위 테스트 통과**.
+
+## 2026-10-27 아바타 성격 배경 및 CSP 개선 (`556457b`)
+
+- **사도 미니 아바타 성격 배경 적용 (`src/ui/common/apostlePortraits.ts`, `components.css`):**
+  - `renderApostleAvatar`에서 사도 성격(`personality`)을 `data-personality` 속성으로 주입하고, 성격별 파스텔 배경색을 적용해 재분배·회수 모달에서 사도 식별성을 강화.
+- **인라인 `onerror` 제거 및 CSP 준수 (`src/ui/common/commonModal.ts`):**
+  - 아바타 `<img>`의 인라인 `onerror` 속성을 제거하고 `createCommonModal` 내부에서 캡처 단계 `error` 이벤트 위임으로 로드 실패 아바타를 숨기도록 개선.
 
 ## 2026-10-15 진행 결과
 

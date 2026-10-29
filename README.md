@@ -58,7 +58,7 @@
 ### 9. 🔄 만개·황크 재분배 시뮬레이터 (베타)
 - **3단 탭 네비게이션:** `[⚙️ 목표·예산 설정]`, `[📋 추천 결과 & 작업 순서]`, `[📈 인원별 비교 그래프]` 탭 분리로 최적화된 UX 제공.
 - **사도별 바로가기 빠른 이동 목차 (TOC):** 한글 초성 검색(`ㄱㄴㄷ`) 및 완성형 혼합 검색 지원, 2열 분할 레이아웃으로 135명 사도를 쾌적하게 탐색.
-- **사복(스킨) 자동 매핑 미니 아바타:** 유저가 착용한 사복 스킨의 공식 CDN 초상화를 100% 자동 적용하여 목차·작업 순서·지도 헤더에 표시.
+- **사복(스킨) 자동 매핑 & 성격 배경 미니 아바타:** 유저가 착용한 사복 스킨의 공식 CDN 초상화와 사도 성격 배경색을 100% 자동 적용하여 목차·작업 순서·지도 헤더에 표시.
 - **우선순위 단계 설정 & 프리셋 공유:** 단계별 목표/스탯/보크 누적 범위 설정, 드래그 앤 드롭 순서 변경, 표준 JSON 프리셋 클립보드 복사 및 파일 다운로드/불러오기 지원.
 - **작업 순서 텍스트 원클릭 복사:** 초기화 대상 및 차수별 색칠 계획을 텍스트로 한 번에 복사하여 게임 플레이 시 간편하게 참조.
 - **국룰 최적화 알고리즘:** 사도 초기화 시 불필요한 일반칸을 강제 복구하지 않는 **클린 슬레이트 최소 복구** 및 황크 경로에서의 **보크 회피** 규칙 적용.
@@ -132,49 +132,85 @@ npm run package
 ```text
 src/
 ├── bridge/          # MAIN world와 ISOLATED world 간 안전한 통신 및 Virtuoso 가상 목록 연동
-│   ├── interceptor.ts   # fetch/XHR API 응답 데이터 가로채기
-│   ├── contentBridge.ts # postMessage 통신 브리지
-│   ├── tileIdentity.ts  # 보드 타일 실제 식별자 및 React Fiber 추출 브리지
-│   └── virtualGrid.ts   # react-virtuoso 가상 목록 필터/정렬 어댑터
+│   ├── interceptor.ts       # fetch/XHR API 응답 데이터 가로채기
+│   ├── contentBridge.ts     # postMessage 통신 브리지
+│   ├── tileIdentity.ts      # 보드 타일 실제 식별자 및 React Fiber 추출 브리지
+│   ├── virtualGrid.ts       # react-virtuoso 가상 목록 필터/정렬 어댑터
+│   └── virtualGridStats.ts  # 가상 목록 통계 메시지 검증 및 구독 관리
 ├── domain/          # 순수 비즈니스 로직 및 스탯/진행도 계산 (Chrome API 독립)
-│   ├── boardProgress.ts # 보크/황크/일반칸 진행도 계산
-│   ├── normalStatValues.ts # 태생 성급별 일반칸 고정 스탯 상승량 테이블
-│   ├── boardPathfinder.ts # 보크 칸 최단 경로 및 필요 비용 계산
-│   ├── boardRecovery.ts # 황크·보크 회수 계산 도메인
-│   ├── hwangRedistribution.ts # 만개·황크 재분배 최적화 알고리즘
+│   ├── constants.ts         # 크레파스·노드·스탯·성격 상수 및 스탯 코드 매핑 테이블
+│   ├── dataParser.ts        # 외부 API 응답 검증 및 정규화 파서
+│   ├── boardProgress.ts     # 보크/황크/일반칸 진행도 계산
+│   ├── apostleProgress.ts   # 사도 진행도 목록 별칭 중복 제거 유틸
+│   ├── apostleLookup.ts     # 이름·스킨 접미사·ID 기반 사도 조회
+│   ├── statAggregates.ts    # 필터 조건별 보크 스탯 집계
+│   ├── normalStatValues.ts  # 태생 성급별 일반칸 고정 스탯 상승량 테이블
+│   ├── boardPathfinder.ts   # 보크 칸 최단 경로 및 필요 비용 계산
+│   ├── boardRecovery.ts     # 황크·보크 회수 계산 도메인
+│   ├── hwangRedistribution.ts # 만개·황크 재분배 최적화 진입점
+│   ├── redistributionTypes.ts # 재분배 타입 정의
+│   ├── redistributionStages.ts # 재분배 기본 우선순위 단계 정의
+│   ├── redistributionModel.ts # 재분배 공통 노드·자원·스탯 계산
+│   ├── redistributionPaths.ts # 재분배 경로 탐색 및 목표 범위 계산
 │   ├── redistributionSearch.ts # 재분배 빔 탐색 및 조합 최적화
 │   ├── redistributionCurve.ts # 인원별 진행도 곡선 산출
 │   ├── redistributionPreset.ts # 재분배 프리셋 검증 및 직렬화
-│   ├── koreanSearch.ts  # 한글 초성 검색(ㄱㄴㄷ) 엔진
-│   ├── hwangStatLimits.ts # 스탯별 상한 분석
-│   ├── filters.ts       # 다차원 필터 판정 로직
-│   ├── listSelection.ts # 가상 목록 정렬 및 사도 ID 선별
-│   ├── updateChecker.ts # 신규 릴리스 버전 확인
-│   └── types.ts         # TypeScript 타입 정의
+│   ├── koreanSearch.ts      # 한글 초성 검색(ㄱㄴㄷ) 엔진
+│   ├── hwangStatLimits.ts   # 스탯별 상한 분석
+│   ├── filters.ts           # 다차원 필터 판정 로직 및 기본 상태
+│   ├── listSelection.ts     # 가상 목록·카드 공통 정렬 및 사도 ID 선별
+│   ├── updateChecker.ts     # 신규 릴리스 버전 확인
+│   └── types.ts             # TypeScript 타입 정의
 ├── ui/              # 루트 스타일 및 4개 기능별 서브디렉토리
-│   ├── common/          # 공통 모달(commonModal), 클립보드 복사(clipboard), 스크롤 락, HTML 유틸
+│   ├── common/          # 공통 모달, 도구 레지스트리, 초상화, 재화·숫자 포맷, 유틸
+│   │   ├── commonModal.ts      # 공통 모달 생성·탭 탐색·아바타 이미지 에러 위임
+│   │   ├── toolModals.ts       # 계산 도구 모달 단일 레지스트리 관리
+│   │   ├── apostlePortraits.ts # 사도 초상화 수집 및 성격 배경 아바타 렌더링
+│   │   ├── resources.ts        # 크레파스·재화 아이콘 및 비용 표시
+│   │   ├── format.ts           # 숫자 및 골드 포맷 유틸
+│   │   ├── clipboard.ts        # 클립보드 복사 유틸
+│   │   ├── scrollLock.ts       # 모달 배경 스크롤 잠금 및 폭 보정
+│   │   ├── html.ts             # HTML/속성 이스케이프 유틸
+│   │   ├── selectors.ts        # 공통 DOM 셀렉터 상수
+│   │   ├── tokens.css          # 디자인 토큰 CSS 변수
+│   │   └── components.css      # 공통 모달·버튼·배지 컴포넌트 스타일
 │   ├── board/           # 인게임 DOM 조작, 카드 뱃지 주입, 필터 패널, 타일 하이라이트, 보크 상세 모달
 │   │   ├── boardEnhancer.ts # 사도 카드 뱃지 주입 및 가시성 제어
 │   │   ├── filterPanel.ts   # 4단 필터/정렬 컨트롤 패널 및 스탯 요약 바
+│   │   ├── pageDetector.ts  # 사도별 보드 탭 활성 여부 판별 및 캐시
+│   │   ├── updateBadge.ts   # 신규 버전 알림 배지 생성
+│   │   ├── assets.ts        # 스프라이트 에셋 URL 상수
 │   │   ├── normalStat.ts    # 일반칸 상세 진행도 팝업 및 고정(Pin) 모달
 │   │   ├── badge.ts         # 보크 뱃지 및 전역 포털 툴팁
 │   │   ├── tileHighlight.ts # 보드 타일 실시간 테두리 하이라이트
 │   │   ├── cardDetector.ts  # 사도 카드 DOM 감지
 │   │   ├── boardNode.ts     # 보드 노드 시각화 정보 추출
 │   │   ├── mutations.ts     # MutationObserver 변경 감지
-│   │   └── bokrModal.ts     # 보크 상세 모달 및 경로 강조
+│   │   ├── bokrModal.ts     # 보크 상세 모달 및 경로 강조
+│   │   └── board*.css / bokrModal.css # 기능별 분할 보드 스타일시트
 │   ├── redistribution/  # 만개·황크 재분배 시뮬레이터
-│   │   ├── hwangRedistribution.ts # 재분배 메인 모달 (3단 탭, TOC)
-│   │   ├── redistributionStageEditor.ts # 단계 편집기 및 드래그 앤 드롭
-│   │   ├── redistributionSummary.ts # 결과 요약 렌더러
+│   │   ├── hwangRedistribution.ts # 재분배 메인 모달 오케스트레이션
+│   │   ├── redistributionTemplate.ts # 재분배 모달 본문 템플릿
+│   │   ├── redistributionForm.ts # 설정 폼 읽기·복원
+│   │   ├── redistributionSettingsTabs.ts # 목표·도움말 내부 탭 및 상한 지연 분석
+│   │   ├── redistributionStageEditor.ts # 단계 편집기
+│   │   ├── redistributionStageDrag.ts # 단계 드래그 앤 드롭 및 자동 스크롤
+│   │   ├── redistributionCalculation.ts # 추천안·그래프 비동기 계산 실행기
+│   │   ├── redistributionResult.ts # 추천 결과·작업 순서·사도 지도 렌더러
+│   │   ├── redistributionSummary.ts # 목표 달성 요약 렌더러
+│   │   ├── redistributionToc.ts # 빠른 이동 목차(TOC) 및 초성 검색
 │   │   ├── redistributionCurve.ts # 인원별 그래프 렌더러
 │   │   ├── redistributionPresetModal.ts # 프리셋 JSON/파일 입출력 모달
 │   │   ├── redistributionSettings.ts # 재분배 설정 저장/복원
-│   │   └── redistributionResource.ts # 재화 아이콘 및 범위 라벨
+│   │   ├── redistributionResource.ts # 재화 아이콘 및 범위 라벨 재내보내기
+│   │   └── hwangRedistribution.css # 재분배 전용 스타일시트
 │   ├── recovery/        # 황크·보크 회수 계산기
-│   │   ├── boardRecovery.ts # 회수 계산 메인 모달 (초성 검색, 순회수 필터)
-│   │   └── boardRecoverySettings.ts # 회수 설정 저장/복원
-│   └── styles.css       # 네임스페이스 격리 메인 스타일시트
+│   │   ├── boardRecovery.ts # 회수 계산 메인 모달 오케스트레이션
+│   │   ├── recoveryTemplate.ts # 회수 설정 매트릭스 템플릿
+│   │   ├── recoveryResult.ts # 회수 결과·대안 카드·보드 지도 렌더러
+│   │   ├── boardRecoverySettings.ts # 회수 설정 저장/복원
+│   │   └── boardRecovery.css # 회수 계산기 전용 스타일시트
+│   └── styles.css       # 네임스페이스 격리 메인 스타일시트 진입점
 └── content.ts       # ISOLATED world 엔트리포인트 및 레이어 간 오케스트레이션
 ```
 

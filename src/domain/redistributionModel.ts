@@ -1,6 +1,6 @@
 /** 재분배 경로와 배분에서 공유하는 노드·자원·스탯 계산 */
 import { getNodeStatCategories, getStatCategoryFromStatType, isHwangNode } from './boardProgress.ts';
-import { NODE_TYPE, STAT_CATEGORIES, STAT_META_LIST } from './constants.ts';
+import { NODE_TYPE, STAT_META_LIST } from './constants.ts';
 import { extractNodeCost } from './boardPathfinder.ts';
 import type { ProgressMap, MasterBoardNode, ResourceCostSummary } from './types.ts';
 import type { HwangStats, RedistributionStat, RedistributionNode } from './redistributionTypes.ts';
@@ -9,7 +9,10 @@ import type { HwangStats, RedistributionStat, RedistributionNode } from './redis
 export const getHwangTargetValue = (stats: HwangStats, stat: RedistributionStat): number =>
   stat === 'attack' ? Math.min(stats.atk_phys, stats.atk_mag) : stats[stat];
 
-export const emptyStats = (): HwangStats => Object.fromEntries(STAT_CATEGORIES.map(key => [key, 0])) as HwangStats;
+export const emptyStats = (): HwangStats => ({
+  hp: 0, atk_phys: 0, atk_mag: 0, def_phys: 0, def_mag: 0,
+  crit: 0, crit_dmg: 0, crit_res: 0, crit_dmg_res: 0,
+});
 export const retained = (node: MasterBoardNode) => node.nodeType === NODE_TYPE.GATE || node.nodeType === NODE_TYPE.PETAL || node.nodeType === NODE_TYPE.START;
 export const hwang = (node: MasterBoardNode) => isHwangNode(node) || node.nodeType === NODE_TYPE.HWANG_EXT;
 
@@ -65,13 +68,21 @@ export function readBokrCounts(node: MasterBoardNode): HwangStats {
   return result;
 }
 
+const bokrValueCache = new WeakMap<MasterBoardNode, HwangStats>();
+const fallbackPerNodeByStat = new Map(STAT_META_LIST.map(meta => [meta.key, meta.valuePerNode ?? 0]));
+
 /** 기존 보크 모달과 같은 원본 수치 우선, 메타데이터 대체 규칙. 백분율이 아닌 정수 스탯. */
 export function readBokrValues(node: MasterBoardNode): HwangStats {
+  const cached = bokrValueCache.get(node);
+  if (cached) return cached;
   const result = emptyStats();
-  if (node.nodeType === NODE_TYPE.BOKR) for (const stat of getNodeStatCategories(node)) {
-    result[stat] = node.stats?.find(value => getStatCategoryFromStatType(value.statType) === stat)?.statValue
-      ?? STAT_META_LIST.find(meta => meta.key === stat)!.valuePerNode!;
+  if (node.nodeType === NODE_TYPE.BOKR) {
+    for (const stat of getNodeStatCategories(node)) {
+      result[stat] = node.stats?.find(value => getStatCategoryFromStatType(value.statType) === stat)?.statValue
+        ?? fallbackPerNodeByStat.get(stat)!;
+    }
   }
+  bokrValueCache.set(node, result);
   return result;
 }
 

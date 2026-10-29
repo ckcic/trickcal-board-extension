@@ -22,6 +22,37 @@ function renderStageTargetLimit(stage: RedistributionStage, target: Redistributi
   return `${renderStageTargetHint(target.stat, bokr, scope, bokr ? stage.boardThrough ?? stage.boardIndex ?? 0 : undefined)}${bokr ? ` · 목표 +${((target.target ?? allGoal?.(stage, target.stat) ?? 0) * (STAT_META_LIST.find(meta => meta.key === target.stat)?.valuePerNode ?? 0)).toLocaleString('ko-KR')} (기본 수치)` : ''}`;
 }
 
+/** 단일 목표 행의 표시값과 상한 안내만 부분 갱신하여 전체 편집기 innerHTML 재생성을 방지한다. */
+export function updateStageTargetRowElement(
+  row: HTMLElement,
+  stage: RedistributionStage,
+  target: RedistributionStage['targets'][number],
+  limits?: HwangStatLimits,
+  bokrLimits?: HwangStatLimits,
+  allGoal?: (stage: RedistributionStage, stat: RedistributionStat) => number
+): void {
+  const bokr = stage.resource === 'bokr';
+  const scope = bokr ? bokrLimits : limits;
+  const input = row.querySelector<HTMLInputElement>('[data-value]');
+  if (input) {
+    const unit = bokr ? 1 : getRedistributionStatUnit(target.stat);
+    input.step = String(unit);
+    input.max = String(bokr ? 100000 : Math.floor(100000 / unit) * unit);
+    const isAll = target.target === null;
+    input.disabled = isAll;
+    input.required = !isAll;
+    if (isAll) {
+      input.value = String(allGoal?.(stage, target.stat) ?? 0);
+    } else if (target.target !== null && Number.isFinite(target.target)) {
+      input.value = String(bokr ? Math.ceil(target.target) : roundRedistributionTarget(target.target, target.stat));
+    }
+  }
+  const limit = row.querySelector<HTMLElement>('[data-limit]');
+  if (limit) {
+    limit.textContent = renderStageTargetLimit(stage, target, scope, allGoal);
+  }
+}
+
 export function renderHwangStatLimits(limits: HwangStatLimits, resource: 'hwang' | 'bokr' = 'hwang'): string {
   return `<details class="tcbe-rd-limits"><summary>스탯별 최대 ${resource === 'bokr' ? '보크' : '황크'} 칸 수</summary>
     <p>보유 사도 기준입니다. 전체 최대에는 잠긴 보드·꽃잎도 포함하며, 현재 해금 범위는 열린 보드·꽃잎 기준입니다. 경로·예산 제한을 적용하기 전 칸 수입니다.</p>

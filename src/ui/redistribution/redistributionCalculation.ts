@@ -54,13 +54,21 @@ export function setupRedistributionCalculation(context: CalculationContext) {
       try {
         if (controller.signal.aborted) return;
         let plan: RedistributionPlan | undefined;
+        let lastYieldTime = Date.now();
         for (const point of iterateHwangRedistribution(progressMap, options, true)) {
           if (controller.signal.aborted) return;
           plan = point.plan; status.textContent = ` 계산 중 · 초기화 상한 ${point.limit}명 기준 (요청 상한 ${options.maxReset}명)`;
-          await new Promise(resolve => setTimeout(resolve, 0));
+          const now = Date.now();
+          if (!point.pending || now - lastYieldTime >= 16) {
+            lastYieldTime = now;
+            await new Promise(resolve => setTimeout(resolve, 0));
+          }
         }
         if (controller.signal.aborted) return;
         if (!plan) throw new Error('추천 결과를 생성하지 못했습니다.');
+        // 계산 완료 직후와 대량 결과 DOM 파싱(innerHTML)을 별도 태스크로 분리해 단일 setTimeout 핸들러 지연을 방지한다.
+        await new Promise(resolve => setTimeout(resolve, 0));
+        if (controller.signal.aborted) return;
         currentCalculatedPlan = plan;
         onPlan(plan);
         result.classList.remove('tcbe-rd-stale-content');
@@ -79,11 +87,6 @@ export function setupRedistributionCalculation(context: CalculationContext) {
       finally { calculationController = null; restoreControls(); }
     }, 30);
   });
-  dialog.addEventListener('error', event => {
-    if (event.target instanceof HTMLImageElement && event.target.classList.contains('tcbe-rd-avatar')) {
-      event.target.style.display = 'none';
-    }
-  }, true);
   dialog.addEventListener('click', async event => {
     if (disposed) return;
     const filterBtn = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-action-filter]') : null;

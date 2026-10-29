@@ -6,13 +6,21 @@ import { emptyStats, retained, hwang, compare, readHwangStats, readBokrCounts, g
 import type { ProgressMap } from './types.ts';
 import type { RedistributionNode, RedistributionStage, RedistributionStat } from './redistributionTypes.ts';
 
+/** 사도 보드별 확장 황크의 선행 꽃잎 매핑을 약한 참조로 캐시하여 반복 탐색을 제거한다. */
+const linkedPetalCache = new WeakMap<RedistributionNode, RedistributionNode | null>();
+
 /** 1차 시작 칸에서 연결한다. 열린 관문도 그곳까지의 색칠 경로를 건너뛸 수 없다. */
 export function boardPathOptions(nodes: RedistributionNode[], reset: boolean, originalOnly = false, selected?: Set<string>, allowBlocked = true, maxLabels = 1, allowGates = false): Map<string, string[][]> {
   const linkedPetals = new Map<string, RedistributionNode>();
-  for (const entry of nodes.filter(item => item.node.nodeType === NODE_TYPE.HWANG_EXT)) {
-    const board = nodes.filter(item => item.boardIndex === entry.boardIndex);
-    const petal = findLinkedPetalNode(board.map(item => item.node), entry.node);
-    const linked = board.find(item => item.node === petal);
+  for (const entry of nodes) {
+    if (entry.node.nodeType !== NODE_TYPE.HWANG_EXT) continue;
+    let linked = linkedPetalCache.get(entry);
+    if (linked === undefined) {
+      const board = nodes.filter(item => item.boardIndex === entry.boardIndex);
+      const petal = findLinkedPetalNode(board.map(item => item.node), entry.node);
+      linked = board.find(item => item.node === petal) ?? null;
+      linkedPetalCache.set(entry, linked);
+    }
     if (linked) linkedPetals.set(entry.key, linked);
   }
   const valid = nodes.filter(entry => entry.position &&
@@ -39,21 +47,30 @@ export function boardPathOptions(nodes: RedistributionNode[], reset: boolean, or
     const current = queue[head]!;
     if (!labels.get(current.key)?.includes(current)) continue;
     const { x, y } = byKey.get(current.key)!.position!;
-    for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+    for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]] as const) {
       const next = coordinates.get(`${nx},${ny}`);
       if (!next || current.path.includes(next.key)) continue;
       const currentEntry = byKey.get(current.key)!;
       if (currentEntry.boardIndex !== next.boardIndex &&
         (Math.abs(currentEntry.boardIndex - next.boardIndex) !== 1 ||
           (currentEntry.boardIndex < next.boardIndex ? currentEntry : next).node.nodeType !== NODE_TYPE.GATE)) continue;
-      const free = selected?.has(next.key) || next.node.nodeType === NODE_TYPE.START || (next.picked && (!reset || retained(next.node)));
+      const free = Boolean(selected?.has(next.key) || next.node.nodeType === NODE_TYPE.START || (next.picked && (!reset || retained(next.node))));
       let cost = free ? createEmptyCostSummary() : next.cost;
       const petal = linkedPetals.get(next.key);
-      const needsPetal = petal && !petal.picked && !selected?.has(petal.key) && !current.path.includes(petal.key);
-      if (needsPetal) cost = sumCosts(cost, petal.cost);
-      const weight = [cost.ultraCrayon, cost.epicCrayon, cost.averageCrayon, cost.basicCrayon, cost.wateringCan || 0, cost.gold]
-        .map((value, index) => value + current.weight[index]!);
-      const label = { key: next.key, weight, path: [...current.path, ...(needsPetal ? [petal.key] : []), next.key] };
+      const needsPetal = Boolean(petal && !petal.picked && !selected?.has(petal.key) && !current.path.includes(petal.key));
+      if (needsPetal) cost = sumCosts(cost, petal!.cost);
+      const cw = current.weight;
+      const weight = (free && !needsPetal)
+        ? cw
+        : [
+            cw[0]! + cost.ultraCrayon,
+            cw[1]! + cost.epicCrayon,
+            cw[2]! + cost.averageCrayon,
+            cw[3]! + cost.basicCrayon,
+            cw[4]! + (cost.wateringCan || 0),
+            cw[5]! + cost.gold,
+          ];
+      const label = { key: next.key, weight, path: needsPetal ? [...current.path, petal!.key, next.key] : [...current.path, next.key] };
       const existing = labels.get(next.key) || [];
       if (existing.some(other => dominates(other, label))) continue;
       let survivors = [...existing.filter(other => !dominates(label, other)), label].sort((a, b) => compare(a.weight, b.weight));
@@ -81,13 +98,21 @@ export function prepareNodes(progressMap: ProgressMap, includeLocked = false) {
     const group: RedistributionNode[] = [];
     apostle.boards.forEach((board, boardIndex) => {
       if (!board.unlocked && !includeLocked) return;
-      const boardNodes = (board.masterNodes || []).map((node, nodeIndex) => {
+      const masterNodes = board.masterNodes || [];
+      const boardNodes = masterNodes.map((node, nodeIndex) => {
         const cost = node.nodeType === NODE_TYPE.START ? createEmptyCostSummary() : extractNodeCost(node);
         if (Object.values(cost).some(value => !Number.isSafeInteger(value) || value < 0)) throw new Error('보드 재화 수치가 올바르지 않습니다.');
         if (hwang(node) && cost.ultraCrayon <= 0) throw new Error('황크칸 비용이 누락되어 계산할 수 없습니다.');
         return { key: `${apostle.apostleId}:${boardIndex}:${nodeIndex}`, apostleId: apostle.apostleId, boardIndex, nodeIndex,
           node, boardUnlocked: board.unlocked, picked: (boardIndex === 0 && node.nodeType === NODE_TYPE.START) || (board.unlocked && board.stepStr?.[nodeIndex] === '1'), cost, stats: readHwangStats(node), bokrStats: readBokrCounts(node), position: positions.get(`${boardIndex}:${nodeIndex}`) };
       });
+      for (const entry of boardNodes) {
+        if (entry.node.nodeType === NODE_TYPE.HWANG_EXT) {
+          const petal = findLinkedPetalNode(masterNodes, entry.node);
+          const linked = petal ? boardNodes.find(item => item.node === petal) ?? null : null;
+          linkedPetalCache.set(entry, linked);
+        }
+      }
       group.push(...boardNodes);
     });
     groups.push(group); nodes.push(...group);
@@ -113,12 +138,57 @@ export function prepareScopes(nodes: RedistributionNode[], groups: Redistributio
 
 /** 입력 미리보기와 모든 초기화 후보에 같은 접근 범위·전부 목표를 적용한다. 예산 적용 전이다. */
 export function createRedistributionGoalPreview(progressMap: ProgressMap) {
-  const { nodes, groups } = prepareNodes(progressMap, true);
-  const cache = new Map<string, number>();
+  let prepared: ReturnType<typeof prepareNodes> | null = null;
+  const scopeKeysCache = new Map<string, Set<string>>();
+  const availableCache = new Map<string, ReturnType<typeof emptyStats>>();
+  const goalCache = new Map<string, number>();
+
+  const ensurePrepared = () => (prepared ??= prepareNodes(progressMap, true));
+
   return (stage: RedistributionStage, stat: RedistributionStat): number => {
-    const key = [stage.resource, stage.boardIndex, stage.boardThrough, stage.allowBlocked, stage.allowGates, stat].join(':');
-    if (!cache.has(key)) cache.set(key, prepareScopes(nodes, groups, [{ ...stage, targets: [{ stat, target: null }] }])[0]!.goals[0]!);
-    return cache.get(key)!;
+    const resource = stage.resource ?? 'hwang';
+    const allowBlocked = Boolean(stage.allowBlocked);
+    const allowGates = Boolean(stage.allowGates);
+    const boardScope = resource === 'bokr'
+      ? (stage.boardThrough !== undefined ? `t:${stage.boardThrough}` : `i:${stage.boardIndex ?? 'all'}`)
+      : 'all';
+    const goalKey = `${resource}:${boardScope}:${allowBlocked}:${allowGates}:${stat}`;
+    const cachedGoal = goalCache.get(goalKey);
+    if (cachedGoal !== undefined) return cachedGoal;
+
+    const availKey = `${resource}:${boardScope}:${allowBlocked}:${allowGates}`;
+    let available = availableCache.get(availKey);
+    if (!available) {
+      const { nodes, groups } = ensurePrepared();
+      const scopeKey = `${allowBlocked}/${allowGates}`;
+      let reachable = scopeKeysCache.get(scopeKey);
+      if (!reachable) {
+        const original = new Set<string>();
+        for (const entry of nodes) if (entry.picked) original.add(entry.key);
+        reachable = new Set<string>();
+        for (const group of groups) {
+          for (const key of boardPathOptions(group, false, false, original, allowBlocked, 1, allowGates).keys()) {
+            reachable.add(key);
+          }
+        }
+        scopeKeysCache.set(scopeKey, reachable);
+      }
+      available = emptyStats();
+      const isBokr = resource === 'bokr';
+      for (const entry of nodes) {
+        if (!reachable.has(entry.key)) continue;
+        if (isBokr) {
+          if (stage.boardThrough !== undefined ? entry.boardIndex > stage.boardThrough : (stage.boardIndex !== undefined && entry.boardIndex !== stage.boardIndex)) continue;
+        }
+        const m = isBokr ? entry.bokrStats : entry.stats;
+        for (const s of STAT_CATEGORIES) available[s] += m[s];
+      }
+      availableCache.set(availKey, available);
+    }
+
+    const goal = getHwangTargetValue(available, stat);
+    goalCache.set(goalKey, goal);
+    return goal;
   };
 }
 

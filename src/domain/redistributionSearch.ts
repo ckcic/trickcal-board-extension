@@ -11,6 +11,7 @@ export function* searchResetSets<T>(ids: number[], maxSize: number,
   let best = baseline;
   // 목적함수 점수는 후보당 한 번만 계산해 비교·정렬에 재사용한다.
   let bestScore = score(baseline);
+  if (checkpoints) yield { limit: 0, best, pending: true };
   type Scored = { ids: number[]; value: T | null; score: number[] | null };
   let frontier: Scored[] = [{ ids: [], value: baseline, score: bestScore }];
   const exact = ids.length <= 8;

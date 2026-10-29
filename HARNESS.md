@@ -23,17 +23,18 @@
 
 ```text
 src/
-├── bridge/          # ISOLATED world와 MAIN world 간 통신 (interceptor.ts, contentBridge.ts, tileIdentity.ts)
-├── domain/          # 순수 비즈니스 로직, 데이터 파싱, 진척도 계산, 재분배·회수 알고리즘, 프리셋, 초성 검색, 타입 정의
+├── bridge/          # ISOLATED world와 MAIN world 간 통신 및 가상 목록 연동 (interceptor.ts, contentBridge.ts, tileIdentity.ts, virtualGrid.ts, virtualGridStats.ts)
+├── domain/          # 순수 비즈니스 로직, 상수(constants.ts), 데이터 파싱, 진척도·스탯 집계, 사도 조회, 재분배·회수 알고리즘, 프리셋, 초성 검색, 타입 정의
 ├── ui/              # 루트 스타일(styles.css) 및 4개 기능별 서브디렉토리
-│   ├── common/      # 공통 모달(commonModal), 클립보드(clipboard), 스크롤 락, HTML 유틸, 디자인 토큰(tokens.css), 공통 컴포넌트(components.css)
-│   ├── board/       # 인게임 DOM 조작, 카드 뱃지 주입, 필터 패널, 타일 하이라이트, 보크 상세 모달, 보드 스타일(board.css, bokrModal.css)
-│   ├── redistribution/ # 만개·황크 재분배 시뮬레이터, 단계 편집기, 인원별 곡선 그래프, 프리셋 모달, 스타일(hwangRedistribution.css)
-│   └── recovery/    # 황크·보크 회수 계산기 및 회수 설정 관리, 스타일(boardRecovery.css)
+│   ├── common/      # 공통 모달(commonModal), 도구 레지스트리(toolModals), 초상화(apostlePortraits), 재화/숫자 포맷(resources, format), 클립보드(clipboard), 스크롤 락, HTML 유틸, 디자인 토큰(tokens.css), 공통 컴포넌트(components.css)
+│   ├── board/       # 인게임 DOM 조작, 카드 뱃지 주입, 필터 패널, 페이지 판별(pageDetector), 업데이트 배지(updateBadge), 타일 하이라이트, 보크 상세 모달, 분할 보드 스타일(board*.css, bokrModal.css)
+│   ├── redistribution/ # 만개·황크 재분배 시뮬레이터, 폼/계산/목차/드래그/단계 편집기, 결과·요약·곡선 렌더러, 프리셋 모달, 스타일(hwangRedistribution.css)
+│   └── recovery/    # 황크·보크 회수 계산기, 설정 템플릿·결과/지도 렌더러, 회수 설정 관리, 스타일(boardRecovery.css)
 └── content.ts       # 콘텐츠 스크립트 진입점 및 레이어 간 오케스트레이션
 ```
 
 ### 레이어별 구현 수칙:
+
 1. **`src/domain/` (순수 로직 계층)**
    - DOM 조작이나 Chrome 확장 API(`chrome.*`)에 의존하지 않는 **순수 함수(Pure Function)** 형태로 작성합니다.
    - 보드 칸 수 계산, 스탯 증가량 산출, 재분배 알고리즘(황크/보크 경로 탐색, 초기화 빔 서치, 클린 슬레이트 최소 복구, 인원별 곡선 산출 등), 회수 알고리즘(`boardRecovery.ts`), 초성 검색 엔진(`koreanSearch.ts`), 프리셋 검증(`redistributionPreset.ts`) 핵심 수식 변경 시 반드시 `tests/`의 단위 테스트를 함께 갱신하거나 추가해야 합니다.
@@ -58,7 +59,7 @@ src/
 2. **UI/UX 구조 원칙**
    - **3개 메인 탭 구조:** `[⚙️ 목표·예산 설정]`, `[📋 추천 결과 & 작업 순서]`, `[📈 인원별 비교 그래프]` 탭을 분리 제공하며 키보드 탐색(좌우/Home/End)과 접근성을 지원합니다.
    - **우측 빠른 이동 목차 (TOC):** 계산 결과 영역은 2열 분할(좌측: 결과 본문 / 우측: 230px 빠른 이동 목차)로 구성하며, 사도별 바로가기 실시간 검색(한글 초성 검색 `ㄱㄴㄷ` 및 완성형 혼합 검색 완벽 지원), 초기화/추가 뱃지, 미니 초상화 아바타를 포함합니다.
-   - **사도 미니 아바타:** 사도 진행도 데이터의 `icon` 해시(`HeroIcons/${icon}.webp`)를 통해 유저가 착용한 사복(스킨, `skinId` -> `skinInfo.skinKey`)을 우선 매핑하여 전체 사도의 얼굴 초상화를 선제 확보하고, 웹페이지 DOM 카드(`collectApostlePortraits`) 이미지로 보완합니다. 목차, 작업 순서 표, 사도 지도 헤더에 26~32px 썸네일로 표시하며, 이미지 실패 시 `onerror`로 안전하게 숨깁니다.
+   - **사도 미니 아바타:** 사도 진행도 데이터의 `icon` 해시(`HeroIcons/${icon}.webp`)를 통해 유저가 착용한 사복(스킨, `skinId` -> `skinInfo.skinKey`)을 우선 매핑하여 전체 사도의 얼굴 초상화를 선제 확보하고, 웹페이지 DOM 카드(`collectApostlePortraits`) 이미지로 보완합니다. 목차, 작업 순서 표, 사도 지도 헤더, 회수 결과 카드에 26~32px 썸네일 및 사도 성격(`data-personality`) 배경색으로 표시하며, CSP를 준수하여 인라인 `onerror` 대신 공통 모달(`commonModal`)의 캡처 단계 `error` 이벤트 위임으로 로드 실패 이미지를 안전하게 숨깁니다.
    - **단계 드래그 앤 드롭 및 가장자리 자동 스크롤:** 단계 순서 변경 시 상/하단 80px 가장자리 진입 시 rAF 기반 부드러운 자동 스크롤을 지원합니다.
    - **작업 순서 클립보드 복사:** 원클릭으로 초기화 대상 사도 및 차수별 색칠 요약 텍스트를 클립보드로 복사할 수 있는 편의 버튼을 제공합니다.
    - **설정 자동 저장:** `localStorage` (`tcbe_redistribution_settings_v1`)를 통해 사용자 입력값을 안전하게 보존·복원합니다.
@@ -90,10 +91,11 @@ src/
 - **하네스 동기화**: `node scripts/sync-harness.mjs`
 
 ### 에이전트 필수 작업 루틴 (코드 수정 후 반드시 수행):
+
 1. **타입 및 번들 검증**:
    - `node scripts/build.mjs` (또는 `npm run build`)를 실행하여 TypeScript 타입 오류나 번들링 에러가 없는지 검증합니다.
 2. **단위 테스트 검증**:
-   - `node --test tests/*.test.mjs` (또는 `npm test`)를 실행하여 전체 단위 테스트(현재 **187개 테스트**)가 모두 통과하는지 확인합니다.
+   - `node --test tests/*.test.mjs` (또는 `npm test`)를 실행하여 전체 단위 테스트(현재 **274개 테스트**)가 모두 통과하는지 확인합니다.
 3. **하네스 동기화**:
    - `HARNESS.md` 수정 시 반드시 `node scripts/sync-harness.mjs`를 실행하여 `GEMINI.md`, `AGENTS.md`, `CLAUDE.md`로 동기화합니다.
 
