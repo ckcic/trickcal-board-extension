@@ -1,5 +1,5 @@
 import { renderRecoveryTemplate } from './recoveryTemplate.ts';
-import { getRecoveryDisplayAlternatives, renderRecoveryMap, renderRecoveryResults, signed, planKey } from './recoveryResult.ts';
+import { getRecoveryDisplayAlternatives, renderRecoveryMap, renderRecoveryResults, renderRecoveryTotalSummary, signed, planKey } from './recoveryResult.ts';
 import type { ProgressMap } from '../../domain/types.ts';
 import { calculateApostleRecovery, getRecoveryNodes, getRecoveryTargets, subtractRecoveryCost, type RecoveryNode, type RecoveryResource, type RecoveryResult, type RecoverySelection } from '../../domain/boardRecovery.ts';
 import { createEmptyCostSummary, NODE_TYPE } from '../../domain/boardProgress.ts';
@@ -10,6 +10,7 @@ import { collectApostlePortraits } from '../common/apostlePortraits.ts';
 import { renderResourceCost } from '../common/resources.ts';
 import { createCommonModal } from '../common/commonModal.ts';
 import { copyTextWithFeedback } from '../common/clipboard.ts';
+import { escapeHtml } from '../common/html.ts';
 import { expandRecoveryPicks, loadRecoverySettings, saveRecoverySettings } from './boardRecoverySettings.ts';
 
 export function closeBoardRecovery(): void { closeTool('recovery'); }
@@ -44,7 +45,7 @@ export function openBoardRecovery(progressMap: ProgressMap): void {
     badgeText: '베타',
     tabs: [
       { id: 'settings', label: '⚙️ 설정', panelId: 'tcbe-rc-settings' },
-      { id: 'results', label: '📋 계산 결과', panelId: 'tcbe-rc-results' },
+      { id: 'results', label: '📋 계산 결과', badge: '완료', badgeHidden: true, panelId: 'tcbe-rc-results' },
     ],
     initialTabId: 'settings',
     bodyHtml: renderRecoveryTemplate(savedSettings),
@@ -61,6 +62,7 @@ export function openBoardRecovery(progressMap: ProgressMap): void {
   const output = dialog.querySelector<HTMLElement>('[data-output]')!;
   const calculate = dialog.querySelector<HTMLButtonElement>('[data-calculate]')!;
   const cancel = dialog.querySelector<HTMLButtonElement>('[data-cancel]')!;
+  const resultsBadge = dialog.querySelector<HTMLElement>('[data-tab-badge="results"]');
 
   const selectedInputs = () => [...dialog.querySelectorAll<HTMLInputElement>('[data-pick]:checked')];
   const read = (): RecoverySelection[] => expandRecoveryPicks(selectedInputs().map(input => input.dataset.pick!));
@@ -87,6 +89,7 @@ export function openBoardRecovery(progressMap: ProgressMap): void {
   const invalidate = () => {
     save();
     generation++; results = []; choices.clear(); output.replaceChildren();
+    if (resultsBadge) resultsBadge.hidden = true;
     dialog.querySelector<HTMLElement>('[data-empty]')!.hidden = false;
     status.textContent = '설정이 변경되었습니다. 다시 계산하세요.';
     cancel.hidden = true; updateSelection();
@@ -102,6 +105,19 @@ export function openBoardRecovery(progressMap: ProgressMap): void {
     return Number(!!pb) - Number(!!pa) || (pb?.net[main] || 0) - (pa?.net[main] || 0) ||
       (pb?.net[other] || 0) - (pa?.net[other] || 0) || a.apostle.apostleId - b.apostle.apostleId;
   });
+
+  const computeTotals = (allOrdered: RecoveryResult[]) => {
+    const activeForTotals = allOrdered.slice(0, limit);
+    const totals = activeForTotals.reduce((sum, result) => {
+      const plan = planFor(result);
+      return plan ? { refund: sumCosts(sum.refund, plan.refund), spend: sumCosts(sum.spend, plan.spend) } : sum;
+    }, { refund: createEmptyCostSummary(), spend: createEmptyCostSummary() });
+
+    const net = subtractRecoveryCost(totals.refund, totals.spend);
+    const extra = subtractRecoveryCost(totals.spend, totals.refund);
+    for (const key of Object.keys(extra) as Array<keyof typeof extra>) extra[key] = Math.max(0, extra[key] || 0);
+    return { net, extra };
+  };
 
   const generateSummaryText = (targets: RecoveryResult[]): string => {
     const lines: string[] = ['[트릭컬 보드 확장 - 황크·보크 회수 작업 순서]'];
@@ -152,23 +168,37 @@ export function openBoardRecovery(progressMap: ProgressMap): void {
     }
   };
 
-  const render = () => {
+  // 상위 N명 숫자 입력 변경 시에는 열린 카드와 스크롤을 보존하고 요약 영역만 부분 갱신한다.
+  const updateLimitInPlace = () => {
     const allOrdered = sorted();
     limit = Math.min(limit, allOrdered.length);
+    const { net, extra } = computeTotals(allOrdered);
+    const totalEl = output.querySelector<HTMLElement>('[data-rc-total]');
+    if (totalEl) totalEl.innerHTML = renderRecoveryTotalSummary(limit, net, extra);
+    const copyBtn = output.querySelector<HTMLButtonElement>('[data-copy-summary]');
+    if (copyBtn) copyBtn.textContent = `상위 ${limit}명 작업 순서 복사`;
+    const items = output.querySelectorAll<HTMLDetailsElement>('.tcbe-rc-apostle');
+    items.forEach((item, index) => {
+      item.dataset.inLimit = String(index < limit);
+    });
+  };
 
-    const activeForTotals = allOrdered.slice(0, limit);
-    const totals = activeForTotals.reduce((sum, result) => {
-      const plan = planFor(result);
-      return plan ? { refund: sumCosts(sum.refund, plan.refund), spend: sumCosts(sum.spend, plan.spend) } : sum;
-    }, { refund: createEmptyCostSummary(), spend: createEmptyCostSummary() });
-
-    const net = subtractRecoveryCost(totals.refund, totals.spend);
-    const extra = subtractRecoveryCost(totals.spend, totals.refund);
-    for (const key of Object.keys(extra) as Array<keyof typeof extra>) extra[key] = Math.max(0, extra[key] || 0);
+  const render = () => {
+    const openIds = new Set(
+      [...output.querySelectorAll<HTMLDetailsElement>('.tcbe-rc-apostle[open]')]
+        .map(el => Number(el.dataset.apostle))
+    );
+    const allOrdered = sorted();
+    limit = Math.min(limit, allOrdered.length);
+    const { net, extra } = computeTotals(allOrdered);
 
     output.innerHTML = renderRecoveryResults({ allOrdered, limit, priority, searchQuery, onlyPositive,
       portraits, planFor, net, extra });
 
+    openIds.forEach(id => {
+      const details = output.querySelector<HTMLDetailsElement>(`[data-apostle="${id}"]`);
+      if (details) details.open = true;
+    });
     filterApostles();
   };
 
@@ -193,7 +223,11 @@ export function openBoardRecovery(progressMap: ProgressMap): void {
     if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return;
     if (target.matches('[data-pick], [data-flowering]')) { invalidate(); return; }
     if (target.matches('[data-sort]')) { priority = target.value as RecoveryResource; render(); output.querySelector<HTMLSelectElement>('[data-sort]')?.focus(); }
-    if (target.matches('[data-limit]')) { limit = Math.max(0, Math.min(results.length, Math.floor(Number(target.value) || 0))); render(); output.querySelector<HTMLInputElement>('[data-limit]')?.focus(); }
+    if (target.matches('[data-limit]')) {
+      limit = Math.max(0, Math.min(results.length, Math.floor(Number(target.value) || 0)));
+      target.value = String(limit);
+      updateLimitInPlace();
+    }
     if (target.matches('[data-only-positive]')) {
       onlyPositive = (target as HTMLInputElement).checked;
       filterApostles();
@@ -220,7 +254,10 @@ export function openBoardRecovery(progressMap: ProgressMap): void {
       const result = results.find(r => r.apostle.apostleId === Number(details.dataset.apostle));
       const entry = result?.nodes.find(n => n.key === button.dataset.tile);
       const info = details.querySelector<HTMLElement>('[data-tile-info]');
-      if (info) { info.textContent = button.title; if (entry) info.innerHTML += ` · 칸 비용: ${renderResourceCost(entry.cost)}`; } return;
+      if (info) {
+        info.innerHTML = `${escapeHtml(button.title)}${entry ? ` · 칸 비용: ${renderResourceCost(entry.cost)}` : ''}`;
+      }
+      return;
     }
     if (button.hasAttribute('data-cancel')) {
       generation++; results = []; calculate.disabled = false; cancel.hidden = true;
@@ -252,6 +289,7 @@ export function openBoardRecovery(progressMap: ProgressMap): void {
     const selections = read(); if (!selections.length) return;
     const token = ++generation, compareFlowering = dialog.querySelector<HTMLInputElement>('[data-flowering]')!.checked;
     calculate.disabled = true; cancel.hidden = false; results = []; output.replaceChildren();
+    if (resultsBadge) resultsBadge.hidden = true;
     dialog.querySelector<HTMLElement>('[data-empty]')!.hidden = true;
     let lastYieldTime = 0;
     for (let index = 0; index < apostles.length; index++) {
@@ -270,12 +308,22 @@ export function openBoardRecovery(progressMap: ProgressMap): void {
       }
       catch (error) { results.push({ apostle, nodes: [], targets: new Set(), alternatives: [], error: error instanceof Error ? error.message : '데이터를 확인할 수 없습니다.' }); }
     }
+    // 계산 루프와 결과 DOM 파싱(innerHTML)을 별도 태스크로 분리해 단일 setTimeout 핸들러 지연을 방지한다.
+    await new Promise(resolve => setTimeout(resolve, 0));
+    if (closed || token !== generation) return;
     choices.clear(); limit = results.length;
     calculate.disabled = false; cancel.hidden = true;
+    if (resultsBadge) resultsBadge.hidden = false;
     status.textContent = `계산 완료 · ${results.length}명. 사도별로 황크·보크 회수 경로를 비교하고 선택하세요.`;
     render(); modal.switchTab('results');
     dialog.querySelector<HTMLButtonElement>('[data-tab="results"]')!.focus();
   });
 
-  updateSelection();
+  // 저장된 선택 항목이 많을 때 모달 오픈 클릭 핸들러가 지연되지 않도록 요약 집계를 다음 틱으로 분리한다.
+  if (savedSettings.picks.length > 0) {
+    calculate.disabled = false;
+    setTimeout(() => { if (!closed) updateSelection(); }, 0);
+  } else {
+    updateSelection();
+  }
 }

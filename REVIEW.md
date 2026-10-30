@@ -14,10 +14,26 @@
 
 # 🧹 0. 리팩토링 후보 목록 (2026-10-14)
 
-상태: **R1~R12 리팩토링 및 추가 최적화 완료.** 각 항목은 기능 변경 없는 구조 개선이 목적이며, 진행 시 `node scripts/build.mjs`와 `node --test tests/*.test.mjs`로 회귀를 확인한다. 현재 전체 테스트는 274개다.
+상태: **R1~R12 리팩토링 및 추가 최적화 완료.** 각 항목은 기능 변경 없는 구조 개선이 목적이며, 진행 시 `node scripts/build.mjs`와 `node --test tests/*.test.mjs`로 회귀를 확인한다. 현재 전체 테스트는 275개다.
 
 **권장 진행 순서:** R3 → R6 → R1 → R2 → R5 → R4 → 나머지
 (R3·R6은 작은 변경으로 정렬 불일치 같은 버그 위험을 먼저 없애고, 이후 큰 파일 정리를 쉽게 만든다.)
+
+## 2026-10-30 2차 UI/UX 검토 및 렌더링 최적화
+
+- **재분배 결과 사도별 보드 지도 지연 렌더링 및 타일 상세 상태바 추가 (`src/ui/redistribution/redistributionResult.ts`, `redistributionCalculation.ts`, `redistributionSummary.ts`, `hwangRedistribution.css`):**
+  - **사도별 지도 지연 렌더링 (`lazyMaps`)**: 기존에 모든 사도 `<details class="tcbe-rd-apostle">`가 닫혀 있는 상태에서도 60~135명의 1~3차 보드 타일(총 5,000~15,000개 DOM 노드)을 최초 `result.innerHTML` 파싱 시 일괄 생성하던 병목을 해소. `redistributionCalculation.ts`에서는 `lazyMaps = true`로 호출하여 빈 `<div data-rd-map>`만 먼저 생성하고, 사용자가 `<details>`를 펼치거나 `[지도]` 버튼·우측 TOC 목차를 클릭할 때 해당 사도의 보드 지도만 즉시 렌더링(`renderRedistributionApostleMap`).
+  - **지도 타일 클릭 상세 안내 바 (`[data-rd-map-selected]`)**: 회수 계산기와 동일한 UX로 재분배 지도에서도 타일 클릭 시 하단 안내문에 칸 정보, 필요 크레파스·골드·물뿌리개 비용 및 관문 전용 재화를 표시.
+  - **스탯별 배치 요약 단일 패스 인덱싱 (`renderRedistributionSummary`)**: 17개 `(resource, stat)` 조합마다 `plan.nodes.filter(...)`를 반복 호출하던 구조를 `plan.nodes` 1회 순회 사전 인덱싱으로 개선.
+- **회수 계산기 UI/UX 및 재렌더링 최적화 (`src/ui/recovery/boardRecovery.ts`, `recoveryResult.ts`, `boardRecovery.css`):**
+  - **모달 오픈 클릭 핸들러 논블로킹 처리**: 저장된 제거 조건이 많을 때 모달 오픈 클릭 핸들러 안에서 135명 노드를 동기 파싱하지 않도록 `setTimeout(..., 0)`으로 초기 선택 요약 집계를 분리.
+  - **회수 대안(`getRecoveryDisplayAlternatives`) `WeakMap` 캐싱**: 정렬(`sorted()`) 및 렌더링마다 반복되던 `selected` 집합 정렬·비교를 `WeakMap<RecoveryResult, RecoveryAlternative[]>`에 캐싱.
+  - **`상위 N명` 변경 시 제자리(In-place) 부분 갱신 및 열린 카드 보존**: `[data-limit]` 숫자 변경 시 전체 `output.innerHTML`을 재작성하지 않고 `[data-rc-total]`, `[data-copy-summary]`, 각 사도 카드의 `data-in-limit` 속성만 즉시 갱신하여 펼쳐둔 `<details>` 카드·지도와 스크롤 위치를 보존. 정렬 변경이나 대안 라디오 선택 시에도 이전에 열어둔 `<details>` 카드의 열림 상태를 유지.
+  - **고정 헤더·탭 레이아웃 및 `[완료]` 탭 배지**: `#tcbe-recovery-dialog`에 고정 높이 플렉스 컬럼 레이아웃(`#tcbe-rc-settings`, `#tcbe-rc-results` 내부 독립 스크롤)과 `[📋 계산 결과]` 탭 `완료` 배지를 적용해 재분배 모달과 UX 일관성을 확보.
+- **메인 보드 카드 탐색 캐시 및 서브모달 Escape 보호 (`src/ui/board/boardEnhancer.ts`, `src/ui/common/commonModal.ts`):**
+  - `enhanceApostleCards`에서 매 `MutationObserver` 콜백마다 재생성하던 `nameToProgress` 역방향 조회 맵을 `WeakMap`으로 캐싱하고, `applyFilterToCards`에서 가상 그리드 사용 시 불필요한 `selectApostleIds` 재호출을 지연 평가로 생략.
+  - `commonModal.ts`에서 프리셋 내보내기/가져오기 서브모달(`.tcbe-rd-modal-overlay`)이 열려 있을 때 `Escape` 키 입력(`cancel` 이벤트)으로 부모 모달까지 함께 닫히지 않도록 보호.
+- **검증:** `tests/redistributionCalculation.test.mjs`에 지연 지도 렌더링 단위 테스트 추가. 타입 검사·번들 빌드 성공, 전체 **275개 단위 테스트 통과**.
 
 ## 2026-10-29 도메인·UI 추가 최적화 및 문서 동기화
 

@@ -150,9 +150,10 @@ export function createCommonModal(options: CommonModalOptions): CommonModalInsta
   // 닫기 버튼 이벤트 등록
   dialog.querySelector('[data-close]')?.addEventListener('click', close);
 
-  // Escape 키로 닫기 이벤트 등록
+  // Escape 키로 닫기 이벤트 등록 (내부 서브 모달이 열려 있을 때는 서브 모달만 닫히도록 보호)
   dialog.addEventListener('cancel', event => {
     event.preventDefault();
+    if (dialog.querySelector('.tcbe-rd-modal-overlay')) return;
     close();
   });
 

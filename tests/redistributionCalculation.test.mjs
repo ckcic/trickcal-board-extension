@@ -10,7 +10,7 @@ const bundled = await build({ entryPoints: ['src/ui/redistribution/redistributio
     builder.onLoad({ filter: /domain[\\/]redistributionCurve\.ts$/ }, () => ({ contents:
       'export function calculateRedistributionCurve(map, options, progress, signal) { return globalThis.curveHook(options, progress, signal); }' }));
     builder.onLoad({ filter: /ui[\\/]redistribution[\\/]redistributionResult\.ts$/ }, () => ({ contents:
-      "export const renderRedistributionResult = () => '추천 결과'; export const generateOrdersText = () => '작업 순서';" }));
+      "export const buildApostleBoardNodesMap = () => new Map(); export const renderGateItems = () => ''; export const renderRedistributionApostleMap = action => `지도:${action.apostle.apostleId}`; export const renderRedistributionResult = (_plan, _opt, _portraits, lazyMaps) => lazyMaps ? '추천 결과' : '즉시 결과'; export const generateOrdersText = () => '작업 순서';" }));
     builder.onLoad({ filter: /ui[\\/]redistribution[\\/]redistributionCurve\.ts$/ }, () => ({ contents:
       "export const renderRedistributionCurve = () => '그래프 결과';" }));
   } }] });
@@ -19,16 +19,19 @@ class Element {
   listeners = new Map();
   disabled = false;
   hidden = false;
+  open = false;
   textContent = '';
   innerHTML = '';
-  classList = { remove() {} };
+  dataset = {};
+  childElementCount = 0;
+  classList = { remove() {}, contains: () => false };
   addEventListener(type, callback) { this.listeners.set(type, callback); }
   emit(type, event = {}) { return this.listeners.get(type)?.({ target: this, preventDefault() {}, ...event }); }
   closest(selector) { return selector === '[data-curve]' ? this : null; }
   querySelector() { return null; }
   replaceChildren() { this.innerHTML = ''; }
 }
-function setup({ fail = false } = {}) {
+function setup({ fail = false, actions = [] } = {}) {
   const form = new Element(), cancel = new Element(), status = new Element(), result = new Element();
   const curveStatus = new Element(), curveResult = new Element(), curveButton = new Element();
   const enabled = new Element(), disabled = new Element(); disabled.disabled = true;
@@ -39,7 +42,7 @@ function setup({ fail = false } = {}) {
   const dialog = new Element(); dialog.querySelector = selector => fields[selector] ?? null;
   const timers = new Map(); let id = 0;
   const options = { searchMode: 'fast', ownedCrayons: 10, maxReset: 2, stages: [] };
-  const plan = { actions: [] };
+  const plan = { actions, nodes: [] };
   let finishCurve, curveSignal, curveOptions;
   const context = vm.createContext({ Element, HTMLImageElement: Element, AbortController, fail, fakePlan: plan,
     setTimeout: callback => { timers.set(++id, callback); return id; }, clearTimeout: timer => timers.delete(timer),
@@ -77,6 +80,20 @@ test('추천 계산은 결과·목차·탭을 갱신하고 원래 비활성 입�
   assert.equal(app.enabled.disabled, false);
   assert.equal(app.disabled.disabled, true);
   assert.equal(app.cancel.hidden, true);
+});
+
+test('사도별 보드 지도는 details가 열릴 때 지연 렌더링된다', async () => {
+  const app = setup({ actions: [{ apostle: { apostleId: 77, name: '테스트' } }] });
+  app.form.emit('submit');
+  await app.flush();
+  const mapBox = new Element();
+  mapBox.dataset.rdMap = '77';
+  const details = new Element();
+  details.open = true;
+  details.classList = { remove() {}, contains: cls => cls === 'tcbe-rd-apostle' };
+  details.querySelector = sel => sel === '[data-rd-map]' ? mapBox : null;
+  app.result.emit('toggle', { target: details });
+  assert.equal(mapBox.innerHTML, '지도:77');
 });
 
 test('추천 취소와 오류는 결과를 확정하지 않고 입력을 복원한다', async () => {

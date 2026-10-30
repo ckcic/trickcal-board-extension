@@ -1,9 +1,11 @@
 import type { ProgressMap } from '../../domain/types.ts';
-import { iterateHwangRedistribution, type RedistributionPlan, type RedistributionOptions } from '../../domain/hwangRedistribution.ts';
+import { iterateHwangRedistribution, type RedistributionAction, type RedistributionNode, type RedistributionPlan, type RedistributionOptions } from '../../domain/hwangRedistribution.ts';
 import { calculateRedistributionCurve } from '../../domain/redistributionCurve.ts';
 import { renderRedistributionCurve } from './redistributionCurve.ts';
-import { renderRedistributionResult, generateOrdersText } from './redistributionResult.ts';
+import { buildApostleBoardNodesMap, renderGateItems, renderRedistributionApostleMap, renderRedistributionResult, generateOrdersText } from './redistributionResult.ts';
 import { copyTextWithFeedback } from '../common/clipboard.ts';
+import { renderResourceCost } from '../common/resources.ts';
+import { escapeHtml } from '../common/html.ts';
 
 interface CalculationContext {
   dialog: HTMLElement;
@@ -23,6 +25,9 @@ export function setupRedistributionCalculation(context: CalculationContext) {
   let curveController: AbortController | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let currentCalculatedPlan: RedistributionPlan | null = null;
+  let currentNodesByApostleBoard = new Map<string, RedistributionNode[]>();
+  let currentActionsById = new Map<string, RedistributionAction>();
+  let currentNodesByKey = new Map<string, RedistributionNode>();
   let disposed = false;
   let restoreControls = () => {};
   const form = dialog.querySelector('form');
@@ -30,6 +35,27 @@ export function setupRedistributionCalculation(context: CalculationContext) {
   const status = dialog.querySelector<HTMLElement>('[data-status]');
   const result = dialog.querySelector<HTMLElement>('[data-result]');
   if (!form || !cancelCalculation || !status || !result) return { dispose() {}, invalidateCurve() {} };
+
+  // 사도별 보드 지도는 details가 펼쳐질 때 최초 1회만 지연 렌더링하여 초기 수천 개 타일 DOM 생성을 방지한다.
+  const ensureApostleMapRendered = (details: HTMLElement) => {
+    if (!currentCalculatedPlan) return;
+    const mapContainer = details.querySelector<HTMLElement>('[data-rd-map]');
+    if (mapContainer && !mapContainer.childElementCount) {
+      const apostleId = mapContainer.dataset.rdMap || '';
+      const action = currentActionsById.get(apostleId);
+      if (action) {
+        mapContainer.innerHTML = renderRedistributionApostleMap(action, currentCalculatedPlan, currentNodesByApostleBoard);
+      }
+    }
+  };
+
+  result.addEventListener('toggle', event => {
+    const target = event.target instanceof Element ? event.target as HTMLDetailsElement : null;
+    if (target && target.classList?.contains?.('tcbe-rd-apostle') && target.open) {
+      ensureApostleMapRendered(target);
+    }
+  }, true);
+
   const disableControls = (form: HTMLFormElement) => {
     const controls = [...form.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLSelectElement>('input, button, select')]
       .map(control => ({ control, disabled: control.disabled }));
@@ -66,14 +92,17 @@ export function setupRedistributionCalculation(context: CalculationContext) {
         }
         if (controller.signal.aborted) return;
         if (!plan) throw new Error('추천 결과를 생성하지 못했습니다.');
-        // 계산 완료 직후와 대량 결과 DOM 파싱(innerHTML)을 별도 태스크로 분리해 단일 setTimeout 핸들러 지연을 방지한다.
+        // 계산 완료 직후와 결과 DOM 파싱(innerHTML)을 별도 태스크로 분리해 단일 setTimeout 핸들러 지연을 방지한다.
         await new Promise(resolve => setTimeout(resolve, 0));
         if (controller.signal.aborted) return;
         currentCalculatedPlan = plan;
+        currentNodesByApostleBoard = buildApostleBoardNodesMap(plan);
+        currentActionsById = new Map((plan.actions || []).map(action => [String(action.apostle.apostleId), action]));
+        currentNodesByKey = new Map((plan.nodes || []).map(entry => [entry.key, entry]));
         onPlan(plan);
         result.classList.remove('tcbe-rd-stale-content');
         result.querySelector('.tcbe-rd-stale-banner')?.remove();
-        result.innerHTML = renderRedistributionResult(plan, options, getPortraitMap());
+        result.innerHTML = renderRedistributionResult(plan, options, getPortraitMap(), true);
         status.textContent = ' 계산 완료';
         updateToc(plan);
         const badge = dialog.querySelector<HTMLElement>('[data-tab-badge="result"]') || dialog.querySelector<HTMLElement>('[data-result-badge]');
@@ -128,10 +157,36 @@ export function setupRedistributionCalculation(context: CalculationContext) {
       finally { curveController = null; curveButton.textContent = '인원별 그래프 계산'; restoreControls(); }
       return;
     }
+    const tile = event.target instanceof Element ? event.target.closest<HTMLElement>('.tcbe-rd-tile[data-entry-key]') : null;
+    if (tile && currentCalculatedPlan) {
+      const details = tile.closest<HTMLElement>('.tcbe-rd-apostle');
+      details?.querySelectorAll('.tcbe-rd-tile-active').forEach(el => el.classList.remove('tcbe-rd-tile-active'));
+      tile.classList.add('tcbe-rd-tile-active');
+      const info = details?.querySelector<HTMLElement>('[data-rd-map-selected]');
+      if (info) {
+        const entry = currentNodesByKey.get(tile.dataset.entryKey || '');
+        const gateHtml = entry ? renderGateItems(entry) : '';
+        const costHtml = entry ? ` · 비용 ${renderResourceCost(entry.cost)}${gateHtml ? ` · ${gateHtml}` : ''}` : '';
+        info.innerHTML = `${escapeHtml(tile.title)}${costHtml}`;
+      }
+      return;
+    }
+    const tocTarget = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-toc-target]') : null;
+    if (tocTarget?.dataset.tocTarget?.startsWith('tcbe-rd-map-')) {
+      const mapDetails = dialog.querySelector<HTMLDetailsElement>(`#${tocTarget.dataset.tocTarget}`);
+      if (mapDetails) {
+        mapDetails.open = true;
+        ensureApostleMapRendered(mapDetails);
+      }
+    }
     const button = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-show-map]') : null;
     if (!button) return;
     const map = dialog.querySelector<HTMLDetailsElement>(`#tcbe-rd-map-${button.dataset.showMap}`);
-    if (map) { map.open = true; map.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    if (map) {
+      map.open = true;
+      ensureApostleMapRendered(map);
+      map.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   });
 
   return {

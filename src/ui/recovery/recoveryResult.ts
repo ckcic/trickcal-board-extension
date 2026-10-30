@@ -13,16 +13,23 @@ const resourceName = (resource: RecoveryResource) => resource === 'hwang' ? '황
 const netLabel = (plan: RecoveryAlternative) => `${resourceIcon('hwang')} ${signed(plan.net.ultraCrayon)} ${resourceIcon('bokr')} ${signed(plan.net.epicCrayon)}`;
 export const planKey = (plan: RecoveryAlternative) => `${Number(plan.flowering)}:${plan.priority}`;
 
+// 사도별 표시 대안 목록을 캐시하여 정렬 및 재렌더링 시 반복적인 selected 집합 정렬 비용을 제거한다.
+const displayAlternativesCache = new WeakMap<RecoveryResult, RecoveryAlternative[]>();
+
 /** 정렬 기준과 무관하게 재화별 대안을 보여주고 같은 색칠 계획은 합친다. */
 export function getRecoveryDisplayAlternatives(result: RecoveryResult): RecoveryAlternative[] {
+  let cached = displayAlternativesCache.get(result);
+  if (cached) return cached;
   const seen = new Set<string>();
-  return [false, true].flatMap(flowering => (['hwang', 'bokr'] as const).flatMap(priority => {
+  cached = [false, true].flatMap(flowering => (['hwang', 'bokr'] as const).flatMap(priority => {
     const plan = getBestRecoveryAlternative(result, priority, flowering);
     if (!plan) return [];
     const signature = [...plan.selected].sort().join('/');
     if (seen.has(signature)) return [];
     seen.add(signature); return [plan];
   }));
+  displayAlternativesCache.set(result, cached);
+  return cached;
 }
 
 export function renderRecoveryMap(result: RecoveryResult, plan: RecoveryAlternative): string {
@@ -86,14 +93,19 @@ function renderRecoveryPlan(result: RecoveryResult, plan: RecoveryAlternative, a
 }
 
 /** 계산 오류가 있는 사도도 같은 목록 안에서 안내한다. */
-function renderRecoveryApostle(result: RecoveryResult, index: number, plan: RecoveryAlternative | undefined,
+function renderRecoveryApostle(result: RecoveryResult, index: number, limit: number, plan: RecoveryAlternative | undefined,
   portraits: Map<number | string, string>): string {
   const id = result.apostle.apostleId, alternatives = getRecoveryDisplayAlternatives(result);
   const extraBokr = plan ? Math.max(0, ...alternatives.map(p => p.net.epicCrayon - plan.net.epicCrayon)) : 0;
   const isPositive = Boolean(plan && (plan.net.ultraCrayon > 0 || plan.net.epicCrayon > 0));
-  return `<details class="tcbe-rc-apostle" data-apostle="${id}" data-apostle-name="${escapeHtml(result.apostle.name)}" data-net-positive="${isPositive}">
+  return `<details class="tcbe-rc-apostle" data-apostle="${id}" data-apostle-name="${escapeHtml(result.apostle.name)}" data-net-positive="${isPositive}" data-in-limit="${index < limit}">
             <summary><span class="tcbe-rc-summary-main">${index + 1}. ${renderApostleAvatar(id, result.apostle.name, portraits, result.apostle.personality)} <span>${escapeHtml(result.apostle.name)}</span> ${plan ? `${netLabel(plan)}${plan.net.ultraCrayon <= 0 && plan.net.epicCrayon <= 0 ? ' · 회수 효과 없음' : ''}` : '· 계산 확인 필요'}${extraBokr ? `<span class="tcbe-rc-hint">다른 경로로 ${resourceIcon('bokr')} ${extraBokr}개 추가 회수 가능</span>` : ''}</span></summary>
             <div data-detail>${plan ? renderRecoveryPlan(result, plan, alternatives) : `<p>${escapeHtml(result.error || '계획을 찾지 못했습니다.')}</p>`}</div></details>`;
+}
+
+/** 상위 N명 합산 요약 박스 내부 HTML을 생성한다. */
+export function renderRecoveryTotalSummary(limit: number, net: ResourceCostSummary, extra: ResourceCostSummary): string {
+  return `선택한 상위 ${limit}명 순회수 · ${resourceIcon('hwang')} <strong>${signed(net.ultraCrayon)}</strong> · ${resourceIcon('bokr')} <strong>${signed(net.epicCrayon)}</strong><p>환급 외 준비 재화: ${renderResourceCost(extra)}</p>`;
 }
 
 export interface RecoveryResultView {
@@ -124,11 +136,11 @@ export function renderRecoveryResults(view: RecoveryResultView): string {
         <span data-search-count class="tcbe-rc-hint"></span>
       </div>
       <p>순위 기준은 목록 순서만 바꿉니다. 사도별 경로를 선택하면 지도·작업 순서·누적 회수량에 적용됩니다.</p>
-      <div class="tcbe-rc-total">선택한 상위 ${limit}명 순회수 · ${resourceIcon('hwang')} <strong>${signed(net.ultraCrayon)}</strong> · ${resourceIcon('bokr')} <strong>${signed(net.epicCrayon)}</strong><p>환급 외 준비 재화: ${renderResourceCost(extra)}</p></div>
+      <div class="tcbe-rc-total" data-rc-total>${renderRecoveryTotalSummary(limit, net, extra)}</div>
       <p class="tcbe-rc-notice">추천 순회수량이며 최대 회수를 보장하지 않습니다. 초기화 환급 − 전체 복구 비용으로 계산합니다. 추가 재화와 초기화 가능 횟수를 확인하고, 필요한 환급을 먼저 확보한 뒤 복구하세요. 음수는 추가 필요량입니다.</p>
       <p>지도: 초록 ✓ 유지·복구 · 파랑 + 새로 칠함 · 빨강 × 지움 · 흐린 칸 미선택. 만개칸은 재분배 지도와 같은 꽃 모양으로 표시합니다. 칸을 누르면 상세 정보와 작업 번호를 확인할 수 있습니다.</p>
       <div data-apostles-list>
-        ${allOrdered.map((result, index) => renderRecoveryApostle(result, index, planFor(result), portraits)).join('') || '<p>현재 칠한 제거 대상이 없습니다.</p>'}
+        ${allOrdered.map((result, index) => renderRecoveryApostle(result, index, limit, planFor(result), portraits)).join('') || '<p>현재 칠한 제거 대상이 없습니다.</p>'}
       </div>
       <div data-search-empty hidden style="text-align: center; padding: 24px; color: #64748b; font-size: 14px;">검색 조건에 맞는 사도가 없습니다.</div>`;
 }

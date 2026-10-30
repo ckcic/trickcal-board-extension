@@ -27,6 +27,28 @@ const ATTR_ENHANCED = 'data-tcbe-enhanced';
 /** 분리된 행은 자동 해제하고 새 API 데이터는 객체 참조로 구분한다. */
 const renderedProgress = new WeakMap<Element, ApostleProgress>();
 
+/** 진행도 맵별 사도 이름·ID 역방향 조회 맵 캐시 */
+const nameToProgressCache = new WeakMap<ProgressMap, { size: number; map: Map<string, ApostleProgress> }>();
+
+function getNameToProgressMap(apostleProgressMap: ProgressMap): Map<string, ApostleProgress> {
+  const cached = nameToProgressCache.get(apostleProgressMap);
+  if (cached && cached.size === apostleProgressMap.size) {
+    return cached.map;
+  }
+  const map = new Map<string, ApostleProgress>();
+  getUniqueApostles(apostleProgressMap).forEach((prog) => {
+    if (prog.name) {
+      const trimmed = prog.name.trim();
+      const normalized = trimmed.replace(/\s+/g, '');
+      map.set(trimmed, prog);
+      map.set(normalized, prog);
+      map.set(String(prog.apostleId), prog);
+    }
+  });
+  nameToProgressCache.set(apostleProgressMap, { size: apostleProgressMap.size, map });
+  return map;
+}
+
 /** 보크 표시가 달라지는 조건만 캐시 키에 포함한다. */
 function badgeFilterKey(filter?: FilterState): string {
   return `${filter?.statCategory || 'all'}_${filter?.boardLevel || 'all'}`;
@@ -334,16 +356,7 @@ export function enhanceApostleCards(
 ): number {
   let enhancedCount = 0;
 
-  const nameToProgress = new Map<string, ApostleProgress>();
-  getUniqueApostles(apostleProgressMap).forEach((prog) => {
-    if (prog.name) {
-      const trimmed = prog.name.trim();
-      const normalized = trimmed.replace(/\s+/g, '');
-      nameToProgress.set(trimmed, prog);
-      nameToProgress.set(normalized, prog);
-      nameToProgress.set(String(prog.apostleId), prog);
-    }
-  });
+  const nameToProgress = getNameToProgressMap(apostleProgressMap);
 
   // 1. 최상위 사도 카드 요소들 직접 탐색 (모달 다이얼로그 요소는 엄격 제외)
   const cardElements = targetCards ?? document.querySelectorAll<HTMLElement>(
@@ -423,10 +436,16 @@ export function applyFilterToCards(
   let total = 0;
   let visible = 0;
 
-  // 전체 데이터의 공통 정렬 결과를 사용해 화면 밖 카드와 부분 갱신도 같은 순서를 유지한다.
-  const orderByApostleId = new Map(
-    selectApostleIds(apostleProgressMap, filter).map((apostleId, index) => [apostleId, index])
-  );
+  // 가상 목록이 아닌 일반 카드 목록에서만 필요 시 지연 계산한다.
+  let orderByApostleId: Map<number, number> | null = null;
+  const getOrderByApostleId = () => {
+    if (!orderByApostleId) {
+      orderByApostleId = new Map(
+        selectApostleIds(apostleProgressMap, filter).map((apostleId, index) => [apostleId, index])
+      );
+    }
+    return orderByApostleId;
+  };
 
   cards.forEach((card) => {
     if (card.closest(DIALOG_EXCLUSION_SELECTOR)) {
@@ -464,7 +483,7 @@ export function applyFilterToCards(
       }
       visible++;
 
-      const targetOrder = String(orderByApostleId.get(progress.apostleId) ?? 0);
+      const targetOrder = String(getOrderByApostleId().get(progress.apostleId) ?? 0);
 
       // 불필요한 Reflow/재렌더링 방지를 위해 order에 실제 변경이 있을 때만 업데이트
       if (card.style.order !== targetOrder) {

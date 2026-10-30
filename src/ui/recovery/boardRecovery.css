@@ -1,3 +1,8 @@
+/* 회수 모달 고정 헤더·탭 및 내부 패널 독립 스크롤 */
+#tcbe-recovery-dialog { height: min(92dvh, 880px); display: flex; flex-direction: column; overflow: hidden; }
+#tcbe-recovery-dialog header { flex-shrink: 0; }
+#tcbe-rc-settings, #tcbe-rc-results { flex: 1; min-height: 0; overflow-y: auto; padding-right: 6px; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: #94a3b8 #f1f5f9; }
+
 /* 회수 체크 매트릭스 그리드 */
 .tcbe-rc-check-row { padding: 10px 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 10px; }
 .tcbe-rc-check-row > button { margin-left: 12px; }
@@ -5,7 +10,8 @@
 .tcbe-rc-check-row label { display: flex; align-items: center; min-height: 36px; cursor: pointer; }
 
 /* 사도별 결과 아코디언 */
-.tcbe-rc-apostle { border: 1px solid #cbd5e1; border-radius: 10px; margin: 10px 0; }
+.tcbe-rc-apostle { border: 1px solid #cbd5e1; border-radius: 10px; margin: 10px 0; transition: opacity .15s ease, border-color .15s ease; }
+.tcbe-rc-apostle[data-in-limit="false"] { opacity: 0.65; border-style: dashed; }
 .tcbe-rc-apostle > summary { padding: 14px; cursor: pointer; font-weight: 600; }
 .tcbe-rc-apostle > summary img { width: 28px; height: 28px; object-fit: cover; vertical-align: middle; }
 .tcbe-rc-apostle > div { padding: 0 14px 14px; }
