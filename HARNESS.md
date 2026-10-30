@@ -95,7 +95,7 @@ src/
 1. **타입 및 번들 검증**:
    - `node scripts/build.mjs` (또는 `npm run build`)를 실행하여 TypeScript 타입 오류나 번들링 에러가 없는지 검증합니다.
 2. **단위 테스트 검증**:
-   - `node --test tests/*.test.mjs` (또는 `npm test`)를 실행하여 전체 단위 테스트(현재 **275개 테스트**)가 모두 통과하는지 확인합니다.
+   - `node --test tests/*.test.mjs` (또는 `npm test`)를 실행하여 전체 단위 테스트(현재 **276개 테스트**)가 모두 통과하는지 확인합니다.
 3. **하네스 동기화**:
    - `HARNESS.md` 수정 시 반드시 `node scripts/sync-harness.mjs`를 실행하여 `GEMINI.md`, `AGENTS.md`, `CLAUDE.md`로 동기화합니다.
 
