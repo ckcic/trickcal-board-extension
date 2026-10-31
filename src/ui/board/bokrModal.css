@@ -45,7 +45,7 @@
 #tcbe-bokr-modal-container .tcbe-bokr-profile-info { flex: 1; min-width: 0; }
 #tcbe-bokr-modal-container .tcbe-bokr-hero-sub { font-size: 14px; color: #a4c75c; border-bottom: 2px solid #e3efcb; padding-bottom: 2px; }
 #tcbe-bokr-modal-container .tcbe-bokr-hero-name { display: flex; align-items: center; gap: 6px; font-size: 18px; }
-#tcbe-bokr-modal-container .tcbe-bokr-stat-banner { display: flex; align-items: center; gap: 8px; padding-bottom: 6px; font-size: 13px; }
+#tcbe-bokr-modal-container .tcbe-bokr-stat-banner { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-bottom: 6px; font-size: 13px; }
 #tcbe-bokr-modal-container .tcbe-bokr-layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 8px; }
 #tcbe-bokr-modal-container .tcbe-bokr-map-scroll { width: 224px; max-width: 100%; margin: 16px auto; }
 #tcbe-bokr-modal-container .tcbe-bokr-map { display: grid; max-width: 100%; margin: auto; gap: 0; }
@@ -72,4 +72,8 @@
 #tcbe-bokr-modal-container .tcbe-cost-check { background-image: url('https://note.trickcal.com/UI/Crayon_check.webp'); }
 #tcbe-bokr-modal-container .watering-can { background-image: url('https://cdn.note.trickcal.com/Materials/a6iBdIQUa2Z8GrR0S05hucxq7qjTIFhCl.webp'); }
 #tcbe-bokr-modal-container .tcbe-cost-text, #tcbe-bokr-modal-container .tcbe-bokr-card p { font-size: 14px; line-height: 1.6; margin-bottom: 5px; }
-@media (max-width: 480px) { #tcbe-bokr-modal-container .tcbe-bokr-layout { grid-template-columns: 1fr; } }
+@media (max-width: 480px) {
+  #tcbe-bokr-modal-container { padding: 10px; }
+  #tcbe-bokr-modal-container .tcbe-bokr-body { padding: 12px 14px 16px; }
+  #tcbe-bokr-modal-container .tcbe-bokr-layout { grid-template-columns: 1fr; }
+}

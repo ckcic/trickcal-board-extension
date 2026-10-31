@@ -7,6 +7,7 @@ import { DEFAULT_FILTER_STATE } from '../../domain/filters.ts';
 import { aggregateBokrStats, type StatAggregates } from '../../domain/statAggregates.ts';
 import { PERSONALITY_META_LIST, STAT_META_LIST } from '../../domain/boardProgress.ts';
 import { showUpdateBadge } from './updateBadge.ts';
+import { getPopupLeft } from './popupPosition.ts';
 import { openHwangRedistribution } from '../redistribution/hwangRedistribution.ts';
 import { openBoardRecovery } from '../recovery/boardRecovery.ts';
 import type {
@@ -468,18 +469,17 @@ export class FilterPanelController {
       `;
       item.appendChild(tooltip);
 
-      // 스마트 툴팁 위치 조절 (좌/우 뷰포트에 맞게 자동 정렬)
+      // 스마트 툴팁 위치 조절 (좁은 모바일 화면에서도 좌/우 경계를 넘지 않도록 보정)
       item.addEventListener('mouseenter', () => {
         const rect = item.getBoundingClientRect();
-        const screenWidth = window.innerWidth;
+        const screenWidth = document.documentElement?.clientWidth || window.innerWidth;
+        const tooltipWidth = tooltip.offsetWidth || 260;
+        tooltip.style.right = 'auto';
+        tooltip.style.left = `${getPopupLeft(rect.left, rect.width, tooltipWidth, screenWidth)}px`;
         if (rect.left + rect.width / 2 > screenWidth / 2) {
-          tooltip.style.left = 'auto';
-          tooltip.style.right = '0';
           tooltip.style.setProperty('--sum-chevron-left', 'auto');
           tooltip.style.setProperty('--sum-chevron-right', '24px');
         } else {
-          tooltip.style.left = '0';
-          tooltip.style.right = 'auto';
           tooltip.style.setProperty('--sum-chevron-left', '24px');
           tooltip.style.setProperty('--sum-chevron-right', 'auto');
         }

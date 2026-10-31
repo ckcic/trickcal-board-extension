@@ -1,4 +1,14 @@
-/** 좁은 화면의 보드 필터 반응형 레이아웃 */
+/** 좁은 화면 및 모바일 브라우저(Yandex, Kiwi 등)의 보드 필터·배지·팝업 반응형 레이아웃 */
+
+/* 스탯 요약 툴팁이 패널 경계 밖으로 펼쳐질 때 잘리지 않도록 보정 */
+.tcbe-panel-container {
+  overflow: visible;
+}
+
+.tcbe-accordion-content {
+  border-bottom-left-radius: 15px;
+  border-bottom-right-radius: 15px;
+}
 
 /* --- 화면이 좁을 때 가로 스크롤 방지 및 반응형 레이아웃 --- */
 @media (max-width: 900px) {
@@ -11,6 +21,7 @@
     width: 100%;
     text-align: center;
     box-sizing: border-box;
+    white-space: normal;
   }
 
   .tcbe-search-slot {
@@ -31,5 +42,77 @@
   .tcbe-summary-card {
     padding: 2px 6px;
     font-size: 11px;
+  }
+}
+
+@media (max-width: 600px) {
+  .tcbe-accordion-header {
+    font-size: 14.5px;
+    padding: 8px 34px 8px 12px;
+  }
+
+  .tcbe-accordion-title {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .tcbe-accordion-content {
+    padding: 8px 10px;
+  }
+
+  .tcbe-tools-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tcbe-btn-tool {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 32px;
+  }
+
+  .tcbe-btn {
+    min-height: 28px;
+  }
+
+  .tcbe-portal-tooltip-inner {
+    padding: 10px 12px;
+    min-width: min(300px, calc(100vw - 24px));
+  }
+
+  .tcbe-normal-popup-inner {
+    padding: 10px;
+    max-height: min(520px, calc(100dvh - 48px));
+  }
+
+  .tcbe-np-section-header {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .tcbe-np-boards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tcbe-np-tabs-container {
+    flex-wrap: wrap;
+  }
+
+  .tcbe-np-tab-btn {
+    min-width: calc(50% - 4px);
+    padding: 6px;
+  }
+
+  .tcbe-summary-tooltip {
+    min-width: min(230px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
+  }
+}
+
+@media (max-width: 420px) {
+  .tcbe-tt-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px 8px;
   }
 }

@@ -6,6 +6,7 @@ import { escapeHtml } from '../common/html.ts';
 
 import { PERSONALITY_META_LIST, STAT_META_LIST } from '../../domain/boardProgress.ts';
 import type { ApostleProgress, FilterState } from '../../domain/types.ts';
+import { getFixedTooltipLeft } from './popupPosition.ts';
 
 /**
  * 상급칸(보크) 상세 현황 툴팁 내부 HTML 생성
@@ -71,6 +72,7 @@ function generateBokrTooltipHtml(progress: ApostleProgress): string {
 let globalPortalTooltipEl: HTMLElement | null = null;
 let globalPortalTooltipInner: HTMLElement | null = null;
 let currentHoveredContainer: HTMLElement | null = null;
+let pinnedContainer: HTMLElement | null = null;
 let tooltipHideTimer: ReturnType<typeof setTimeout> | null = null;
 
 function ensureGlobalPortalTooltip(): { el: HTMLElement; inner: HTMLElement } {
@@ -95,7 +97,12 @@ function ensureGlobalPortalTooltip(): { el: HTMLElement; inner: HTMLElement } {
   });
 
   el.addEventListener('mouseleave', () => {
+    if (pinnedContainer) return;
     hideGlobalPortalTooltip();
+  });
+
+  el.addEventListener('click', (e) => {
+    e.stopPropagation();
   });
 
   const mountTarget = document.getElementById('root') || document.body;
@@ -103,29 +110,56 @@ function ensureGlobalPortalTooltip(): { el: HTMLElement; inner: HTMLElement } {
   globalPortalTooltipEl = el;
   globalPortalTooltipInner = inner;
 
-  window.addEventListener('scroll', () => {
-    if (currentHoveredContainer && globalPortalTooltipEl && globalPortalTooltipEl.style.display !== 'none') {
-      updatePortalTooltipPosition(currentHoveredContainer, globalPortalTooltipEl);
+  const syncActivePosition = () => {
+    const active = pinnedContainer || currentHoveredContainer;
+    if (active && globalPortalTooltipEl && globalPortalTooltipEl.style.display !== 'none') {
+      if (!document.body.contains(active)) {
+        if (pinnedContainer === active) {
+          pinnedContainer.classList.remove('tcbe-pinned');
+          pinnedContainer = null;
+        }
+        hideGlobalPortalTooltip(true);
+        return;
+      }
+      updatePortalTooltipPosition(active, globalPortalTooltipEl);
     }
-  }, { passive: true });
+  };
+
+  window.addEventListener('scroll', syncActivePosition, { passive: true });
+  window.addEventListener('resize', syncActivePosition, { passive: true });
+  document.addEventListener('click', (e) => {
+    const target = e.target as Node | null;
+    if (!pinnedContainer && (!globalPortalTooltipEl || globalPortalTooltipEl.style.display === 'none')) {
+      return;
+    }
+    if (target && ((pinnedContainer && pinnedContainer.contains(target)) || (globalPortalTooltipEl && globalPortalTooltipEl.contains(target)))) {
+      return;
+    }
+    if (pinnedContainer) {
+      pinnedContainer.classList.remove('tcbe-pinned');
+      pinnedContainer = null;
+    }
+    hideGlobalPortalTooltip(true);
+  });
 
   return { el, inner };
 }
 
 function updatePortalTooltipPosition(container: HTMLElement, el: HTMLElement) {
   const rect = container.getBoundingClientRect();
-  const screenWidth = window.innerWidth;
+  const screenWidth = document.documentElement?.clientWidth || window.innerWidth;
   const screenHeight = window.innerHeight;
+  const tooltipWidth = el.offsetWidth || 350;
 
-  // 1. 좌우 위치 (position: fixed 기준)
+  // 1. 좌우 위치 (position: fixed 기준 화면 양끝 여백 안으로 안전하게 보정)
+  const left = getFixedTooltipLeft(rect.left, rect.width, tooltipWidth, screenWidth);
+  el.style.left = `${left}px`;
+  el.style.right = 'auto';
+
   if (rect.left + rect.width / 2 > screenWidth / 2) {
-    el.style.left = 'auto';
-    el.style.right = `${Math.max(8, screenWidth - rect.right - 6)}px`;
     el.style.setProperty('--chevron-left', 'auto');
     el.style.setProperty('--chevron-right', '28px');
   } else {
-    el.style.left = `${Math.max(8, rect.left - 6)}px`;
-    el.style.right = 'auto';
     el.style.setProperty('--chevron-left', '28px');
     el.style.setProperty('--chevron-right', 'auto');
   }
@@ -254,13 +288,32 @@ export function createBadgeElement(
     }
   }
 
-  // 5. 상급칸 툴팁 연결 (호버 시 전역 포털로 즉시 최상위 노출)
+  // 5. 상급칸 툴팁 연결 (호버 및 모바일 터치/클릭 고정 모두 지원)
   container.addEventListener('mouseenter', () => {
+    if (pinnedContainer && pinnedContainer !== container) return;
     showGlobalPortalTooltip(container, progress);
   });
 
   container.addEventListener('mouseleave', () => {
+    if (pinnedContainer === container) return;
     hideGlobalPortalTooltip();
+  });
+
+  container.addEventListener('click', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (pinnedContainer === container) {
+      container.classList.remove('tcbe-pinned');
+      pinnedContainer = null;
+      hideGlobalPortalTooltip(true);
+    } else {
+      if (pinnedContainer) {
+        pinnedContainer.classList.remove('tcbe-pinned');
+      }
+      pinnedContainer = container;
+      container.classList.add('tcbe-pinned');
+      showGlobalPortalTooltip(container, progress);
+    }
   });
 
   return container;

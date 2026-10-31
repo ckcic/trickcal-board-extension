@@ -37,6 +37,7 @@ dialog[id^="tcbe-"] header,
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 14px;
 }
@@ -49,6 +50,7 @@ dialog[id^="tcbe-"] h2,
   color: var(--tcbe-text-heading);
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -66,6 +68,7 @@ dialog[id^="tcbe-"] h2 small,
 nav.tcbe-rd-main-tabs,
 nav.tcbe-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   border-bottom: 2px solid var(--tcbe-border-light);
   padding: 4px 0 10px;
@@ -86,6 +89,7 @@ nav.tcbe-tabs button {
   transition: all .15s ease-in-out;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
 }
 
@@ -193,7 +197,8 @@ dialog[id^="tcbe-"] input[type=number] {
 }
 
 dialog[id^="tcbe-"] input[type=search] {
-  min-width: 200px;
+  min-width: min(200px, 100%);
+  max-width: 100%;
 }
 
 dialog[id^="tcbe-"] input:focus,
@@ -363,3 +368,38 @@ dialog[id^="tcbe-"] legend {
   background-size: auto 100%;
 }
 
+/* ── 모바일 및 소형 화면 공통 다이얼로그·탭 최적화 ── */
+@media (max-width: 600px) {
+  dialog[id^="tcbe-"],
+  .tcbe-common-dialog {
+    width: calc(100vw - 12px);
+    max-height: 95dvh;
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  dialog[id^="tcbe-"] header,
+  .tcbe-common-dialog header {
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  dialog[id^="tcbe-"] h2,
+  .tcbe-common-dialog h2 {
+    font-size: 17px;
+  }
+
+  nav.tcbe-rd-main-tabs,
+  nav.tcbe-tabs {
+    gap: 6px;
+    padding: 2px 0 8px;
+    margin-bottom: 12px;
+  }
+
+  nav.tcbe-rd-main-tabs button,
+  nav.tcbe-tabs button {
+    flex: 1 1 auto;
+    padding: 7px 10px;
+    font-size: 12.5px;
+  }
+}

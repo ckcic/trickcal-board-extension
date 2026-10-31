@@ -1,7 +1,7 @@
 /* 베타 재분배 창은 원본 스타일과 분리하고 좌우 2열 분할 레이아웃을 사용한다. */
 #tcbe-redistribution-dialog { box-sizing: border-box; width: min(1280px, calc(100vw - 32px)); height: min(92dvh, 880px); max-height: calc(100dvh - 32px); margin: auto; padding: 20px 24px; border: 1px solid #cbd5e1; border-radius: 16px; background: #fff; color: #1e293b; font: 14px/1.6 system-ui, sans-serif; overflow: hidden; display: flex; flex-direction: column; }
 #tcbe-redistribution-dialog::backdrop { background: rgb(15 23 42 / 55%); }
-#tcbe-redistribution-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; }
+#tcbe-redistribution-dialog header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; flex-shrink: 0; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; }
 #tcbe-redistribution-dialog h2 { font-size: 22px; margin: 0; }
 #tcbe-redistribution-dialog h2 small { font-size: 12px; background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 12px; }
 #tcbe-redistribution-dialog button { padding: 7px 12px; border: 1px solid #cbd5e1; border-radius: 7px; background: #f8fafc; color: #1e293b; cursor: pointer; }
@@ -62,7 +62,7 @@
 .tcbe-rd-stage.drag-over-bottom { border-bottom: 3px solid #2563eb !important; }
 .tcbe-rd-empty-placeholder { padding: 48px 24px; text-align: center; color: #64748b; background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; margin: 12px 0; }
 .tcbe-rd-curve-preview h3 { margin-top: 0; }
-.tcbe-rd-curve-controls { display: flex; align-items: center; gap: 12px; margin: 10px 0; }
+.tcbe-rd-curve-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 10px 0; }
 @media (max-width: 960px) {
   /* 좁은 화면에서는 목차와 결과를 하나의 영역에서 스크롤해 높이 경쟁과 잘림을 막는다. */
   .tcbe-rd-result-container { flex-direction: column; overflow-y: auto; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: #94a3b8 #f1f5f9; }
@@ -93,7 +93,7 @@
 #tcbe-redistribution-dialog .tcbe-rd-stage [data-blocked] { width: auto; }
 #tcbe-redistribution-dialog .tcbe-rd-stage [data-gates], #tcbe-redistribution-dialog .tcbe-rd-stage [data-resource] { width: auto; }
 #tcbe-redistribution-dialog [hidden] { display: none !important; }
-#tcbe-redistribution-dialog .tcbe-rd-tabs { display: flex; gap: 6px; margin: 14px 0; border-bottom: 2px solid #dbe5ce; }
+#tcbe-redistribution-dialog .tcbe-rd-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0; border-bottom: 2px solid #dbe5ce; }
 #tcbe-redistribution-dialog .tcbe-rd-tabs button { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 #tcbe-redistribution-dialog .tcbe-rd-tabs [aria-selected=true] { background: #e8f2dc; border-color: #65a30d; color: #365314; font-weight: 700; }
 #tcbe-redistribution-dialog [role=tabpanel] { padding: 0 8px 12px; }
@@ -139,7 +139,7 @@
 #tcbe-redistribution-dialog table { border-collapse: collapse; width: 100%; white-space: nowrap; text-align: left; }
 #tcbe-redistribution-dialog td, #tcbe-redistribution-dialog th { padding: 9px; border-bottom: 1px solid #e2e8f0; }
 #tcbe-redistribution-dialog summary { cursor: pointer; font-weight: 600; }
-#tcbe-redistribution-dialog .tcbe-rd-apostle summary { display: flex; align-items: center; gap: 10px; }
+#tcbe-redistribution-dialog .tcbe-rd-apostle summary { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 #tcbe-redistribution-dialog .tcbe-rd-apostle summary .tcbe-rd-avatar { width: 32px; height: 32px; }
 #tcbe-redistribution-dialog .tcbe-rd-apostle { border: 1px solid #cbd5e1; padding: 12px; margin: 10px 0; border-radius: 8px; }
 :is(#tcbe-redistribution-dialog, #tcbe-recovery-dialog) .tcbe-rd-maps { display: flex; flex-wrap: wrap; gap: 24px; overflow: auto; }
@@ -177,9 +177,9 @@
 #tcbe-redistribution-dialog .tcbe-rd-bar { display: flex; flex-direction: column; width: 120px; gap: 3px; }
 #tcbe-redistribution-dialog .tcbe-rd-bar i, #tcbe-redistribution-dialog .tcbe-rd-bar b { display: block; height: 6px; background: #94a3b8; border-radius: 3px; }
 #tcbe-redistribution-dialog .tcbe-rd-bar b { background: #2563eb; }
-#tcbe-redistribution-dialog .tcbe-rd-stale-banner { margin: 0 0 16px; padding: 10px 14px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; color: #92400e; font-size: 13px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#tcbe-redistribution-dialog .tcbe-rd-stale-banner { margin: 0 0 16px; padding: 10px 14px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; color: #92400e; font-size: 13px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 #tcbe-redistribution-dialog .tcbe-rd-stale-content { opacity: 0.65; transition: opacity .2s ease; }
-#tcbe-redistribution-dialog .tcbe-rd-orders-tools { display: flex; align-items: center; gap: 10px; margin: 8px 0 12px; }
+#tcbe-redistribution-dialog .tcbe-rd-orders-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 8px 0 12px; }
 #tcbe-redistribution-dialog .tcbe-rd-copy-btn { padding: 6px 12px; font-size: 13px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; color: #334155; cursor: pointer; font-weight: 500; transition: all .15s ease; }
 #tcbe-redistribution-dialog .tcbe-rd-copy-btn:hover { background: #f8fafc; border-color: #94a3b8; }
 #tcbe-redistribution-dialog .tcbe-rd-copy-status { font-size: 12px; color: #166534; font-weight: 600; }
@@ -210,10 +210,20 @@
 .tcbe-rd-status-success { color: #16a34a; }
 .tcbe-rd-status-warning { color: #d97706; }
 .tcbe-rd-status-error { color: #dc2626; }
-.tcbe-rd-modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 18px; border-top: 1px solid #e2e8f0; background: #f8fafc; }
+.tcbe-rd-modal-footer { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; padding: 12px 18px; border-top: 1px solid #e2e8f0; background: #f8fafc; }
 .tcbe-rd-modal-btn { padding: 8px 16px; font-size: 13px; font-weight: 600; border-radius: 7px; border: 1px solid #cbd5e1; background: #fff; color: #334155; cursor: pointer; transition: all .15s ease; }
 .tcbe-rd-modal-btn:hover { background: #f1f5f9; color: #0f172a; }
 .tcbe-rd-modal-btn.tcbe-rd-btn-primary { background: #2563eb; color: #fff; border-color: #2563eb; }
 .tcbe-rd-modal-btn.tcbe-rd-btn-primary:hover { background: #1d4ed8; border-color: #1d4ed8; }
 
-@media (max-width: 600px) { #tcbe-redistribution-dialog { padding: 14px; } #tcbe-redistribution-dialog h2 { font-size: 18px; } }
+@media (max-width: 600px) {
+  #tcbe-redistribution-dialog { width: calc(100vw - 12px); height: 95dvh; max-height: 95dvh; padding: 12px; border-radius: 12px; }
+  #tcbe-redistribution-dialog h2 { font-size: 17px; }
+  #tcbe-redistribution-dialog .tcbe-rd-inputs { gap: 10px; margin: 12px 0; }
+  #tcbe-redistribution-dialog .tcbe-rd-inputs label { width: 100%; justify-content: space-between; }
+  #tcbe-redistribution-dialog .tcbe-rd-stage [data-stat] { width: 100%; max-width: 100%; }
+  #tcbe-redistribution-dialog .tcbe-rd-cards { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+  #tcbe-redistribution-dialog .tcbe-rd-cards > div { padding: 12px; }
+  #tcbe-redistribution-dialog .tcbe-rd-cards strong { font-size: 18px; }
+  .tcbe-rd-modal-overlay { padding: 10px; }
+}

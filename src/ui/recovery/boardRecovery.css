@@ -32,8 +32,12 @@
 #tcbe-recovery-dialog li { margin-bottom: 5px; }
 
 @media (max-width: 760px) {
-  #tcbe-recovery-dialog { padding: 14px; }
-  #tcbe-recovery-dialog h2 { font-size: 18px; }
+  #tcbe-recovery-dialog { width: calc(100vw - 12px); height: 95dvh; max-height: 95dvh; padding: 12px; border-radius: 12px; }
+  #tcbe-recovery-dialog h2 { font-size: 17px; }
   .tcbe-rc-check-row > div { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .tcbe-rc-alternative { min-width: 0; flex-basis: 100%; }
+}
+
+@media (max-width: 400px) {
+  .tcbe-rc-check-row > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
