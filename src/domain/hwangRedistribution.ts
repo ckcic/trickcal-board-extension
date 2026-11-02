@@ -1,8 +1,9 @@
 /** 황크·보크 재분배 베타: 초기화 조합별 단계 배분과 추천 계산. */
-import { searchResetSets } from './redistributionSearch.ts';
+import { searchResetSets, FAST_SINGLETONS, FAST_PROPOSALS, THOROUGH_PROPOSALS } from './redistributionSearch.ts';
 import { createEmptyCostSummary } from './boardProgress.ts';
 import { NODE_TYPE, STAT_CATEGORIES } from './constants.ts';
 import { sumCosts } from './boardPathfinder.ts';
+import { buildOptimalPaintOrder, optimizeApostleNormalTiles } from './boardSteiner.ts';
 import { emptyStats, retained, hwang, refundCost, compare, getHwangTargetValue } from './redistributionModel.ts';
 import { boardPathOptions, boardPaths, prepareNodes, prepareScopes } from './redistributionPaths.ts';
 import type { ProgressMap, ResourceCostSummary } from './types.ts';
@@ -46,7 +47,6 @@ export function* iterateHwangRedistribution(progressMap: ProgressMap, options: R
         stage.targets.some(item => !validStat(item.stat) || (item.target !== null && (!Number.isFinite(item.target) || item.target < 0 || item.target > 100000))))) {
     throw new Error('황크 보유량·초기화 인원·단계별 스탯 목표 입력을 확인해 주세요. 같은 단계의 스탯은 중복할 수 없습니다.');
   }
-  const targets = stages.filter(stage => stage.resource !== 'bokr').flatMap(stage => stage.targets);
   const { apostles, nodes, groups } = prepareNodes(progressMap, stages.some(stage => stage.allowGates));
   const scopes = prepareScopes(nodes, groups, stages);
   const byKey = new Map(nodes.map(entry => [entry.key, entry]));
@@ -67,6 +67,26 @@ export function* iterateHwangRedistribution(progressMap: ProgressMap, options: R
   });
   const moveCache = new Map<string, Move[]>();
   let cachedMoveCount = 0;
+  const steinerCache = new Map<string, string>();
+  const optimizeNormalsFor = (group: RedistributionNode[], reset: boolean, selected: Set<string>) => {
+    if (!group.length) return;
+    const mask = getGroupSelectionMask(group, selected);
+    const cacheKey = `${group[0]!.apostleId}/${reset}/${Boolean(options.restoreNormal)}/${mask}`;
+    const cachedMask = steinerCache.get(cacheKey);
+    if (cachedMask !== undefined) {
+      if (cachedMask !== mask) {
+        for (let i = 0; i < group.length; i++) {
+          if (cachedMask[i] === '1') selected.add(group[i]!.key);
+          else selected.delete(group[i]!.key);
+        }
+      }
+      return;
+    }
+    optimizeApostleNormalTiles(group, reset, selected, Boolean(options.restoreNormal));
+    const afterMask = getGroupSelectionMask(group, selected);
+    if (steinerCache.size >= 2048) steinerCache.delete(steinerCache.keys().next().value!);
+    steinerCache.set(cacheKey, afterMask);
+  };
   const stagePathsFor = (group: RedistributionNode[], reset: boolean, selected: Set<string>, allowBlocked: boolean, allowGates = false) => {
     const key = `${group[0]?.apostleId}/${reset}/${allowBlocked}/${allowGates}/${getGroupSelectionMask(group, selected)}`;
     const cached = pathCache.get(key);
@@ -77,9 +97,30 @@ export function* iterateHwangRedistribution(progressMap: ProgressMap, options: R
   };
   const before = emptyStats();
   for (const entry of nodes.filter(item => item.picked)) for (const stat of STAT_CATEGORIES) before[stat] += entry.stats[stat];
-  const ranking = apostles.map(apostle => ({ apostle, waste: nodes.filter(item => item.apostleId === apostle.apostleId && item.picked && hwang(item.node))
-    .reduce((total, entry) => total + entry.cost.ultraCrayon * (targets.some(target => (target.target === null || target.target > getHwangTargetValue(before, target.stat)) && getHwangTargetValue(entry.stats, target.stat) > 0) ? 0 : 1), 0) }))
-    .filter(item => nodes.some(entry => entry.apostleId === item.apostle.apostleId && entry.picked && !retained(entry.node) && (entry.cost.ultraCrayon > 0 || entry.cost.epicCrayon > 0))).sort((a, b) => b.waste - a.waste || a.apostle.apostleId - b.apostle.apostleId);
+  // 초기화 후보 순위: 목적함수는 단계 순서의 사전식 비교이므로, 아직 미달인 첫 단계까지의 스탯만 "보호"하고
+  // 그 외 스탯의 황크·보크는 회수해 앞 단계에 재투자할 수 있는 낭비분으로 본다.
+  // (이전 방식은 모든 단계 목표를 보호해 후순위 단계용 황크를 낭비로 보지 못하고, 동점 시 사도 ID 순으로만 정렬했다.)
+  const firstUnmet = stages.findIndex((stage, stageIndex) => stage.targets.some((target, index) =>
+    target.target === null || getHwangTargetValue(originalStageStats[stageIndex]!, target.stat) < scopes[stageIndex]!.goals[index]!));
+  const protectedStages = stages.slice(0, firstUnmet < 0 ? stages.length : firstUnmet + 1).map((stage, stageIndex) => ({ stage, stageIndex }));
+  const isProtected = (entry: RedistributionNode, resource: 'hwang' | 'bokr') => protectedStages.some(({ stage, stageIndex }) =>
+    (stage.resource === 'bokr' ? 'bokr' : 'hwang') === resource && scopes[stageIndex]!.keys.has(entry.key) && stage.targets.some(target => {
+      const metric = resource === 'bokr' ? entry.bokrStats : entry.stats;
+      return target.stat === 'attack' ? metric.atk_phys > 0 || metric.atk_mag > 0 : metric[target.stat] > 0;
+    }));
+  const priorityResource = stages[firstUnmet < 0 ? 0 : firstUnmet]!.resource === 'bokr' ? 'bokr' : 'hwang';
+  const ranking = apostles.map(apostle => {
+    let wasteUltra = 0, wasteEpic = 0, refundUltra = 0, refundEpic = 0;
+    for (const entry of groupById.get(apostle.apostleId) || []) {
+      if (!entry.picked || retained(entry.node)) continue;
+      refundUltra += entry.cost.ultraCrayon; refundEpic += entry.cost.epicCrayon;
+      if (hwang(entry.node) && !isProtected(entry, 'hwang')) wasteUltra += entry.cost.ultraCrayon;
+      if (entry.node.nodeType === NODE_TYPE.BOKR && !isProtected(entry, 'bokr')) wasteEpic += entry.cost.epicCrayon;
+    }
+    // 우선 단계 재화의 낭비분 → 다른 재화 낭비분 → 총 환급량 순으로 비교한다.
+    const score = priorityResource === 'bokr' ? [wasteEpic, wasteUltra, refundEpic, refundUltra] : [wasteUltra, wasteEpic, refundUltra, refundEpic];
+    return { apostle, score, refundable: refundUltra > 0 || refundEpic > 0 };
+  }).filter(item => item.refundable).sort((a, b) => -compare(a.score, b.score) || a.apostle.apostleId - b.apostle.apostleId);
 
   function run(resetIds: Set<number>, choices: number[] = [], branches?: number[][]): RedistributionPlan | null {
     const trace: number[] = [];
@@ -215,9 +256,10 @@ export function* iterateHwangRedistribution(progressMap: ProgressMap, options: R
             }
             const efficiency = efficiencyGain / targetCost;
             // 황크 단계에서는 보크 소모를 최대한 배제(-cost.epicCrayon 우선)하고, 보크 단계에서는 보크 효율을 우선한다.
+            // 동일 효율·주요 재화 후보 간에는 물뿌리개·중크·하크·골드·경로 길이가 최소인 칸을 우선한다.
             const score = bokr
-              ? [-ratio, efficiency, -cost.ultraCrayon, -cost.epicCrayon]
-              : [-ratio, -cost.epicCrayon, efficiency, -cost.ultraCrayon];
+              ? [-ratio, efficiency, -cost.ultraCrayon, -cost.epicCrayon, -(cost.wateringCan || 0), -cost.averageCrayon, -cost.basicCrayon, -cost.gold, -move.path.length]
+              : [-ratio, -cost.epicCrayon, efficiency, -cost.ultraCrayon, -(cost.wateringCan || 0), -cost.averageCrayon, -cost.basicCrayon, -cost.gold, -move.path.length];
             move.score = score;
             // 안정 정렬의 첫 원소와 같도록, 동점이면 먼저 등장한 후보를 유지한다.
             if (linear) { if (!top || compare(score, top.score) > 0) top = move; }
@@ -244,6 +286,7 @@ export function* iterateHwangRedistribution(progressMap: ProgressMap, options: R
         trace.push(choice);
         addPath(best.path);
         const affected = groupById.get(byKey.get(best.path.at(-1)!)!.apostleId)!;
+        optimizeNormalsFor(affected, resetIds.has(affected[0]!.apostleId), selected);
         for (const [key, path] of stagePathsFor(affected, resetIds.has(affected[0]!.apostleId), selected, stage.allowBlocked, stage.allowGates)) stagePaths.set(key, path);
         refreshMoves(affected[0]!.apostleId);
         remaining -= best.cost.ultraCrayon; remainingBokr -= best.cost.epicCrayon;
@@ -266,7 +309,7 @@ export function* iterateHwangRedistribution(progressMap: ProgressMap, options: R
         target: goals[index]!, all: target.target === null, before: getHwangTargetValue(original, target.stat), after: getHwangTargetValue(final, target.stat) })) };
     });
     const actions: RedistributionAction[] = [];
-    // paintOrder를 한 번만 순회해 사도별로 묶는다 (기존: 사도 수 × paintOrder 반복).
+    // paintOrder를 한 번만 순회해 사도별로 묶은 뒤, 슈타이너 트리 최적화 결과를 반영해 연결 순서를 확정한다.
     const paintByApostle = new Map<number, RedistributionNode[]>();
     for (const key of paintOrder) {
       if (initial.has(key)) continue;
@@ -275,8 +318,12 @@ export function* iterateHwangRedistribution(progressMap: ProgressMap, options: R
       if (list) list.push(entry); else paintByApostle.set(entry.apostleId, [entry]);
     }
     for (const apostle of apostles) {
-      const paint = paintByApostle.get(apostle.apostleId) || [];
+      const rawPaint = paintByApostle.get(apostle.apostleId) || [];
       const reset = resetIds.has(apostle.apostleId);
+      if (!reset && !rawPaint.length) continue;
+      const group = groupById.get(apostle.apostleId) || [];
+      optimizeNormalsFor(group, reset, selected);
+      const paint = buildOptimalPaintOrder(group, selected, initial, rawPaint);
       if (!reset && !paint.length) continue;
       actions.push({ apostle, reset, paint, balance: 0,
         refund: reset ? { ...(refundByApostle.get(apostle.apostleId) || createEmptyCostSummary()) } : createEmptyCostSummary(),
@@ -325,8 +372,8 @@ export function* iterateHwangRedistribution(progressMap: ProgressMap, options: R
   let result: RedistributionPlan | undefined;
   for (const point of searchResetSets(ranking.map(item => item.apostle.apostleId), Math.min(options.maxReset, apostles.length), evaluate, objective, compare, checkpoints, options.searchMode === 'fast')) {
     result = { ...point.best, notes: [
-      ranking.length <= 8 ? '초기화 후보 8명 이하: 인원 상한 내 모든 초기화 조합을 비교합니다.' : options.searchMode === 'fast' ? '빠른 탐색: 인원 상한별 최대 3개 초기화 조합을 비교합니다. 상세 탐색보다 좋은 조합을 놓칠 수 있습니다.' :
-        '초기화 조합 빔 탐색: 모든 1인 후보와 이후 단계별 최대 26개 후보(빔 폭 3)를 비교합니다.',
+      ranking.length <= 8 ? '초기화 후보 8명 이하: 인원 상한 내 모든 초기화 조합을 비교합니다.' : options.searchMode === 'fast' ? '빠른 탐색: 낭비 황크·보크 순위 상위 ' + FAST_SINGLETONS + '명을 1인 평가한 뒤, 인원 상한별 최대 ' + FAST_PROPOSALS + '개 조합을 비교합니다. 상세 탐색보다 좋은 조합을 놓칠 수 있습니다.' :
+        '초기화 조합 빔 탐색: 빠른 탐색 경로를 포함하고, 모든 1인 후보를 평가해 실제 효과 순으로 재정렬한 뒤 단계별 최대 ' + THOROUGH_PROPOSALS + '개 조합(빔 폭 3)을 추가 비교합니다.',
       '경로별 황크·보크 대체 비용을 최대 8개 비교합니다. 전체 노드 24개 이하에서는 배분 선택도 최대 12회 추가 탐색합니다. 그 이상은 단계별 탐욕 배분이며 전역 최적해나 최소 초기화 인원은 보장하지 않습니다.',
     ] };
     yield { limit: point.limit, plan: result, ...(point.pending ? { pending: true } : {}) };

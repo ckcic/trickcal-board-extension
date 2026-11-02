@@ -1,6 +1,7 @@
 /** 기존 황크·보크를 보존하면서 선택한 칸의 회수 및 만개 우회를 비교한다. */
 import { createEmptyCostSummary, getNodeStatCategories, isHwangNode, NODE_TYPE, STAT_CATEGORIES } from './boardProgress.ts';
 import { extractNodeCost, findLinkedPetalNode, getApostleBoardLayout, sumCosts } from './boardPathfinder.ts';
+import { buildOptimalPaintOrder, optimizeApostleNormalTiles } from './boardSteiner.ts';
 import { readBokrValues, readHwangStats, type HwangStats } from './hwangRedistribution.ts';
 import type { ApostleProgress, ResourceCostSummary, StatCategory } from './types.ts';
 
@@ -217,20 +218,58 @@ function solve(
       }
     }
   }
+  // 후속 경로 추가로 인해 앞서 임시 복구했던 제거 대상(targets)이나 비필수 경유 특수칸이 불필요해졌다면 제거한다.
+  const isMandatoryStillConnected = () => {
+    const visited = new Uint8Array(nLen);
+    const q: number[] = [];
+    for (const r of roots) {
+      if (selectedMask[r] && !visited[r]) { visited[r] = 1; q.push(r); }
+    }
+    for (let h = 0; h < q.length; h++) {
+      const u = q[h]!;
+      for (const v of adjacent[u] || []) {
+        if (selectedMask[v] && !visited[v]) { visited[v] = 1; q.push(v); }
+      }
+    }
+    for (let i = 0; i < nLen; i++) {
+      if (mandatoryMask[i] && !visited[i]) return false;
+    }
+    return true;
+  };
+  for (let i = 0; i < nLen; i++) {
+    if (!selectedMask[i] || mandatoryMask[i] || nodes[i]!.retained || nodes[i]!.node.nodeType === NODE_TYPE.NORMAL) continue;
+    selectedMask[i] = 0;
+    const pIdx = petalsByIdx[i]!;
+    const hadPetal = pIdx >= 0 && !nodes[pIdx]!.retained && selectedMask[pIdx] === 1;
+    if (hadPetal) selectedMask[pIdx] = 0;
+    if (!isMandatoryStillConnected()) {
+      selectedMask[i] = 1;
+      if (hadPetal) selectedMask[pIdx] = 1;
+    }
+  }
   const selected = new Set<string>();
-  const spend = paint.reduce((total, entry) => sumCosts(total, entry.cost), createEmptyCostSummary());
+  const initial = new Set<string>();
+  for (const idx of retainedIndices) initial.add(nodes[idx]!.key);
+  for (let i = 0; i < nLen; i++) {
+    if (selectedMask[i]) selected.add(nodes[i]!.key);
+  }
+  optimizeApostleNormalTiles(nodes, true, selected, false);
+  const optimizedPaint = buildOptimalPaintOrder(nodes, selected, initial, paint);
+  for (let i = 0; i < nLen; i++) {
+    selectedMask[i] = selected.has(nodes[i]!.key) ? 1 : 0;
+  }
+  const spend = optimizedPaint.reduce((total, entry) => sumCosts(total, entry.cost), createEmptyCostSummary());
   const hwangDelta = stats(), bokrDelta = stats();
   for (let i = 0; i < nLen; i++) {
     const entry = nodes[i]!;
-    if (selectedMask[i]) selected.add(entry.key);
     const delta = selectedMask[i]! - Number(entry.picked);
     if (!delta) continue;
     const h = (nodeHwang[i] ??= readHwangStats(entry.node));
     const b = (nodeBokr[i] ??= readBokrValues(entry.node));
     for (const stat of STAT_CATEGORIES) { hwangDelta[stat] += delta * h[stat]; bokrDelta[stat] += delta * b[stat]; }
   }
-  return { flowering, priority, selected, paint, refund: { ...refund }, spend, net: subtractRecoveryCost(refund, spend), hwangDelta, bokrDelta,
-    repaintedTargets: [...targets].filter(key => selected.has(key)), usedNewBokr: paint.some(entry => !entry.picked && entry.node.nodeType === NODE_TYPE.BOKR) };
+  return { flowering, priority, selected, paint: optimizedPaint, refund: { ...refund }, spend, net: subtractRecoveryCost(refund, spend), hwangDelta, bokrDelta,
+    repaintedTargets: [...targets].filter(key => selected.has(key)), usedNewBokr: optimizedPaint.some(entry => !entry.picked && entry.node.nodeType === NODE_TYPE.BOKR) };
 }
 
 export function calculateApostleRecovery(

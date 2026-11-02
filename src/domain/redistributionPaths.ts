@@ -32,6 +32,18 @@ export function boardPathOptions(nodes: RedistributionNode[], reset: boolean, or
     !(entry.node.nodeType === NODE_TYPE.GATE && !entry.picked && !selected?.has(entry.key) && !allowGates) &&
     (entry.node.nodeType !== NODE_TYPE.HWANG_EXT || linkedPetals.has(entry.key)));
   const coordinates = new Map(valid.map(entry => [`${entry.position!.x},${entry.position!.y}`, entry]));
+  // 동일 재화 비용·길이의 경로 중 중심 교차로(인접 특수칸 및 격자 차수가 높은 칸)를 경유하는 경로를 우선해 T자 동선 공유율을 높인다.
+  const centrality = new Map<string, number>();
+  for (const entry of valid) {
+    const { x, y } = entry.position!;
+    let score = 0;
+    for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]] as const) {
+      const nb = coordinates.get(`${nx},${ny}`);
+      if (!nb || nb.boardIndex !== entry.boardIndex) continue;
+      score += nb.node.nodeType !== NODE_TYPE.NORMAL ? 5 : 1;
+    }
+    centrality.set(entry.key, score);
+  }
   type Label = { key: string; weight: number[]; path: string[] };
   const labels = new Map<string, Label[]>();
   const queue: Label[] = [];
@@ -39,7 +51,7 @@ export function boardPathOptions(nodes: RedistributionNode[], reset: boolean, or
     a.weight[0]! <= b.weight[0]! && a.weight[1]! <= b.weight[1]! &&
     (a.weight[0]! < b.weight[0]! || a.weight[1]! < b.weight[1]! || compare(a.weight, b.weight) <= 0);
   for (const entry of valid) if (entry.node.nodeType === NODE_TYPE.START && entry.boardIndex === 0) {
-    const label = { key: entry.key, weight: [0, 0, 0, 0, 0, 0], path: [entry.key] };
+    const label = { key: entry.key, weight: [0, 0, 0, 0, 0, 0, 0, 0, 0], path: [entry.key] };
     labels.set(entry.key, [label]); queue.push(label);
   }
   const byKey = new Map(valid.map(entry => [entry.key, entry]));
@@ -69,6 +81,9 @@ export function boardPathOptions(nodes: RedistributionNode[], reset: boolean, or
             cw[3]! + cost.basicCrayon,
             cw[4]! + (cost.wateringCan || 0),
             cw[5]! + cost.gold,
+            cw[6]! + (free ? 0 : 1),
+            cw[7]! + (free || next.picked ? 0 : 1),
+            cw[8]! - (free ? 0 : centrality.get(next.key) || 0),
           ];
       const label = { key: next.key, weight, path: needsPetal ? [...current.path, petal!.key, next.key] : [...current.path, next.key] };
       const existing = labels.get(next.key) || [];

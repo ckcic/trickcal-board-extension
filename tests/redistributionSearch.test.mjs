@@ -150,3 +150,34 @@ test('그래프 계산은 조기 포화 감지 시 남은 인원 상한을 일�
   assert.deepEqual(updates.at(-1), [6, 6]);
 });
 
+
+test('상세 탐색은 빠른 탐색 레인을 포함하므로 모든 인원 상한에서 빠른 탐색보다 나쁜 조합을 고르지 않는다', () => {
+  // 사도 간 상호작용(시너지·상쇄)이 있는 무작위 목적함수로 빔 탐색의 경로 의존성을 재현한다.
+  let rng = 7;
+  const next = () => (rng = (rng * 1103515245 + 12345) >>> 0) / 2 ** 32;
+  for (let trial = 0; trial < 40; trial++) {
+    const ids = Array.from({ length: 20 }, (_, i) => i + 1);
+    const solo = new Map(ids.map(id => [id, Math.floor(next() * 50)]));
+    const pair = new Map();
+    for (const a of ids) for (const b of ids) if (a < b && next() < 0.15) pair.set(`${a},${b}`, Math.floor(next() * 80) - 40);
+    const value = set => {
+      const list = [...set].sort((a, b) => a - b);
+      let gain = list.reduce((sum, id) => sum + solo.get(id), 0);
+      for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) gain += pair.get(`${list[i]},${list[j]}`) ?? 0;
+      return { gain, size: list.length };
+    };
+    const score = v => [v.gain, -v.size];
+    const fastPoints = [...searchResetSets(ids, 6, value, score, compare, false, true)];
+    const thoroughPoints = [...searchResetSets(ids, 6, value, score, compare, false, false)];
+    fastPoints.forEach((point, limit) => assert.ok(compare(score(thoroughPoints[limit].best), score(point.best)) >= 0,
+      `trial ${trial} limit ${limit}: 상세 ${thoroughPoints[limit].best.gain} < 빠른 ${point.best.gain}`));
+  }
+});
+
+test('1인 평가 후에는 정적 순위가 아니라 실제 1인 점수 순으로 조합을 확장한다', () => {
+  // 정적 순위는 1..30이지만 실제 효과는 30, 29가 가장 크다. 상세 탐색의 2인 조합은 {29, 30}이어야 한다.
+  const ids = Array.from({ length: 30 }, (_, i) => i + 1);
+  const value = set => ({ gain: [...set].reduce((sum, id) => sum + (id >= 29 ? 100 : 1), 0), size: set.size });
+  const points = [...searchResetSets(ids, 2, value, v => [v.gain, -v.size], compare)];
+  assert.equal(points[2].best.gain, 200);
+});

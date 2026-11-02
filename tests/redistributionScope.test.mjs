@@ -5,7 +5,7 @@ import { calculateRedistributionCurve, readCurveValue } from '../src/domain/redi
 import { renderRedistributionResult } from '../src/ui/redistribution/redistributionResult.ts';
 import { renderRedistributionStageEditor } from '../src/ui/redistribution/redistributionStageEditor.ts';
 import { renderRedistributionCurve } from '../src/ui/redistribution/redistributionCurve.ts';
-import { searchResetSets } from '../src/domain/redistributionSearch.ts';
+import { searchResetSets, FAST_SINGLETONS, FAST_PROPOSALS } from '../src/domain/redistributionSearch.ts';
 const start = { id: 1, nodeType: 2, grid: { x: 0, y: 0 } };
 const yellow = (id, x, y, type = 88) => ({ id, nodeType: 5, grid: { x, y }, requireItems: [{ item: 610004, value: 2 }], stats: type === 88 ? [{ statType: 88, statValue: 60 }, { statType: 89, statValue: 60 }] : [{ statType: type, statValue: 80 }] });
 const bokr = (id, x, y, type = 3) => ({ id, nodeType: 4, grid: { x, y }, requireItems: [{ item: 610003, value: 3 }], stats: [{ statType: type, statValue: 13 }] });
@@ -88,9 +88,9 @@ test('editor has icon radios and independent gate and hwang-blocked checkboxes',
   assert.match(html, /value="1" selected>1~2차/); assert.match(html, /1~3차/);
 });
 
-test('fast large-set search limits each reset count to three trials', () => {
+test('fast large-set search limits singleton and per-limit trials', () => {
   let calls = 0;
   const points = [...searchResetSets(Array.from({length:135},(_,i)=>i), 135, ids => { calls++; return {score:ids.size}; }, p=>[p.score], (a,b)=>a[0]-b[0], false, true)];
-  assert.ok(calls <= 1+135*3);
+  assert.ok(calls <= 1 + FAST_SINGLETONS + 134 * FAST_PROPOSALS);
   assert.equal(points.length,136); assert.equal(points[135].best.score,135);
 });
