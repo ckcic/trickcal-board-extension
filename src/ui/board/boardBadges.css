@@ -172,22 +172,23 @@ html[data-tcbe-board-level="2"] .virtuoso-grid-item > :is([data-slot="card"], .b
   letter-spacing: -0.2px;
 }
 
-.tcbe-portal-tooltip-inner::after {
+.tcbe-portal-tooltip::after {
   content: '';
   position: absolute;
-  top: 100%;
+  top: calc(100% - 8px);
   left: var(--chevron-left, 28px);
   right: var(--chevron-right, auto);
   margin-left: -6px;
   border-width: 6px;
   border-style: solid;
   border-color: var(--tcbe-green-accent) transparent transparent transparent;
+  pointer-events: none;
 }
 
 /* 상단 공간 부족 시 아래쪽으로 전개될 때 꼭짓점 화살표 반전 */
-.tcbe-portal-tooltip.tcbe-popup-bottom .tcbe-portal-tooltip-inner::after {
+.tcbe-portal-tooltip.tcbe-popup-bottom::after {
   top: auto;
-  bottom: 100%;
+  bottom: calc(100% - 8px);
   border-color: transparent transparent var(--tcbe-green-accent) transparent;
 }
 
