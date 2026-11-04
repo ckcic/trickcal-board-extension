@@ -50,14 +50,17 @@ function copyStaticFiles() {
     console.log('[TCBE Build] Copied manifest.json to dist');
   }
 
-  // 2. icons 디렉터리
+  // 2. icons 디렉터리 (manifest.json에 등록된 표준 해상도 아이콘만 복사)
   const iconsSrcDir = path.join(rootDir, 'icons');
   const iconsDestDir = path.join(distDir, 'icons');
   if (fs.existsSync(iconsSrcDir)) {
-    if (!fs.existsSync(iconsDestDir)) {
-      fs.mkdirSync(iconsDestDir, { recursive: true });
-    }
-    const iconFiles = fs.readdirSync(iconsSrcDir);
+    fs.rmSync(iconsDestDir, { recursive: true, force: true });
+    fs.mkdirSync(iconsDestDir, { recursive: true });
+    const manifestData = JSON.parse(fs.readFileSync(manifestSrc, 'utf8'));
+    const requiredIcons = new Set(
+      Object.values(manifestData.icons ?? {}).map((rel) => path.basename(String(rel))),
+    );
+    const iconFiles = fs.readdirSync(iconsSrcDir).filter((file) => requiredIcons.has(file));
     for (const file of iconFiles) {
       fs.copyFileSync(path.join(iconsSrcDir, file), path.join(iconsDestDir, file));
     }
@@ -90,15 +93,33 @@ async function build() {
   const modeLabel = isProd ? 'production' : 'development';
   console.log(`[TCBE Build] Mode: ${modeLabel}`);
 
+  // 프로덕션 빌드 시 UI 템플릿 리터럴 내 불필요한 줄바꿈 및 들여쓰기 공백 압축 플러그인
+  const htmlTemplateMinifyPlugin = {
+    name: 'tcbe-html-template-minify',
+    setup(buildApi) {
+      if (!isProd) return;
+      buildApi.onLoad({ filter: /src[\\/]ui[\\/].*\.ts$/ }, (args) => {
+        const raw = fs.readFileSync(args.path, 'utf8');
+        const contents = raw
+          .replace(/>\r?\n\s+</g, '><')
+          .replace(/\r?\n\s+(?=<\/?[a-zA-Z])/g, ' ')
+          .replace(/\r?\n\s+(?=(?:class|id|type|data-|aria-|role|style|title|value|min|max|step|placeholder|disabled|checked|selected|tabindex|width|height|viewBox|fill|stroke)=)/g, ' ');
+        return { contents, loader: 'ts' };
+      });
+    },
+  };
+
   // JS 번들 공통 옵션 (프로덕션/개발 모드 분리)
   const commonJsOptions = {
     bundle: true,
     minify: isProd,
     sourcemap: !isProd,
+    charset: 'utf8',
     target: ['chrome110'],
     format: 'iife',
     drop: isProd ? ['console', 'debugger'] : [],
     legalComments: isProd ? 'none' : 'inline',
+    plugins: [htmlTemplateMinifyPlugin],
   };
 
   // CSS 번들 옵션 (서버 원본 에셋 및 chrome-extension:// URL은 외부 경로로 처리)
@@ -108,6 +129,7 @@ async function build() {
     bundle: true,
     minify: isProd,
     sourcemap: !isProd,
+    charset: 'utf8',
     target: ['chrome110'],
     legalComments: isProd ? 'none' : 'inline',
     external: ['chrome-extension://*', '/UI/*', 'https://*'],
