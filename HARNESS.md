@@ -46,6 +46,7 @@ src/
    - 원본 웹사이트(`note.trickcal.com`)는 SPA이므로 DOM이 수시로 재렌더링됩니다. `MutationObserver`와 **Debounce(지연 실행)** 기법을 적극 활용하여 불필요한 반복 렌더링 및 프리징을 방지합니다.
    - 원본 웹사이트의 스타일과 충돌하지 않도록 네임스페이스 클래스명(예: `tcbe-badge`, `tcbe-filter-*`, `tcbe-rd-*`, `tcbe-br-*`)을 사용합니다.
    - 에셋(스프라이트, 크레파스 이미지 등)은 `chrome.runtime.getURL` 또는 안전한 CDN URL을 통해 주입합니다.
+   - 모바일 및 소형 화면(`<= 768px`, `<= 640px`, `<= 420px`)과 터치 환경(`hover: none`)에서도 툴팁·팝업·모달이 뷰포트 밖으로 잘리거나 불필요한 스크롤바가 생기지 않도록 `popupPosition.ts` 경계 보정 및 반응형 스타일을 유지합니다.
 
 ---
 

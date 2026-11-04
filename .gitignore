@@ -6,7 +6,7 @@ scratch/
 *.zip
 .DS_Store
 
-# AI 도구별 인식 파일 (HARNESS.md에서 자동 생성)
+# AI 도구별 인식 파일 및 내부 검토 문서 (HARNESS.md에서 자동 생성)
 GEMINI.md
 AGENTS.md
 CLAUDE.md
@@ -14,3 +14,6 @@ CLAUDE.md
 .vscode
 
 references/
+BOARD_NODES.md
+REVIEW.md
+HWANG_RECOVERY_*.md
