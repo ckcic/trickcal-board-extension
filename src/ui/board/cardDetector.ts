@@ -29,7 +29,7 @@ export function findCardContainer(nameElement: Element): HTMLElement | null {
   // 3. 상위 탐색 로직 (폴백)
   let curr: Element | null = nameElement;
   for (let i = 0; i < 8; i++) {
-    if (!curr || curr === document.body) break;
+    if (!curr || (typeof document !== 'undefined' && curr === document.body)) break;
     const parent: HTMLElement | null = curr.parentElement;
     if (!parent) break;
 

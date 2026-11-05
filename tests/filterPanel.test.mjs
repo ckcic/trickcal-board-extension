@@ -26,6 +26,13 @@ function setup() {
       appendChild(child) { node.children.push(child); return child; },
       addEventListener(type, callback) { listeners.set(type, callback); },
       click() { listeners.get('click')?.({ stopPropagation() {} }); },
+      trigger(type, ev = {}) { listeners.get(type)?.({ stopPropagation() {}, ...ev }); },
+      style: {
+        left: '', right: '',
+        setProperty(k, v) { this[k] = v; },
+      },
+      offsetWidth: 260,
+      getBoundingClientRect: () => ({ left: 260, width: 90 }),
       querySelectorAll(selector) {
         const match = selector.match(/^\.([\w-]+)\[([\w-]+)\]$/);
         assert.ok(match, `지원되지 않는 테스트 셀렉터: ${selector}`);
@@ -42,9 +49,11 @@ function setup() {
   }
   const context = vm.createContext({
     document: { createElement: makeElement, body: { contains: () => true },
+      documentElement: { clientWidth: 360 },
       getElementById: id => walk(root).find(node => node.id === id) ?? null,
       querySelector: () => { throw new Error('스탯 선택이 전역 패널을 탐색함'); },
     },
+    window: { innerWidth: 360 },
     localStorage: { getItem: () => null, setItem() {} },
   });
   vm.runInContext(bundled.outputFiles[0].text, context);
@@ -133,4 +142,11 @@ test('스탯 버튼과 요약 카드의 선택이 동기화되고 다른 필터�
   assert.equal(controller.getState().grade, 3);
   assert.equal(changes.length, 5);
   assert.deepEqual({ ...setup().controller.getState() }, DEFAULT_FILTER_STATE);
+
+  // 좁은 화면(360px)에서 우측 요약 카드 호버 시 툴팁이 화면 경계 안쪽으로 위치 보정됨을 확인
+  summary.trigger('mouseenter');
+  const tooltip = summary.children[0];
+  assert.equal(tooltip.style.right, 'auto');
+  assert.equal(tooltip.style.left, '-176px');
+  assert.equal(tooltip.style['--sum-chevron-right'], '24px');
 });
