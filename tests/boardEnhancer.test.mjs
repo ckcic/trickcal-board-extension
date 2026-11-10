@@ -149,6 +149,15 @@ test('카드 컨테이너 탐색은 모달 내부를 제외하고 data-slot, 배
   assert.equal(findCardContainer({ closest: () => null, parentElement: inner }), fallbackCard);
 });
 
+test('role 속성이 없는 네이티브 dialog 안의 결과 항목도 카드로 처리하지 않는다', () => {
+  const slotCard = { tagName: 'DIV' };
+  const closest = selector => selector.split(/,\s*/).includes('dialog') ? {}
+    : selector === '[data-slot="card"]' ? slotCard : null;
+  assert.equal(findCardContainer({ closest }), null);
+  const card = { closest, getAttribute() { throw new Error('모달 항목을 필터 카드로 처리함'); } };
+  assert.deepEqual(applyFilterToCards(DEFAULT_FILTER_STATE, new Map(), [card]), { total: 0, visible: 0 });
+});
+
 test('타일 스탯 하이라이트는 보크 타일만 활성·비활성 구분해 강조하고 황크·일반·관문 타일은 제외하며 동일 스탯 캐시를 재사용한다', () => {
   const makeRect = (rectCls, imgCls) => {
     const classes = new Set();

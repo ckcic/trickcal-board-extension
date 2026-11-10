@@ -1,4 +1,5 @@
 import { takeOverApostleSearch } from './integratedSearch.ts';
+import { SITE_APOSTLE_SEARCH_SELECTOR } from '../common/selectors.ts';
 /**
  * @file filterPanel.ts
  * @description 트릭컬 노트의 사도별 탭 상단에 배치되는 스탯/성격/성급/보드차수별 필터 컨트롤 패널 및 스탯별 총 칸 수/수치 통계 바
@@ -778,7 +779,7 @@ export class FilterPanelController {
     const existingPanel = document.getElementById('tcbe-filter-panel');
 
     // 사이트 본래의 사도명 검색 입력창 검색
-    const searchInput = document.querySelector<HTMLInputElement>('input[placeholder*="사도"]:not([data-tcbe-search])');
+    const searchInput = document.querySelector<HTMLInputElement>(SITE_APOSTLE_SEARCH_SELECTOR);
 
     // 사도별 화면이 아닌 경우(검색창이 존재하지 않고, 이전에 이동한 요소도 없는 경우) 마운트하지 않음
     if (!searchInput && !this.originalSearchElement) {

@@ -1,3 +1,5 @@
+import { SITE_APOSTLE_SEARCH_SELECTOR } from '../common/selectors.ts';
+
 /** 페이지 판별에 필요한 DOM만 주입하여 브라우저 전역 없이도 검증한다. */
 export function createPageDetector(
   doc: Pick<Document, 'querySelector' | 'querySelectorAll'>,
@@ -26,7 +28,7 @@ export function createPageDetector(
       }
       if (cachedNavigation.isStatTab) return false;
       // 검색창 이동·제거와 패널 통합 상태는 캐시하지 않고 매번 현재 DOM으로 확인한다.
-      return Boolean(doc.querySelector('input[placeholder*="사도"]') || hasIntegratedSearch());
+      return Boolean(doc.querySelector(SITE_APOSTLE_SEARCH_SELECTOR) || hasIntegratedSearch());
     },
   };
 }

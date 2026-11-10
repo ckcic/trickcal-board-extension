@@ -3,6 +3,7 @@ import test from 'node:test';
 import vm from 'node:vm';
 import { build } from 'esbuild';
 import { DEFAULT_FILTER_STATE } from '../src/domain/filters.ts';
+import { SITE_APOSTLE_SEARCH_SELECTOR } from '../src/ui/common/selectors.ts';
 import { calculateAllApostlesProgress } from '../src/domain/boardProgress.ts';
 import { mockHeroInfo, mockMasterBoard, mockText, mockUserApostles } from './fixtures/sanitizedData.mjs';
 
@@ -38,7 +39,7 @@ function setup() {
     removeEventListener() {}, postMessage: message => sent.push(message) };
   const context = vm.createContext({ window: host, Element,
     document: { body: {}, documentElement: { style: { setProperty() {} }, setAttribute() {}, removeAttribute() {} },
-      querySelector: selector => selector === 'input[placeholder*="사도"]' && state.search ? {} : null,
+      querySelector: selector => selector === SITE_APOSTLE_SEARCH_SELECTOR && state.search ? {} : null,
       querySelectorAll: selector => {
         if (selector === 'button, a, div[role="button"]') { state.scans++; return state.buttons; }
         return [];

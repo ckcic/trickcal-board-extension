@@ -116,9 +116,9 @@ export function openHwangRedistribution(progressMap: ProgressMap): void {
     saveSettingsTimer = setTimeout(() => { saveSettingsTimer = null; saveSettings(); }, 300);
   };
   let currentCalculatedPlan: RedistributionPlan | null = null;
-  const invalidateResult = (event?: Event) => {
+  const invalidateResult = (event?: Event, persist = true) => {
     syncCostModeVisibility();
-    if (event) debouncedSaveSettings();
+    if (persist) debouncedSaveSettings();
     const targetName = event?.target instanceof HTMLInputElement ? event.target.name : '';
     const keepCurve = ['reset', 'gold', 'watering-can', 'clouds'].includes(targetName);
     if (!keepCurve) {
@@ -178,7 +178,7 @@ export function openHwangRedistribution(progressMap: ProgressMap): void {
       });
     }, 0);
   }
-  invalidateResult();
+  invalidateResult(undefined, false);
   const status = dialog.querySelector('[data-status]');
   if (status) status.textContent = '';
 
