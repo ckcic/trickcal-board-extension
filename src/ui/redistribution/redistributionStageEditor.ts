@@ -1,6 +1,7 @@
 import { renderResourceIcon } from '../common/resources.ts';
 /** 단계별 목표 편집 UI. 같은 스탯은 서로 다른 단계에서 반복할 수 있다. */
 import { STAT_META_LIST } from '../../domain/boardProgress.ts';
+import { DEFAULT_GROWTH_RATIOS } from '../../domain/constants.ts';
 import type { RedistributionStage, RedistributionStat } from '../../domain/hwangRedistribution.ts';
 import { getRedistributionStatUnit, roundRedistributionTarget, type HwangStatLimits } from '../../domain/hwangStatLimits.ts';
 
@@ -19,6 +20,11 @@ export function renderStageTargetHint(stat: RedistributionStat, bokr: boolean, l
 function renderStageTargetLimit(stage: RedistributionStage, target: RedistributionStage['targets'][number], scope?: HwangStatLimits,
   allGoal?: (stage: RedistributionStage, stat: RedistributionStat) => number): string {
   const bokr = stage.resource === 'bokr';
+  const isRatio = target.mode === 'ratio' || (target.ratio !== undefined && target.ratio > 0);
+  if (isRatio) {
+    const ratioVal = target.ratio ?? DEFAULT_GROWTH_RATIOS[target.stat] ?? 1;
+    return `${renderStageTargetHint(target.stat, bokr, scope, bokr ? stage.boardThrough ?? stage.boardIndex ?? 0 : undefined)} · 성장비 ${ratioVal} 비례 무제한 배분`;
+  }
   return `${renderStageTargetHint(target.stat, bokr, scope, bokr ? stage.boardThrough ?? stage.boardIndex ?? 0 : undefined)}${bokr ? ` · 목표 +${((target.target ?? allGoal?.(stage, target.stat) ?? 0) * (STAT_META_LIST.find(meta => meta.key === target.stat)?.valuePerNode ?? 0)).toLocaleString('ko-KR')} (기본 수치)` : ''}`;
 }
 
@@ -33,19 +39,34 @@ export function updateStageTargetRowElement(
 ): void {
   const bokr = stage.resource === 'bokr';
   const scope = bokr ? bokrLimits : limits;
+  const isRatio = target.mode === 'ratio' || (target.ratio !== undefined && target.ratio > 0);
+  const isAll = !isRatio && target.target === null;
   const input = row.querySelector<HTMLInputElement>('[data-value]');
   if (input) {
-    const unit = bokr ? 1 : getRedistributionStatUnit(target.stat);
-    input.step = String(unit);
-    input.max = String(bokr ? 100000 : Math.floor(100000 / unit) * unit);
-    const isAll = target.target === null;
-    input.disabled = isAll;
-    input.required = !isAll;
-    if (isAll) {
-      input.value = String(allGoal?.(stage, target.stat) ?? 0);
-    } else if (target.target !== null && Number.isFinite(target.target)) {
-      input.value = String(bokr ? Math.ceil(target.target) : roundRedistributionTarget(target.target, target.stat));
+    if (isRatio) {
+      input.min = '0.1';
+      input.max = '1000';
+      input.step = '0.1';
+      input.disabled = false;
+      input.required = true;
+      input.value = String(target.ratio ?? DEFAULT_GROWTH_RATIOS[target.stat] ?? 1);
+    } else {
+      const unit = bokr ? 1 : getRedistributionStatUnit(target.stat);
+      input.min = '0';
+      input.step = String(unit);
+      input.max = String(bokr ? 100000 : Math.floor(100000 / unit) * unit);
+      input.disabled = isAll;
+      input.required = !isAll;
+      if (isAll) {
+        input.value = String(allGoal?.(stage, target.stat) ?? 0);
+      } else if (target.target !== null && Number.isFinite(target.target)) {
+        input.value = String(bokr ? Math.ceil(target.target) : roundRedistributionTarget(target.target, target.stat));
+      }
     }
+  }
+  const unitSpan = row.querySelector<HTMLElement>('[data-unit]');
+  if (unitSpan) {
+    unitSpan.textContent = isRatio ? '배율' : bokr ? '칸' : '%';
   }
   const limit = row.querySelector<HTMLElement>('[data-limit]');
   if (limit) {
@@ -74,13 +95,25 @@ export function renderRedistributionStageEditor(stages: RedistributionStage[], l
     </div>
     <div class="tcbe-rd-stage-options"><div class="tcbe-rd-resource-choice" role="group" aria-label="${index + 1}단계 재화">${(['hwang', 'bokr'] as const).map(resource => `<label title="${resource === 'hwang' ? '황크' : '보크'}"><input type="radio" data-resource name="stage-resource-${index}" value="${resource}" ${(stage.resource || 'hwang') === resource ? 'checked' : ''} aria-label="${index + 1}단계 ${resource === 'hwang' ? '황크' : '보크'}">${renderResourceIcon(resource)}</label>`).join('')}</div>
       ${bokr ? `<label>대상 보드 <select data-board-through aria-label="${index + 1}단계 대상 보드">${[0, 1, 2].map(board => `<option value="${board}" ${board === (stage.boardThrough ?? stage.boardIndex ?? 0) ? 'selected' : ''}>${board === 0 ? '1차' : `1~${board + 1}차`}</option>`).join('')}</select></label><small>선택한 차수까지 누적한 칸 수</small>` : '<small>연결에 필요한 보크만 사용</small>'}</div>
-    ${stage.targets.map((target, targetIndex) => `<div class="tcbe-rd-target" data-target="${targetIndex}">
+    ${stage.targets.map((target, targetIndex) => {
+      const isRatio = target.mode === 'ratio' || (target.ratio !== undefined && target.ratio > 0);
+      const isAll = !isRatio && target.target === null;
+      const ratioVal = target.ratio ?? DEFAULT_GROWTH_RATIOS[target.stat] ?? 1;
+      const inputVal = isRatio
+        ? ratioVal
+        : isAll
+          ? (allGoal?.(stage, target.stat) ?? 0)
+          : Number.isFinite(target.target)
+            ? bokr ? Math.ceil(target.target!) : roundRedistributionTarget(target.target!, target.stat)
+            : '';
+      return `<div class="tcbe-rd-target" data-target="${targetIndex}">
       <select data-stat aria-label="${index + 1}단계 ${targetIndex + 1}번 스탯">${choices.map(([stat, name]) => `<option value="${stat}" ${stat === target.stat ? 'selected' : ''}>${name}</option>`).join('')}</select>
-      <select data-mode aria-label="${index + 1}단계 ${targetIndex + 1}번 목표 방식"><option value="percent" ${target.target !== null ? 'selected' : ''}>${bokr ? '목표 칸 수' : '목표 %'}</option><option value="all" ${target.target === null ? 'selected' : ''}>전부</option></select>
-      <input data-value type="number" min="0" max="${bokr ? 100000 : Math.floor(100000 / getRedistributionStatUnit(target.stat)) * getRedistributionStatUnit(target.stat)}" step="${bokr ? 1 : getRedistributionStatUnit(target.stat)}" value="${target.target === null ? (allGoal?.(stage, target.stat) ?? 0) : Number.isFinite(target.target) ? bokr ? Math.ceil(target.target) : roundRedistributionTarget(target.target, target.stat) : ''}" ${target.target === null ? 'disabled' : 'required'} aria-label="${index + 1}단계 ${targetIndex + 1}번 목표 ${bokr ? '칸 수' : '백분율'}">
-      <span>${bokr ? '칸' : '%'}</span><small data-limit>${renderStageTargetLimit(stage, target, scope, allGoal)}</small>
+      <select data-mode aria-label="${index + 1}단계 ${targetIndex + 1}번 목표 방식"><option value="percent" ${!isAll && !isRatio ? 'selected' : ''}>${bokr ? '목표 칸 수' : '목표 %'}</option><option value="all" ${isAll ? 'selected' : ''}>전부</option><option value="ratio" ${isRatio ? 'selected' : ''}>비율 배분</option></select>
+      <input data-value type="number" min="${isRatio ? '0.1' : '0'}" max="${isRatio ? '1000' : bokr ? 100000 : Math.floor(100000 / getRedistributionStatUnit(target.stat)) * getRedistributionStatUnit(target.stat)}" step="${isRatio ? '0.1' : bokr ? 1 : getRedistributionStatUnit(target.stat)}" value="${inputVal}" ${isAll ? 'disabled' : 'required'} aria-label="${index + 1}단계 ${targetIndex + 1}번 목표 ${isRatio ? '성장비 배율' : bokr ? '칸 수' : '백분율'}">
+      <span data-unit>${isRatio ? '배율' : bokr ? '칸' : '%'}</span><small data-limit>${renderStageTargetLimit(stage, target, scope, allGoal)}</small>
       <button type="button" data-stage-action="remove-target" data-index="${index}" data-target-index="${targetIndex}" ${stage.targets.length === 1 ? 'disabled' : ''} aria-label="${index + 1}단계 ${targetIndex + 1}번 스탯 삭제">삭제</button>
-    </div>`).join('')}
+    </div>`;
+    }).join('')}
     <div class="tcbe-rd-stage-footer"><button type="button" data-stage-action="add-target" data-index="${index}" ${stage.targets.length >= choices.length ? 'disabled' : ''}>스탯 추가</button>
       <label><input data-blocked type="checkbox" ${stage.allowBlocked ? 'checked' : ''}> 막힌 경로 포함 (황크 방어력·치저)</label>
       <label><input data-gates type="checkbox" ${stage.allowGates ? 'checked' : ''}> 관문 개방 포함</label></div>
@@ -94,9 +127,18 @@ export function readRedistributionStages(container: HTMLElement): Redistribution
     boardThrough: stage.querySelector<HTMLSelectElement>('[data-board-through]') ? Number(stage.querySelector<HTMLSelectElement>('[data-board-through]')!.value) : undefined,
     allowBlocked: stage.querySelector<HTMLInputElement>('[data-blocked]')!.checked,
     allowGates: stage.querySelector<HTMLInputElement>('[data-gates]')!.checked,
-    targets: Array.from(stage.querySelectorAll<HTMLElement>('[data-target]')).map(target => ({
-      stat: target.querySelector<HTMLSelectElement>('[data-stat]')!.value as RedistributionStat,
-      target: target.querySelector<HTMLSelectElement>('[data-mode]')!.value === 'all' ? null : target.querySelector<HTMLInputElement>('[data-value]')!.valueAsNumber,
-    })),
+    targets: Array.from(stage.querySelectorAll<HTMLElement>('[data-target]')).map(target => {
+      const stat = target.querySelector<HTMLSelectElement>('[data-stat]')!.value as RedistributionStat;
+      const modeVal = target.querySelector<HTMLSelectElement>('[data-mode]')!.value;
+      const rawNum = target.querySelector<HTMLInputElement>('[data-value]')!.valueAsNumber;
+      if (modeVal === 'ratio') {
+        const ratio = Number.isFinite(rawNum) && rawNum > 0 ? rawNum : (DEFAULT_GROWTH_RATIOS[stat] ?? 1);
+        return { stat, target: null, mode: 'ratio' as const, ratio };
+      }
+      return {
+        stat,
+        target: modeVal === 'all' ? null : rawNum,
+      };
+    }),
   }));
 }

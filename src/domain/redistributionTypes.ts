@@ -1,12 +1,19 @@
 /** 재분배 옵션·단계·노드·추천 결과의 공통 타입 */
-import type { ApostleProgress, MasterBoardNode, ResourceCostSummary, StatCategory } from './types.ts';
+import type { AuxiliaryResourceKey, ResourceWeightConfig } from './constants.ts';
+import type { ApostleProgress, MasterBoardNode, PromotionStep, ProofCostSummary, ResourceCostSummary, StatCategory } from './types.ts';
 
 export type HwangStats = Record<StatCategory, number>;
 export type RedistributionStat = StatCategory | 'attack';
+export type RedistributionTargetMode = 'value' | 'all' | 'ratio';
+export type RedistributionCostMode = 'strict' | 'weighted';
 export interface RedistributionTarget {
   stat: RedistributionStat;
   /** null은 해당 단계에서 접근 가능한 칸 전부. 숫자는 누적 백분율 목표. */
   target: number | null;
+  /** 목표 설정 방식 ('value': 목표 수치, 'all': 전부, 'ratio': 성장비 비례 무제한 배분) */
+  mode?: RedistributionTargetMode;
+  /** 'ratio' 모드일 때 스탯별 성장비 가중치 (예: 공격력 1.5, 체력 1, 치명 0.5) */
+  ratio?: number;
 }
 export interface RedistributionStage {
   /** 생략 시 기존 황크 단계. 보크 목표는 백분율 대신 누적 칸 수이다. */
@@ -26,11 +33,25 @@ export interface RedistributionStageResult {
   boardThrough?: number;
   allowBlocked: boolean;
   allowGates?: boolean;
-  targets: Array<{ stat: RedistributionStat; target: number; all: boolean; before: number; after: number }>;
+  targets: Array<{
+    stat: RedistributionStat;
+    target: number;
+    all: boolean;
+    mode?: RedistributionTargetMode;
+    ratio?: number;
+    before: number;
+    after: number;
+  }>;
 }
 export interface RedistributionOptions {
   /** 빠른 탐색은 큰 계정의 조합 비교 수를 제한한다. 생략 시 기존 상세 탐색. */
   searchMode?: 'fast' | 'thorough';
+  /** 후보 경로/이동 평가 방식 ('strict': 재화 우선순위 기본, 'weighted': 재화 가치 환산 효율) */
+  costMode?: RedistributionCostMode;
+  /** 'strict' 모드에서 사용할 보조 재화 절약 우선순위 순서 */
+  resourcePriority?: AuxiliaryResourceKey[];
+  /** 'weighted' 모드에서 사용할 재화별 상대 가치 설정 */
+  resourceWeights?: Partial<ResourceWeightConfig>;
   /** 이미 칠한 칸과 별개로, 아직 사용하지 않고 보유한 황크 수. */
   ownedCrayons: number;
   /** 미사용 보유 보크. 생략 시 0. 보유량+환급분 안에서 필요한 최소 경로를 사용한다. */
@@ -56,6 +77,10 @@ export interface RedistributionNode {
   picked: boolean;
   boardUnlocked?: boolean;
   cost: ResourceCostSummary;
+  /** 미개방 관문 노드의 증명서 비용 요약 (개방 + 선행 성급 승급 합산) */
+  gateProofs?: ProofCostSummary;
+  /** 미개방 관문 개방에 필요한 선행 성급 승급 단계 목록 */
+  promotions?: PromotionStep[];
   stats: HwangStats;
   bokrStats: HwangStats;
   position?: { x: number; y: number };
@@ -77,6 +102,10 @@ export interface RedistributionPlan {
   remainingWateringCan?: number;
   refund: ResourceCostSummary;
   spend: ResourceCostSummary;
+  /** 관문 개방 및 성급 승급에 소모되는 증명서 합계 */
+  proofSpend?: ProofCostSummary;
+  /** 성급 승급이 필요한 사도별 승급 단계 요약 */
+  promotions?: Array<{ apostle: ApostleProgress; steps: PromotionStep[] }>;
   resetCount: number;
   actions: RedistributionAction[];
   nodes: RedistributionNode[];

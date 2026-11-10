@@ -1,16 +1,32 @@
 /** 시작 칸·관문·꽃잎 경로 탐색과 단계별 목표 범위 구성 */
 import { createEmptyCostSummary } from './boardProgress.ts';
-import { NODE_TYPE, STAT_CATEGORIES } from './constants.ts';
-import { extractNodeCost, findLinkedPetalNode, getApostleBoardLayout, sumCosts } from './boardPathfinder.ts';
+import { NODE_TYPE, STAT_CATEGORIES, type AuxiliaryResourceKey } from './constants.ts';
+import { calculateGateAndPromotionExpense, extractNodeCost, findLinkedPetalNode, getApostleBoardLayout, sumCosts } from './boardPathfinder.ts';
 import { emptyStats, retained, hwang, compare, readHwangStats, readBokrCounts, getHwangTargetValue } from './redistributionModel.ts';
-import type { ProgressMap } from './types.ts';
+import type { ProgressMap, ResourceCostSummary } from './types.ts';
 import type { RedistributionNode, RedistributionStage, RedistributionStat } from './redistributionTypes.ts';
+
+const DEFAULT_PATH_AUX_PRIORITY: readonly AuxiliaryResourceKey[] = ['averageCrayon', 'basicCrayon', 'wateringCan', 'gold'];
+const ZERO_COST: ResourceCostSummary = { basicCrayon: 0, averageCrayon: 0, epicCrayon: 0, ultraCrayon: 0, gold: 0, wateringCan: 0 };
+
+function getAuxResourceCost(cost: ResourceCostSummary, key: AuxiliaryResourceKey): number {
+  return key === 'wateringCan' ? (cost.wateringCan || 0) : cost[key];
+}
 
 /** 사도 보드별 확장 황크의 선행 꽃잎 매핑을 약한 참조로 캐시하여 반복 탐색을 제거한다. */
 const linkedPetalCache = new WeakMap<RedistributionNode, RedistributionNode | null>();
 
 /** 1차 시작 칸에서 연결한다. 열린 관문도 그곳까지의 색칠 경로를 건너뛸 수 없다. */
-export function boardPathOptions(nodes: RedistributionNode[], reset: boolean, originalOnly = false, selected?: Set<string>, allowBlocked = true, maxLabels = 1, allowGates = false): Map<string, string[][]> {
+export function boardPathOptions(
+  nodes: RedistributionNode[],
+  reset: boolean,
+  originalOnly = false,
+  selected?: Set<string>,
+  allowBlocked = true,
+  maxLabels = 1,
+  allowGates = false,
+  resourcePriority: readonly AuxiliaryResourceKey[] = DEFAULT_PATH_AUX_PRIORITY
+): Map<string, string[][]> {
   const linkedPetals = new Map<string, RedistributionNode>();
   for (const entry of nodes) {
     if (entry.node.nodeType !== NODE_TYPE.HWANG_EXT) continue;
@@ -54,6 +70,10 @@ export function boardPathOptions(nodes: RedistributionNode[], reset: boolean, or
     const label = { key: entry.key, weight: [0, 0, 0, 0, 0, 0, 0, 0, 0], path: [entry.key] };
     labels.set(entry.key, [label]); queue.push(label);
   }
+  const p0 = resourcePriority[0] ?? 'averageCrayon';
+  const p1 = resourcePriority[1] ?? 'basicCrayon';
+  const p2 = resourcePriority[2] ?? 'wateringCan';
+  const p3 = resourcePriority[3] ?? 'gold';
   const byKey = new Map(valid.map(entry => [entry.key, entry]));
   for (let head = 0; head < queue.length; head++) {
     const current = queue[head]!;
@@ -67,20 +87,20 @@ export function boardPathOptions(nodes: RedistributionNode[], reset: boolean, or
         (Math.abs(currentEntry.boardIndex - next.boardIndex) !== 1 ||
           (currentEntry.boardIndex < next.boardIndex ? currentEntry : next).node.nodeType !== NODE_TYPE.GATE)) continue;
       const free = Boolean(selected?.has(next.key) || next.node.nodeType === NODE_TYPE.START || (next.picked && (!reset || retained(next.node))));
-      let cost = free ? createEmptyCostSummary() : next.cost;
       const petal = linkedPetals.get(next.key);
       const needsPetal = Boolean(petal && !petal.picked && !selected?.has(petal.key) && !current.path.includes(petal.key));
-      if (needsPetal) cost = sumCosts(cost, petal!.cost);
+      let cost = free ? ZERO_COST : next.cost;
+      if (needsPetal) cost = free ? petal!.cost : sumCosts(cost, petal!.cost);
       const cw = current.weight;
       const weight = (free && !needsPetal)
         ? cw
         : [
             cw[0]! + cost.ultraCrayon,
             cw[1]! + cost.epicCrayon,
-            cw[2]! + cost.averageCrayon,
-            cw[3]! + cost.basicCrayon,
-            cw[4]! + (cost.wateringCan || 0),
-            cw[5]! + cost.gold,
+            cw[2]! + getAuxResourceCost(cost, p0),
+            cw[3]! + getAuxResourceCost(cost, p1),
+            cw[4]! + getAuxResourceCost(cost, p2),
+            cw[5]! + getAuxResourceCost(cost, p3),
             cw[6]! + (free ? 0 : 1),
             cw[7]! + (free || next.picked ? 0 : 1),
             cw[8]! - (free ? 0 : centrality.get(next.key) || 0),
@@ -115,11 +135,25 @@ export function prepareNodes(progressMap: ProgressMap, includeLocked = false) {
       if (!board.unlocked && !includeLocked) return;
       const masterNodes = board.masterNodes || [];
       const boardNodes = masterNodes.map((node, nodeIndex) => {
+        const picked = Boolean((boardIndex === 0 && node.nodeType === NODE_TYPE.START) || (board.unlocked && board.stepStr?.[nodeIndex] === '1'));
         const cost = node.nodeType === NODE_TYPE.START ? createEmptyCostSummary() : extractNodeCost(node);
+        let gateProofs: RedistributionNode['gateProofs'];
+        let promotions: RedistributionNode['promotions'];
+        if (node.nodeType === NODE_TYPE.GATE && !picked) {
+          const gateExpense = calculateGateAndPromotionExpense(apostle, boardIndex, node);
+          if (node.requireGold === undefined) {
+            cost.gold += gateExpense.gateGold;
+          }
+          cost.gold += gateExpense.promotionGold;
+          gateProofs = gateExpense.proofCost;
+          if (gateExpense.promotions.length > 0) {
+            promotions = gateExpense.promotions;
+          }
+        }
         if (Object.values(cost).some(value => !Number.isSafeInteger(value) || value < 0)) throw new Error('보드 재화 수치가 올바르지 않습니다.');
         if (hwang(node) && cost.ultraCrayon <= 0) throw new Error('황크칸 비용이 누락되어 계산할 수 없습니다.');
         return { key: `${apostle.apostleId}:${boardIndex}:${nodeIndex}`, apostleId: apostle.apostleId, boardIndex, nodeIndex,
-          node, boardUnlocked: board.unlocked, picked: (boardIndex === 0 && node.nodeType === NODE_TYPE.START) || (board.unlocked && board.stepStr?.[nodeIndex] === '1'), cost, stats: readHwangStats(node), bokrStats: readBokrCounts(node), position: positions.get(`${boardIndex}:${nodeIndex}`) };
+          node, boardUnlocked: board.unlocked, picked, cost, ...(gateProofs ? { gateProofs } : {}), ...(promotions ? { promotions } : {}), stats: readHwangStats(node), bokrStats: readBokrCounts(node), position: positions.get(`${boardIndex}:${nodeIndex}`) };
       });
       for (const entry of boardNodes) {
         if (entry.node.nodeType === NODE_TYPE.HWANG_EXT) {
@@ -147,7 +181,13 @@ export function prepareScopes(nodes: RedistributionNode[], groups: Redistributio
     const available = emptyStats();
     for (const entry of nodes) if (keys.has(entry.key)) for (const stat of STAT_CATEGORIES)
       available[stat] += (stage.resource === 'bokr' ? entry.bokrStats : entry.stats)[stat];
-    return { keys, goals: stage.targets.map(target => target.target ?? getHwangTargetValue(available, target.stat)) };
+    return {
+      keys,
+      goals: stage.targets.map(target => {
+        const isUnlimited = target.mode === 'all' || target.mode === 'ratio' || target.target === null;
+        return isUnlimited ? getHwangTargetValue(available, target.stat) : target.target!;
+      }),
+    };
   });
 }
 

@@ -22,7 +22,7 @@ export function renderRedistributionSummary(plan: RedistributionPlan, stages: Re
     const lines = (value: (target: RedistributionStageResult['targets'][number]) => string) =>
       stage.targets.map(target => `<div class="tcbe-rd-line">${names.get(target.stat)} ${value(target)}</div>`).join('');
     const order = `${bokr ? `${redistributionBoardLabel(stage)} · ` : ''}${stage.allowBlocked ? '막힌 경로 포함' : '막힌 경로 제외'} (황크 방어력·치저) · ${stage.allowGates ? '관문 개방 포함' : '현재 관문'}`;
-    return `<tr><th>${index + 1}단계<small>${resourceIcon(bokr)}</small></th><td>${order}</td><td>${lines(target => `${target.all ? '전부 · ' : ''}${formatNumber(target.target)}${unit}`)}</td><td>${lines(target => `${formatNumber(target.before)}${unit}`)}</td><td>${lines(target => `${formatNumber(target.after)}${unit}`)}</td></tr>`;
+    return `<tr><th>${index + 1}단계<small>${resourceIcon(bokr)}</small></th><td>${order}</td><td>${lines(target => `${target.mode === 'ratio' ? `비율 배분 (${target.ratio ?? 1}배) · 최대 ` : target.all ? '전부 · ' : ''}${formatNumber(target.target)}${unit}`)}</td><td>${lines(target => `${formatNumber(target.before)}${unit}`)}</td><td>${lines(target => `${formatNumber(target.after)}${unit}`)}</td></tr>`;
   }).join('');
 
   // 전체 노드를 1회만 순회하여 재화·스탯별 엔트리 목록을 사전 인덱싱한다.

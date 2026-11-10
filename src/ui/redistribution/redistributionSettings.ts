@@ -1,5 +1,6 @@
+import { DEFAULT_RESOURCE_PRIORITY, normalizeResourcePriority, type AuxiliaryResourceKey, type ResourceWeightConfig } from '../../domain/constants.ts';
 import { validateRedistributionStages } from '../../domain/redistributionPreset.ts';
-import type { RedistributionStage } from '../../domain/hwangRedistribution.ts';
+import type { RedistributionCostMode, RedistributionStage } from '../../domain/hwangRedistribution.ts';
 
 const REDISTRIBUTION_SETTINGS_KEY = 'tcbe_redistribution_settings_v1';
 export interface RedistributionSettings {
@@ -10,6 +11,9 @@ export interface RedistributionSettings {
   wateringCan?: number;
   clouds?: number;
   searchMode: 'fast' | 'thorough';
+  costMode?: RedistributionCostMode;
+  resourcePriority?: AuxiliaryResourceKey[];
+  resourceWeights?: Partial<ResourceWeightConfig>;
   stages: RedistributionStage[];
 }
 
@@ -22,6 +26,8 @@ export function parseRedistributionSettings(raw: string | null): RedistributionS
       (value.gold !== undefined && !integer(value.gold, 2000000000)) ||
       (value.wateringCan !== undefined && !integer(value.wateringCan, 100000)) ||
       (value.clouds !== undefined && !integer(value.clouds, 1000000)) ||
+      (value.costMode !== undefined && !['strict', 'weighted'].includes(value.costMode)) ||
+      (value.resourcePriority !== undefined && (!Array.isArray(value.resourcePriority) || value.resourcePriority.some((k: unknown) => typeof k !== 'string' || !DEFAULT_RESOURCE_PRIORITY.includes(k as AuxiliaryResourceKey)))) ||
       !['fast', 'thorough'].includes(value.searchMode)) return null;
 
     const validatedStages = validateRedistributionStages(value.stages);
@@ -29,6 +35,7 @@ export function parseRedistributionSettings(raw: string | null): RedistributionS
 
     return {
       ...value,
+      ...(value.resourcePriority ? { resourcePriority: normalizeResourcePriority(value.resourcePriority) } : {}),
       stages: validatedStages,
     };
   } catch { return null; }

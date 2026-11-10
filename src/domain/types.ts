@@ -18,6 +18,15 @@ export type StatCategory =
 /** 성격(Personality) 정의 */
 export type PersonalityType = 0 | 1 | 2 | 3 | 4 | 5;
 
+/** 종족(Tribe) 정의 (0: 요정, 1: 수인, 2: 엘프, 3: 정령, 4: 유령, 5: 용족, 6: 마녀, 7: 미스틱) */
+export type TribeType = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+/** 종족 표시 메타 정보 */
+export interface TribeMeta {
+  id: TribeType;
+  nameKo: string;
+}
+
 /** 태생 성급 정의 (1성, 2성, 3성) */
 export type GradeFilterTarget = 'all' | 1 | 2 | 3;
 
@@ -77,6 +86,7 @@ export interface HeroInfo {
   desc?: string;
   icon?: string;
   title?: string;
+  heroGroup?: string; // 엘다인 사도 이명/그룹 텍스트 키 (존재 시 엘다인)
 }
 
 /** 사도 스킨(사복) 마스터 정보 */
@@ -101,6 +111,7 @@ export interface UserApostle {
   level?: number;
   rank?: number;
   grade?: number;
+  isFavorite?: boolean; // 즐겨찾기(관심 사도) 여부
   boardSteps?: UserBoardStep[];
   [key: string]: unknown;
 }
@@ -143,6 +154,25 @@ export interface ResourceCostSummary {
   ultraCrayon: number;   // 최상급 크레파스 (610004)
   wateringCan?: number;  // 만개 물뿌리개 (610005, 꽃잎 칸 해금용)
   gold: number;          // 골드
+}
+
+/** 증명서 종류 ('commonProof': ★1 공동 교단 증명서, 'proof': 일반 사도 증명서, 'eldainProof': 엘다인 사도 증명서) */
+export type ProofResourceType = 'commonProof' | 'proof' | 'eldainProof';
+
+/** 증명서 소모량 요약 */
+export interface ProofCostSummary {
+  commonProof: number; // ★1 공동 교단 증명서
+  proof: number;       // 일반 사도 증명서
+  eldainProof: number; // 엘다인 사도 증명서
+}
+
+/** 성급 승급 단계 정보 */
+export interface PromotionStep {
+  fromGrade: number;
+  toGrade: number;
+  gold: number;
+  proofType: ProofResourceType;
+  proofCount: number;
 }
 
 /** 일반칸 종류별(기본/강화) 카운트 요약 */
@@ -212,7 +242,11 @@ export interface ApostleProgress {
   apostleId: number;
   name: string;
   personality: PersonalityType;
+  tribe?: TribeType;    // 종족 (0: 요정, 1: 수인, 2: 엘프, 3: 정령, 4: 유령, 5: 용족, 6: 마녀, 7: 미스틱)
   gradeDefault: number; // 태생 성급 (1, 2, 3)
+  grade?: number;       // 현재 성급 (1~5, 생략 시 gradeDefault)
+  isFavorite?: boolean; // 즐겨찾기(관심 사도) 여부
+  isEldain?: boolean;   // 엘다인 사도 여부
   icon?: string; // 사도 아이콘 해시 (HeroIcons CDN 연동용)
   isOwned?: boolean; // 유저 보유 여부 (미보유 시 false)
   unlockedBoardCount: number;
@@ -255,17 +289,26 @@ export type SortOption =
   | 'grade_desc'        // 초기 성급 높은 순 (3성 -> 1성)
   | 'grade_asc'         // 초기 성급 낮은 순 (1성 -> 3성)
   | 'personality_asc'   // 성격 순 (순수 -> 냉정 -> 광기 -> 활발 -> 우울 -> 공명)
-  | 'personality_desc'; // 성격 역순 (공명 -> 우울 -> 활발 -> 광기 -> 냉정 -> 순수)
+  | 'personality_desc'  // 성격 역순 (공명 -> 우울 -> 활발 -> 광기 -> 냉정 -> 순수)
+  | 'tribe_asc'         // 종족 순 (요정 -> 수인 -> 엘프 -> 정령 -> 유령 -> 용족 -> 마녀 -> 미스틱)
+  | 'tribe_desc'        // 종족 역순 (미스틱 -> 마녀 -> 용족 -> 유령 -> 정령 -> 엘프 -> 수인 -> 요정)
+  | 'favorite_desc'     // 즐겨찾기 우선 순
+  | 'favorite_asc';     // 즐겨찾기 후순위 순
 
 export type UnlockedTierFilter = 'all' | 1 | 2 | 3; // 사도별 해금된 보드 관문 (1차, 2차, 3차)
+
+export type SpecialApostleFilter = 'all' | 'favorite' | 'eldain'; // 사도 특수 구분 (즐겨찾기 / 엘다인)
+export type TribeFilterTarget = 'all' | TribeType; // 종족 필터 대상
 
 export interface FilterState {
   status: BokrFilterStatus;
   boardLevel: BoardFilterLevel;
   statCategory: StatFilterTarget;
   personality: PersonalityFilterTarget;
+  tribe?: TribeFilterTarget;         // 종족 필터 ('all' | 0..7)
   grade: GradeFilterTarget;          // 초기 성급 필터 ('all' | 1 | 2 | 3)
   unlockedTier: UnlockedTierFilter;  // 해금 관문 필터 ('all' | 1 | 2 | 3)
+  special?: SpecialApostleFilter;    // 사도 특수 구분 필터 ('all' | 'favorite' | 'eldain')
   sortBy: SortOption;                // 정렬 옵션
 }
 

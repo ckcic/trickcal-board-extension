@@ -1,12 +1,13 @@
-import { renderRedistributionTemplate } from './redistributionTemplate.ts';
+import { renderRedistributionTemplate, renderResourcePriorityList } from './redistributionTemplate.ts';
 import { setupRedistributionToc } from './redistributionToc.ts';
 import { setupRedistributionSettingsTabs } from './redistributionSettingsTabs.ts';
 import { setupRedistributionStageDrag } from './redistributionStageDrag.ts';
 import { setupRedistributionCalculation } from './redistributionCalculation.ts';
-import { readFormOptions, restoreFormOptions } from './redistributionForm.ts';
+import { readFormOptions, restoreFormOptions, resetFormResourceWeights, resetFormResourcePriority } from './redistributionForm.ts';
 import { collectApostlePortraits } from '../common/apostlePortraits.ts';
 import { closeAllTools, closeTool, registerToolModal } from '../common/toolModals.ts';
 import { formatNumber } from '../common/format.ts';
+import { DEFAULT_GROWTH_RATIOS, normalizeResourcePriority } from '../../domain/constants.ts';
 import type { ProgressMap } from '../../domain/types.ts';
 import { loadRedistributionSettings, saveRedistributionSettings } from './redistributionSettings.ts';
 import { openExportPresetModal, openImportPresetModal } from './redistributionPresetModal.ts';
@@ -90,12 +91,25 @@ export function openHwangRedistribution(progressMap: ProgressMap): void {
   const form = dialog.querySelector('form');
   if (!targetList || !form) { modal.close(); return; }
   if (savedSettings) restoreFormOptions(dialog, savedSettings, ownedCount);
+  const syncCostModeVisibility = () => {
+    const costModeSelect = dialog.querySelector<HTMLSelectElement>('[name=cost-mode]');
+    const isWeighted = costModeSelect?.value === 'weighted';
+    const priorityDetails = dialog.querySelector<HTMLDetailsElement>('[data-priority-details]');
+    const weightsDetails = dialog.querySelector<HTMLDetailsElement>('[data-weights-details]');
+    if (priorityDetails) priorityDetails.hidden = isWeighted;
+    if (weightsDetails) weightsDetails.hidden = !isWeighted;
+  };
+  syncCostModeVisibility();
   const saveSettings = () => {
     const options = readFormOptions(dialog);
     if (!options) return;
     saveRedistributionSettings({ owned: options.ownedCrayons, bokr: options.ownedBokr ?? 0, reset: options.maxReset,
       gold: options.ownedGold, wateringCan: options.ownedWateringCan, clouds: options.ownedClouds,
-      searchMode: options.searchMode ?? 'fast', stages: options.stages ?? [] });
+      searchMode: options.searchMode ?? 'fast',
+      ...(options.costMode ? { costMode: options.costMode } : {}),
+      ...(options.resourcePriority ? { resourcePriority: options.resourcePriority } : {}),
+      ...(options.resourceWeights ? { resourceWeights: options.resourceWeights } : {}),
+      stages: options.stages ?? [] });
   };
   const debouncedSaveSettings = () => {
     if (saveSettingsTimer !== null) clearTimeout(saveSettingsTimer);
@@ -103,6 +117,7 @@ export function openHwangRedistribution(progressMap: ProgressMap): void {
   };
   let currentCalculatedPlan: RedistributionPlan | null = null;
   const invalidateResult = (event?: Event) => {
+    syncCostModeVisibility();
     if (event) debouncedSaveSettings();
     const targetName = event?.target instanceof HTMLInputElement ? event.target.name : '';
     const keepCurve = ['reset', 'gold', 'watering-can', 'clouds'].includes(targetName);
@@ -216,14 +231,27 @@ export function openHwangRedistribution(progressMap: ProgressMap): void {
       const row = event.target.closest<HTMLElement>('[data-target]');
       if (row) {
         const statSelect = row.querySelector<HTMLSelectElement>('[data-stat]');
+        const modeSelect = row.querySelector<HTMLSelectElement>('[data-mode]');
         const resource = row.closest('[data-stage]')?.querySelector<HTMLInputElement>('[data-resource]:checked');
         const input = row.querySelector<HTMLInputElement>('[data-value]');
         if (!statSelect || !resource || !input) return;
         const stat = statSelect.value as RedistributionStat;
         const bokr = resource.value === 'bokr';
-        const unit = bokr ? 1 : getRedistributionStatUnit(stat);
-        input.step = String(unit); input.max = String(Math.floor(100000 / unit) * unit);
-        if (Number.isFinite(input.valueAsNumber)) input.value = String(bokr ? Math.ceil(input.valueAsNumber) : roundRedistributionTarget(input.valueAsNumber, stat));
+        const isRatio = modeSelect?.value === 'ratio';
+        if (isRatio) {
+          input.min = '0.1';
+          input.step = '0.1';
+          input.max = '1000';
+          if (event.target === modeSelect || event.target === statSelect || !Number.isFinite(input.valueAsNumber) || input.valueAsNumber <= 0) {
+            input.value = String(DEFAULT_GROWTH_RATIOS[stat] ?? 1);
+          }
+        } else {
+          const unit = bokr ? 1 : getRedistributionStatUnit(stat);
+          input.min = '0';
+          input.step = String(unit);
+          input.max = String(Math.floor(100000 / unit) * unit);
+          if (Number.isFinite(input.valueAsNumber)) input.value = String(bokr ? Math.ceil(input.valueAsNumber) : roundRedistributionTarget(input.valueAsNumber, stat));
+        }
         const limit = row.querySelector('[data-limit]');
         if (limit) limit.textContent = renderStageTargetHint(stat, bokr, bokr ? bokrLimits : limits);
       }
@@ -276,6 +304,29 @@ export function openHwangRedistribution(progressMap: ProgressMap): void {
   });
   dialog.querySelector('[data-examples]')?.addEventListener('click', () => {
     stages = createExampleRedistributionStages(); renderTargets(); invalidateResult();
+  });
+  dialog.querySelector('[data-reset-weights]')?.addEventListener('click', () => {
+    resetFormResourceWeights(dialog);
+    invalidateResult(new Event('change'));
+  });
+  dialog.querySelector('[data-reset-priority]')?.addEventListener('click', () => {
+    resetFormResourcePriority(dialog);
+    invalidateResult(new Event('change'));
+  });
+  dialog.querySelector('[data-priority-list]')?.addEventListener('click', event => {
+    const btn = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-priority-move]') : null;
+    if (!btn) return;
+    const priorityList = dialog.querySelector<HTMLElement>('[data-priority-list]');
+    if (!priorityList) return;
+    const items = priorityList.querySelectorAll<HTMLElement>('[data-priority-key]');
+    const current = normalizeResourcePriority(Array.from(items, el => el.getAttribute('data-priority-key') || ''));
+    const idx = Number(btn.getAttribute('data-priority-index'));
+    const dir = btn.getAttribute('data-priority-move');
+    const targetIdx = dir === 'up' ? idx - 1 : idx + 1;
+    if (idx < 0 || idx >= current.length || targetIdx < 0 || targetIdx >= current.length) return;
+    [current[idx], current[targetIdx]] = [current[targetIdx]!, current[idx]!];
+    priorityList.innerHTML = renderResourcePriorityList(current);
+    invalidateResult(new Event('change'));
   });
   dialog.querySelector('[data-export-preset]')?.addEventListener('click', () => {
     readTargets();

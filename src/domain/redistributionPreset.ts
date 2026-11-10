@@ -68,10 +68,29 @@ export function validateRedistributionStage(raw: unknown): RedistributionStage |
     let val: number | null = null;
     if (t.target !== null && t.target !== undefined) {
       if (typeof t.target !== 'number' || !Number.isFinite(t.target) || t.target < 0 || t.target > 100000) return null;
-      if (isBokr && !Number.isSafeInteger(t.target)) return null;
+      if (isBokr && t.mode !== 'ratio' && !Number.isSafeInteger(t.target)) return null;
       val = t.target;
     }
-    validatedTargets.push({ stat, target: val });
+
+    let mode: RedistributionTarget['mode'] = undefined;
+    if (t.mode !== undefined) {
+      if (t.mode !== 'value' && t.mode !== 'all' && t.mode !== 'ratio') return null;
+      mode = t.mode;
+    }
+
+    let ratio: number | undefined = undefined;
+    if (t.ratio !== undefined) {
+      if (typeof t.ratio !== 'number' || !Number.isFinite(t.ratio) || t.ratio <= 0 || t.ratio > 1000) return null;
+      ratio = t.ratio;
+    }
+
+    const targetObj: RedistributionTarget = {
+      stat,
+      target: mode === 'all' || mode === 'ratio' ? null : val,
+    };
+    if (mode !== undefined) targetObj.mode = mode;
+    if (ratio !== undefined) targetObj.ratio = ratio;
+    validatedTargets.push(targetObj);
   }
 
   const result: RedistributionStage = {
@@ -123,7 +142,12 @@ export function exportRedistributionPreset(stages: RedistributionStage[]): strin
     stages: validated.map(s => {
       const stageObj: RedistributionStage = {
         allowBlocked: s.allowBlocked,
-        targets: s.targets.map(t => ({ stat: t.stat, target: t.target })),
+        targets: s.targets.map(t => {
+          const item: RedistributionTarget = { stat: t.stat, target: t.target };
+          if (t.mode !== undefined) item.mode = t.mode;
+          if (t.ratio !== undefined) item.ratio = t.ratio;
+          return item;
+        }),
       };
       if (s.resource === 'bokr') {
         stageObj.resource = 'bokr';

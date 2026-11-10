@@ -117,6 +117,8 @@ export function parseTrickcalApiPayload(data: unknown): ExtractedApiData | null 
     apostles: apostles.map(apostle => ({
       apostleId: apostle.apostleId ?? apostle.id,
       skinId: isNumber(apostle.skinId) ? apostle.skinId : undefined,
+      grade: isInteger(apostle.grade) && apostle.grade >= 1 && apostle.grade <= 5 ? apostle.grade : undefined,
+      isFavorite: typeof apostle.isFavorite === 'boolean' ? apostle.isFavorite : undefined,
       boardSteps: apostle.boardSteps?.map(({ step }) => ({ step })),
     })),
     board,

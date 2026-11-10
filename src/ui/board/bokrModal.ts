@@ -1,6 +1,7 @@
 /** 보크 클릭 모달에서 실제 위치, 목표 비용, 경로 비용을 안내한다. */
 import { getApostleBoardLayout, type BokrPathResult } from '../../domain/boardPathfinder.ts';
 import { getNodeStatCategories, getStatCategoryFromStatType, PERSONALITY_META_LIST, STAT_META_LIST } from '../../domain/boardProgress.ts';
+import { PROOF_LABELS } from '../../domain/constants.ts';
 import type { ApostleProgress, MasterBoardNode, ResourceCostSummary } from '../../domain/types.ts';
 import { getBoardNodeVisual, computeBoardGridLayout, getTileGridStyle } from './boardNode.ts';
 import { escapeHtml } from '../common/html.ts';
@@ -61,9 +62,15 @@ function renderCostItems(cost: ResourceCostSummary, showPathDefaults = false): s
 /** 원본처럼 관문 안내를 경로 재화의 첫 행에 표시한다. */
 export function renderBokrPathCost(pathResult: BokrPathResult): string {
   if (pathResult.isTargetPicked) return '<div class="tcbe-cost-item"><span class="tcbe-cost-icon tcbe-cost-check" aria-hidden="true"></span><span>이 칸은 색칠되어 있어요</span></div>';
-  const gates = (pathResult.gateRequirements || []).map(gate =>
-    `<div class="tcbe-cost-item"><span class="tcbe-cost-icon tcbe-cost-gate" aria-hidden="true"></span><span>${gate.boardLevel}번 관문 오픈 필요</span></div>`
-  ).join('');
+  const details = pathResult.gateOpenDetails || [];
+  const gates = (pathResult.gateRequirements || []).map((gate, idx) => {
+    const detail = details[idx];
+    const proofText = detail ? ` (${PROOF_LABELS[detail.gateProofType]} ${detail.gateProofCount}개)` : '';
+    const promoText = detail && detail.promotions.length > 0
+      ? detail.promotions.map(p => `<div class="tcbe-cost-item"><span class="tcbe-cost-icon tcbe-cost-gate" aria-hidden="true"></span><span>★${p.fromGrade}→★${p.toGrade} 승급 필요 (${PROOF_LABELS[p.proofType]} ${p.proofCount}개, ${p.gold / 1000}k 골드)</span></div>`).join('')
+      : '';
+    return `<div class="tcbe-cost-item"><span class="tcbe-cost-icon tcbe-cost-gate" aria-hidden="true"></span><span>${gate.boardLevel}번 관문 오픈 필요${proofText}</span></div>${promoText}`;
+  }).join('');
   return gates + renderCostItems(pathResult.pathCost, true);
 }
 

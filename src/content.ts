@@ -149,17 +149,16 @@ import { closeAllTools } from './ui/common/toolModals.ts';
 
       // 2. 필터 및 정렬 적용
       let { visible } = applyFilterToCards(filterState, latestProgressMap, connectedCards);
-      if (connectedCards) {
+
+      // 3. 통계 정보 및 스탯별 총 칸수/수치 요약 갱신
+      if (gridStats?.key === gridSelectionKey && document.querySelector('[data-testid="virtuoso-item-list"]')) {
+        visible = gridStats.visible;
+      } else if (connectedCards) {
         // 전체 통계에는 카드 속성만 읽고 내부 보드와 배지는 탐색하지 않는다.
         const cards = Array.from(document.querySelectorAll<HTMLElement>('[data-tcbe-apostle-name]'))
           .filter(card => !card.closest(DIALOG_EXCLUSION_SELECTOR) &&
             latestProgressMap!.has(card.getAttribute('data-tcbe-apostle-name') || ''));
         visible = cards.filter(card => !card.classList.contains('tcbe-card-hidden')).length;
-      }
-
-      // 3. 통계 정보 및 스탯별 총 칸수/수치 요약 갱신
-      if (gridStats?.key === gridSelectionKey && document.querySelector('[data-testid="virtuoso-item-list"]')) {
-        visible = gridStats.visible;
       }
       if (filterController) {
         const { incompleteCount, masterTotal, statName, persName } = countIncompleteApostles(

@@ -11,7 +11,97 @@ import {
   NODE_TYPE,
   WATERING_CAN_ITEM_ID,
 } from './boardProgress.ts';
-import type { ApostleProgress, MasterBoardNode, RequireItem, ResourceCostSummary } from './types.ts';
+import { GATE_OPEN_COSTS, PROMOTION_COSTS } from './constants.ts';
+import type {
+  ApostleProgress,
+  MasterBoardNode,
+  PromotionStep,
+  ProofCostSummary,
+  ProofResourceType,
+  RequireItem,
+  ResourceCostSummary,
+} from './types.ts';
+
+/**
+ * 사도의 태생 성급 및 엘다인 여부에 따른 전용 증명서 종류 반환
+ */
+export function getApostleProofType(apostle: Pick<ApostleProgress, 'gradeDefault' | 'isEldain'>): ProofResourceType {
+  if (apostle.gradeDefault === 1) return 'commonProof';
+  if (apostle.isEldain) return 'eldainProof';
+  return 'proof';
+}
+
+/**
+ * 관문 개방 및 필요 성급(2차 보드=3성, 3차 보드=4성) 승급 비용 계산
+ */
+export interface GateOpenExpense {
+  /** 개방 대상 보드 차수 (2 또는 3) */
+  opensBoardLevel: 2 | 3;
+  /** 관문 개방 자체 골드 비용 */
+  gateGold: number;
+  /** 관문 개방 증명서 종류 */
+  gateProofType: ProofResourceType;
+  /** 관문 개방 증명서 수량 */
+  gateProofCount: number;
+  /** 선행 성급 승급 단계 목록 */
+  promotions: PromotionStep[];
+  /** 승급에 필요한 총 골드 비용 */
+  promotionGold: number;
+  /** 관문 개방 + 성급 승급 합산 증명서 소모량 */
+  proofCost: ProofCostSummary;
+}
+
+export function calculateGateAndPromotionExpense(
+  apostle: Pick<ApostleProgress, 'gradeDefault' | 'grade' | 'isEldain'>,
+  gateBoardIndex: number,
+  rawGateNode?: MasterBoardNode
+): GateOpenExpense {
+  const opensBoardLevel: 2 | 3 = gateBoardIndex === 0 ? 2 : 3;
+  const fallbackGate = GATE_OPEN_COSTS[opensBoardLevel] ?? { gold: 0, proof: 5 };
+  const gateGold = rawGateNode?.requireGold !== undefined ? rawGateNode.requireGold : fallbackGate.gold;
+  const apostleProofType = getApostleProofType(apostle);
+  const gateProofType: ProofResourceType = opensBoardLevel === 2 ? 'commonProof' : apostleProofType;
+  const gateProofCount = fallbackGate.proof;
+
+  const proofCost: ProofCostSummary = {
+    commonProof: 0,
+    proof: 0,
+    eldainProof: 0,
+  };
+  proofCost[gateProofType] += gateProofCount;
+
+  const promotions: PromotionStep[] = [];
+  let promotionGold = 0;
+
+  if (typeof apostle.grade === 'number' && Number.isSafeInteger(apostle.grade)) {
+    const requiredGrade = opensBoardLevel + 1; // 2차 보드 개방 = 3성, 3차 보드 개방 = 4성
+    // 2번 관문(3차 보드 개방)은 이미 1번 관문에서 3성까지 승급된 상태를 전제하므로 최소 3성부터 시작
+    const startGrade = Math.max(apostle.grade, opensBoardLevel === 3 ? 3 : 1);
+    for (let g = startGrade; g < requiredGrade; g++) {
+      const stepCost = PROMOTION_COSTS[g as 1 | 2 | 3];
+      if (!stepCost) continue;
+      promotions.push({
+        fromGrade: g,
+        toGrade: g + 1,
+        gold: stepCost.gold,
+        proofType: apostleProofType,
+        proofCount: stepCost.proof,
+      });
+      promotionGold += stepCost.gold;
+      proofCost[apostleProofType] += stepCost.proof;
+    }
+  }
+
+  return {
+    opensBoardLevel,
+    gateGold,
+    gateProofType,
+    gateProofCount,
+    promotions,
+    promotionGold,
+    proofCost,
+  };
+}
 
 /**
  * 경로 탐색 결과 인터페이스
@@ -21,6 +111,8 @@ export interface BokrPathResult {
   pathSteps?: Array<{ boardIndex: number; nodeIndex: number; nodeId: number }>;
   /** 미해금 관문의 크레파스 외 추가 재화 */
   gateRequirements?: Array<{ boardLevel: number; items: RequireItem[] }>;
+  /** 미해금 관문 개방 및 성급 승급 상세 내역 */
+  gateOpenDetails?: GateOpenExpense[];
   /** 목표 노드 */
   targetNode: MasterBoardNode;
   /** 목표 노드가 이미 색칠되어 있는지 여부 */
@@ -104,12 +196,28 @@ export function findApostlePathToBokr(progress: ApostleProgress, boardIndex: num
     const { boardIndex: level, nodeIndex, nodeId: id } = layout[index]!;
     return { boardIndex: level, nodeIndex, nodeId: id };
   });
-  const gateRequirements = result.pathNodeIndices.filter(index => !layout[index]!.picked && nodes[index]?.nodeType === NODE_TYPE.GATE)
+  const unpickedGateIndices = result.pathNodeIndices.filter(index => !layout[index]!.picked && nodes[index]?.nodeType === NODE_TYPE.GATE);
+  const gateRequirements = unpickedGateIndices
     .map(index => ({ boardLevel: layout[index]!.boardIndex + 1, items: layout[index]!.node.requireItems || [] }));
+  const gateOpenDetails = unpickedGateIndices
+    .map(index => calculateGateAndPromotionExpense(progress, layout[index]!.boardIndex, layout[index]!.node));
+  const extraPromotionGold = gateOpenDetails.reduce((sum, detail) => {
+    const rawGold = layout[unpickedGateIndices[gateOpenDetails.indexOf(detail)]!]?.node.requireGold;
+    const missingGateGold = rawGold === undefined ? detail.gateGold : 0;
+    return sum + missingGateGold + detail.promotionGold;
+  }, 0);
+  const adjustedPathCost = extraPromotionGold > 0
+    ? { ...result.pathCost, gold: result.pathCost.gold + extraPromotionGold }
+    : result.pathCost;
+  const adjustedTotalCost = extraPromotionGold > 0
+    ? { ...result.totalCost, gold: result.totalCost.gold + extraPromotionGold }
+    : result.totalCost;
   const unpickedPathNodes = result.pathNodeIndices.slice(0, -1)
     .filter(index => !layout[index]!.picked && nodes[index]?.nodeType !== NODE_TYPE.START)
     .map(index => layout[index]!.node);
   return { ...result, targetNode: target, pathSteps, gateRequirements,
+    ...(gateOpenDetails.length > 0 ? { gateOpenDetails } : {}),
+    pathCost: adjustedPathCost, totalCost: adjustedTotalCost,
     pathNodeIds: pathSteps.map(step => step.nodeId), pathNodeIndices: pathSteps.map(step => step.nodeIndex),
     unpickedPathNodes, unpickedNormalCount: unpickedPathNodes.filter(node => node.nodeType === NODE_TYPE.NORMAL).length };
 }

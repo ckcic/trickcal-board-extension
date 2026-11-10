@@ -100,7 +100,8 @@ function solveBoardNormalSteiner<T extends SteinerBoardNode>(
   requiredKeys: Set<string>,
   optionalNormals: T[],
   selected: Set<string>,
-  allBoardEntries: T[]
+  allBoardEntries: T[],
+  normalPriority: readonly ('averageCrayon' | 'basicCrayon' | 'gold')[] = ['averageCrayon', 'basicCrayon', 'gold']
 ): T[] {
   if (requiredKeys.size === 0) return [];
   const currentSelectedNormals = optionalNormals.filter(e => selected.has(e.key));
@@ -269,10 +270,13 @@ function solveBoardNormalSteiner<T extends SteinerBoardNode>(
       nodeCosts[cv] = ZERO_COST;
     } else {
       const entry = allNodes[oldIdx]!;
+      const k0 = normalPriority[0] ?? 'averageCrayon';
+      const k1 = normalPriority[1] ?? 'basicCrayon';
+      const k2 = normalPriority[2] ?? 'gold';
       nodeCosts[cv] = [
-        entry.cost.averageCrayon,
-        entry.cost.basicCrayon,
-        entry.cost.gold,
+        entry.cost[k0],
+        entry.cost[k1],
+        entry.cost[k2],
         1,
         entry.picked ? 0 : 1,
         -calcCentrality(entry),
@@ -441,7 +445,8 @@ export function optimizeApostleNormalTiles<T extends SteinerBoardNode>(
   group: T[],
   reset: boolean,
   selected: Set<string>,
-  restoreNormal = false
+  restoreNormal = false,
+  normalPriority: readonly ('averageCrayon' | 'basicCrayon' | 'gold')[] = ['averageCrayon', 'basicCrayon', 'gold']
 ): boolean {
   if (!group.length) return false;
   let maxBoard = 0;
@@ -529,7 +534,8 @@ export function optimizeApostleNormalTiles<T extends SteinerBoardNode>(
             requiredKeys,
             optionalNormals,
             selected,
-            boardEntries
+            boardEntries,
+            normalPriority
           );
           const verifySet = new Set([
             ...rootEntries.map(e => e.key),
@@ -568,7 +574,8 @@ export function optimizeApostleNormalTiles<T extends SteinerBoardNode>(
       requiredKeys,
       optionalNormals,
       selected,
-      boardEntries
+      boardEntries,
+      normalPriority
     );
     const optimalKeySet = new Set(optimalNormals.map(e => e.key));
     for (const norm of optionalNormals) {

@@ -40,13 +40,31 @@ function ensureDistDir() {
  */
 function copyStaticFiles() {
   for (const file of ['popup.html', 'popup.css']) {
-    fs.copyFileSync(path.join(rootDir, 'src', file), path.join(distDir, file));
+    const srcPath = path.join(rootDir, 'src', file);
+    const destPath = path.join(distDir, file);
+    if (isProd && file === 'popup.css') {
+      const css = fs.readFileSync(srcPath, 'utf8');
+      const minified = esbuild.transformSync(css, { loader: 'css', minify: true });
+      fs.writeFileSync(destPath, minified.code);
+    } else if (isProd && file === 'popup.html') {
+      const html = fs.readFileSync(srcPath, 'utf8')
+        .replace(/>\r?\n\s+</g, '><')
+        .trim();
+      fs.writeFileSync(destPath, html);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
   }
   // 1. manifest.json
   const manifestSrc = path.join(rootDir, 'manifest.json');
   const manifestDest = path.join(distDir, 'manifest.json');
   if (fs.existsSync(manifestSrc)) {
-    fs.copyFileSync(manifestSrc, manifestDest);
+    if (isProd) {
+      const manifestObj = JSON.parse(fs.readFileSync(manifestSrc, 'utf8'));
+      fs.writeFileSync(manifestDest, JSON.stringify(manifestObj));
+    } else {
+      fs.copyFileSync(manifestSrc, manifestDest);
+    }
     console.log('[TCBE Build] Copied manifest.json to dist');
   }
 
@@ -102,8 +120,11 @@ async function build() {
         const raw = fs.readFileSync(args.path, 'utf8');
         const contents = raw
           .replace(/>\r?\n\s+</g, '><')
+          .replace(/(?<=`)\r?\n\s+(?=<)/g, '')
+          .replace(/(?<=>)\r?\n\s+(?=`)/g, '')
+          .replace(/(?<=>)\r?\n\s+(?=\$\{)/g, '')
           .replace(/\r?\n\s+(?=<\/?[a-zA-Z])/g, ' ')
-          .replace(/\r?\n\s+(?=(?:class|id|type|data-|aria-|role|style|title|value|min|max|step|placeholder|disabled|checked|selected|tabindex|width|height|viewBox|fill|stroke)=)/g, ' ');
+          .replace(/\r?\n\s+(?=(?:class|id|type|name|for|href|src|alt|open|hidden|draggable|data-|aria-|role|style|title|value|min|max|step|placeholder|disabled|checked|selected|tabindex|width|height|viewBox|fill|stroke)=)/g, ' ');
         return { contents, loader: 'ts' };
       });
     },

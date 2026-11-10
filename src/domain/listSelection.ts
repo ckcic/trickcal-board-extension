@@ -12,6 +12,10 @@ export function compareApostles(a: ApostleProgress, b: ApostleProgress, sortBy: 
     case 'grade_asc': primary = a.gradeDefault - b.gradeDefault; break;
     case 'personality_desc': primary = b.personality - a.personality; break;
     case 'personality_asc': primary = a.personality - b.personality; break;
+    case 'tribe_desc': primary = (b.tribe ?? -1) - (a.tribe ?? -1); break;
+    case 'tribe_asc': primary = (a.tribe ?? 99) - (b.tribe ?? 99); break;
+    case 'favorite_desc': primary = Number(Boolean(b.isFavorite)) - Number(Boolean(a.isFavorite)); break;
+    case 'favorite_asc': primary = Number(Boolean(a.isFavorite)) - Number(Boolean(b.isFavorite)); break;
   }
   return primary || (sortBy === 'name_desc' ? b.name.localeCompare(a.name, 'ko') : a.name.localeCompare(b.name, 'ko'));
 }

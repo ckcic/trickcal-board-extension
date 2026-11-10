@@ -5,8 +5,9 @@
 
 import { formatNumber } from '../common/format.ts';
 import { STAT_META_LIST, NODE_TYPE, isHwangNode } from '../../domain/boardProgress.ts';
+import { AUXILIARY_RESOURCE_LABELS, PROOF_LABELS, normalizeResourcePriority } from '../../domain/constants.ts';
 import { getHwangTargetValue, readBokrValues, type RedistributionAction, type RedistributionNode, type RedistributionStat, type RedistributionPlan, type RedistributionOptions } from '../../domain/hwangRedistribution.ts';
-import type { ResourceCostSummary, StatCategory } from '../../domain/types.ts';
+import type { ProofResourceType, ResourceCostSummary, StatCategory } from '../../domain/types.ts';
 import { escapeHtml } from '../common/html.ts';
 import { getBoardNodeVisual, computeBoardGridLayout, getTileGridStyle } from '../board/boardNode.ts';
 import { renderRedistributionSummary } from './redistributionSummary.ts';
@@ -17,14 +18,30 @@ const hwang = (node: RedistributionNode['node']) => isHwangNode(node) || node.no
 const names = new Map<RedistributionStat, string>(STAT_META_LIST.map(meta => [meta.key, meta.nameKo]));
 names.set('attack', '공격력');
 
-/** 관문 아이템 렌더링 (골드/크레파스 제외 전용 재화) */
+/** 관문 아이템 렌더링 (골드/크레파스 제외 전용 재화 및 성급 승급 정보) */
 export function renderGateItems(entry: RedistributionNode): string {
   if (entry.node.nodeType !== NODE_TYPE.GATE) return '';
   const items = (entry.node.requireItems || []).filter(item => ![610001,610002,610003,610004,610005].includes(item.item) && item.value > 0);
-  return items.map(item => {
+  const rawBadges = items.map(item => {
     const name = item.item === 4300000 ? '★1 공동 교단 증명서' : item.item >= 310000 && item.item < 320000 ? '지정 사도 증명서' : '관문 전용 재화 (종류 확인 필요)';
     return `<span title="원본 아이템 ${item.item}">${name} ${formatNumber(item.value)}개</span>`;
-  }).join(' · ');
+  });
+  if (!rawBadges.length && entry.gateProofs) {
+    for (const key of ['commonProof', 'proof', 'eldainProof'] as ProofResourceType[]) {
+      const val = entry.gateProofs[key];
+      if (val > 0) {
+        rawBadges.push(`<span>${PROOF_LABELS[key]} ${formatNumber(val)}개</span>`);
+      }
+    }
+  }
+  if (entry.promotions && entry.promotions.length > 0) {
+    const first = entry.promotions[0]!;
+    const last = entry.promotions[entry.promotions.length - 1]!;
+    const promoProofCount = entry.promotions.reduce((s, p) => s + p.proofCount, 0);
+    const promoGold = entry.promotions.reduce((s, p) => s + p.gold, 0);
+    rawBadges.push(`<span>★${first.fromGrade}→★${last.toGrade} 승급 필요 (${PROOF_LABELS[first.proofType]} ${formatNumber(promoProofCount)}개 · ${formatNumber(promoGold)} 골드 포함)</span>`);
+  }
+  return rawBadges.join(' · ');
 }
 
 /**
@@ -175,13 +192,34 @@ export function renderRedistributionResult(
   const extra = { ...plan.spend };
   for (const key of Object.keys(extra) as Array<keyof ResourceCostSummary>) extra[key] = Math.max(0, (plan.spend[key] || 0) - (plan.refund[key] || 0));
   const gateRows = plan.actions.flatMap(action => action.paint.filter(entry => entry.node.nodeType === NODE_TYPE.GATE).map(entry => `<li>${escapeHtml(action.apostle.name)} · ${entry.boardIndex + 1}차 관문 개방: ${renderResourceCost(entry.cost)} ${renderGateItems(entry)}</li>`));
+  const proofSummaryParts: string[] = [];
+  if (plan.proofSpend) {
+    for (const key of ['commonProof', 'proof', 'eldainProof'] as ProofResourceType[]) {
+      if (plan.proofSpend[key] > 0) {
+        proofSummaryParts.push(`${PROOF_LABELS[key]} ${formatNumber(plan.proofSpend[key])}개`);
+      }
+    }
+  }
+  const promotionRows = (plan.promotions || []).map(p => {
+    const first = p.steps[0]!;
+    const last = p.steps[p.steps.length - 1]!;
+    const totalProofs = p.steps.reduce((s, step) => s + step.proofCount, 0);
+    const totalGold = p.steps.reduce((s, step) => s + step.gold, 0);
+    return `${escapeHtml(p.apostle.name)} (★${first.fromGrade}→★${last.toGrade}, ${PROOF_LABELS[first.proofType]} ${formatNumber(totalProofs)}개 · ${formatNumber(totalGold)} 골드)`;
+  });
   const hasGoldOption = options.ownedGold !== undefined;
   const hasCanOption = options.ownedWateringCan !== undefined || options.ownedClouds !== undefined;
   const totalOwnedCans = (options.ownedWateringCan ?? 0) + Math.floor((options.ownedClouds ?? 0) / 10);
   const cloudRemainder = (options.ownedClouds ?? 0) % 10;
+  const priorityOrderText = normalizeResourcePriority(options.resourcePriority)
+    .map(key => AUXILIARY_RESOURCE_LABELS[key])
+    .join(' → ');
+  const costModeText = options.costMode === 'weighted'
+    ? '재화 가치 환산 효율'
+    : `재화별 엄격 우선순위 (${priorityOrderText} 순 절약)`;
 
   return `<h3 id="tcbe-sec-summary">계산 요약</h3><div class="tcbe-rd-cards"><div><small>초기화 / 설정 상한</small><strong>${plan.resetCount} / ${options.maxReset}명</strong></div><div><small>미사용 ${resourceIcon('hwang')}</small><strong>${formatNumber(options.ownedCrayons)} → ${formatNumber(plan.remaining)}개</strong></div>${plan.remainingBokr === undefined ? '' : `<div><small>미사용 ${resourceIcon('bokr')}</small><strong>${formatNumber(options.ownedBokr ?? 0)} → ${formatNumber(plan.remainingBokr)}개</strong></div>`}${hasGoldOption ? `<div><small>소지 ${resourceIcon('gold')}</small><strong class="${plan.remainingGold! >= 0 ? 'tcbe-rd-positive' : 'tcbe-rd-short'}">${formatNumber(options.ownedGold!)} → ${plan.remainingGold! >= 0 ? `잔여 ${formatNumber(plan.remainingGold!)}` : `부족 ${formatNumber(Math.abs(plan.remainingGold!))}`}</strong></div>` : ''}${hasCanOption ? `<div><small>소지 ${resourceIcon('watering-can')}</small><strong class="${plan.remainingWateringCan! >= 0 ? 'tcbe-rd-positive' : 'tcbe-rd-short'}">${totalOwnedCans}개 → ${plan.remainingWateringCan! >= 0 ? `잔여 ${plan.remainingWateringCan!}개` : `부족 ${Math.abs(plan.remainingWateringCan!)}개`}</strong></div>` : ''}</div>
-    <div class="tcbe-rd-resources"><p>환급 합계: ${renderResourceCost(plan.refund)}</p><p>사용 합계: ${renderResourceCost(plan.spend)}</p><p>환급 외 준비 재화: ${renderResourceCost(extra)}${extra.wateringCan ? ` <small class="tcbe-rd-caption">(만개 물뿌리개 1개 = <span class="tcbe-rd-resource-icon sunshine-cloud tcbe-rd-sm" aria-hidden="true"></span>햇살구름 10개 상당, 총 햇살구름 ${extra.wateringCan * 10}개 필요)</small>` : ''}</p>${(hasGoldOption || hasCanOption) ? `<p class="tcbe-rd-balance-summary"><strong>소지 재화 차감 후 상태:</strong> ${hasGoldOption ? `골드 ${plan.remainingGold! >= 0 ? `<span class="tcbe-rd-positive">${formatNumber(plan.remainingGold!)} 잔여</span>` : `<span class="tcbe-rd-short">${formatNumber(Math.abs(plan.remainingGold!))} 부족</span>`}` : ''}${hasGoldOption && hasCanOption ? ' · ' : ''}${hasCanOption ? `물뿌리개 ${plan.remainingWateringCan! >= 0 ? `<span class="tcbe-rd-positive">${plan.remainingWateringCan!}개 잔여${cloudRemainder > 0 ? ` (구름 ${cloudRemainder}개 남음)` : ''}</span>` : `<span class="tcbe-rd-short">${Math.abs(plan.remainingWateringCan!)}개 부족 (<span class="tcbe-rd-resource-icon sunshine-cloud tcbe-rd-sm" aria-hidden="true"></span>햇살구름 ${Math.max(0, Math.abs(plan.remainingWateringCan!) * 10 - cloudRemainder)}개 추가 교환 필요)</span>`}` : ''}</p>` : ''}</div>
+    <div class="tcbe-rd-resources"><p>비용 평가 기준: <strong>${costModeText}</strong></p><p>환급 합계: ${renderResourceCost(plan.refund)}</p><p>사용 합계: ${renderResourceCost(plan.spend)}</p><p>환급 외 준비 재화: ${renderResourceCost(extra)}${extra.wateringCan ? ` <small class="tcbe-rd-caption">(만개 물뿌리개 1개 = <span class="tcbe-rd-resource-icon sunshine-cloud tcbe-rd-sm" aria-hidden="true"></span>햇살구름 10개 상당, 총 햇살구름 ${extra.wateringCan * 10}개 필요)</small>` : ''}</p>${proofSummaryParts.length ? `<p>관문·성급 승급 증명서 합계: <strong>${proofSummaryParts.join(' · ')}</strong></p>` : ''}${promotionRows.length ? `<p>성급 승급 대상 (${promotionRows.length}명): ${promotionRows.join(', ')}</p>` : ''}${(hasGoldOption || hasCanOption) ? `<p class="tcbe-rd-balance-summary"><strong>소지 재화 차감 후 상태:</strong> ${hasGoldOption ? `골드 ${plan.remainingGold! >= 0 ? `<span class="tcbe-rd-positive">${formatNumber(plan.remainingGold!)} 잔여</span>` : `<span class="tcbe-rd-short">${formatNumber(Math.abs(plan.remainingGold!))} 부족</span>`}` : ''}${hasGoldOption && hasCanOption ? ' · ' : ''}${hasCanOption ? `물뿌리개 ${plan.remainingWateringCan! >= 0 ? `<span class="tcbe-rd-positive">${plan.remainingWateringCan!}개 잔여${cloudRemainder > 0 ? ` (구름 ${cloudRemainder}개 남음)` : ''}</span>` : `<span class="tcbe-rd-short">${Math.abs(plan.remainingWateringCan!)}개 부족 (<span class="tcbe-rd-resource-icon sunshine-cloud tcbe-rd-sm" aria-hidden="true"></span>햇살구름 ${Math.max(0, Math.abs(plan.remainingWateringCan!) * 10 - cloudRemainder)}개 추가 교환 필요)</span>`}` : ''}</p>` : ''}</div>
     ${gateRows.length ? `<div class="tcbe-rd-notice"><strong>추가로 열 관문 ${gateRows.length}개</strong><ul>${gateRows.join('')}</ul><p>골드·크레파스는 위 사용 합계에 포함됩니다. 증명서 등 전용 재화의 보유량과 게임 내 개방 조건은 별도 확인하세요.</p></div>` : ''}
     <details class="tcbe-rd-method"><summary>계산 기준·제한</summary><p class="tcbe-rd-notice">${plan.notes.map(escapeHtml).join(' ')} 관문 개방을 켠 단계만 새 관문 비용을 포함하며, 미개방 꽃잎은 물뿌리개·골드를 준비해 엽니다. 초기화한 사도는 목표 도달에 필수적인 최소 일반칸만 연결 복구하며(클린 슬레이트 최적화), 보크는 연결과 설정한 목표에 필요한 만큼 다시 칠합니다. 황크는 백분율, 보크는 스탯별 칸 수로 평가합니다. 일반칸 스탯은 평가하지 않습니다.</p></details>
     ${renderRedistributionSummary(plan, summaries)}

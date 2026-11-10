@@ -21,13 +21,14 @@ import type {
   SkinInfo,
   StatCategory,
   StatCountSummary,
+  TribeType,
   UserApostle,
 } from './types.ts';
 
 /** 기존 호출부의 import 경로와 상수 객체 참조를 유지한다. */
 export {
   BASIC_CRAYON_ITEM_ID, MID_CRAYON_ITEM_ID, BOKR_ITEM_ID, HWANG_ITEM_ID, WATERING_CAN_ITEM_ID,
-  NODE_TYPE, STAT_CATEGORIES, STAT_META_LIST, PERSONALITY_META_LIST,
+  NODE_TYPE, STAT_CATEGORIES, STAT_META_LIST, PERSONALITY_META_LIST, TRIBE_META_LIST,
 } from './constants.ts';
 
 /**
@@ -181,7 +182,17 @@ export function calculateApostleProgress(
   const apostleName = resolveApostleName(apostleId, heroInfoMap, textMap);
   const heroMaster: Partial<HeroInfo> = heroInfoMap[apostleId] || heroInfoMap[String(apostleId)] || { personality: 0, gradeDefault: 3 };
   const personality = (heroMaster.personality ?? 0) as PersonalityType;
+  const tribe = typeof heroMaster.tribe === 'number' && Number.isSafeInteger(heroMaster.tribe) && heroMaster.tribe >= 0 && heroMaster.tribe <= 7
+    ? (heroMaster.tribe as TribeType)
+    : undefined;
   const gradeDefault = heroMaster.gradeDefault ?? 3;
+  const grade = typeof userApostle.grade === 'number' && Number.isSafeInteger(userApostle.grade) && userApostle.grade >= 1 && userApostle.grade <= 5
+    ? userApostle.grade
+    : undefined;
+  const isFavorite = userApostle.isFavorite === true;
+  const heroGroupKey = typeof heroMaster.heroGroup === 'string' ? heroMaster.heroGroup.trim() : '';
+  const heroGroupText = heroGroupKey ? String(textMap[heroGroupKey] ?? heroGroupKey).trim() : '';
+  const isEldain = heroGroupText.length > 0;
 
   // 착용한 사복(스킨)이 있으면 스킨 아이콘 해시를 우선 적용
   let icon = heroMaster.icon;
@@ -497,7 +508,11 @@ export function calculateApostleProgress(
     apostleId,
     name: apostleName,
     personality,
+    tribe,
     gradeDefault,
+    grade,
+    isFavorite,
+    isEldain,
     icon,
     isOwned,
     unlockedBoardCount,

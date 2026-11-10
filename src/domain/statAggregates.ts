@@ -9,6 +9,9 @@ export function aggregateBokrStats(progressMap: ProgressMap, filter: FilterState
   const result = Object.fromEntries(STAT_CATEGORIES.map(key =>
     [key, { picked: 0, total: 0, remaining: 0 }])) as StatAggregates;
   for (const progress of getUniqueApostles(progressMap)) {
+    if (filter.special === 'favorite' && !progress.isFavorite) continue;
+    if (filter.special === 'eldain' && !progress.isEldain) continue;
+    if (filter.tribe !== undefined && filter.tribe !== 'all' && progress.tribe !== filter.tribe) continue;
     if (filter.unlockedTier !== 'all' && progress.unlockedBoardCount !== filter.unlockedTier) continue;
     if (filter.grade !== 'all' && progress.gradeDefault !== filter.grade) continue;
     if (filter.personality !== 'all' && progress.personality !== filter.personality) continue;

@@ -6,13 +6,18 @@ export const DEFAULT_FILTER_STATE: Readonly<FilterState> = Object.freeze({
   boardLevel: 'all',
   statCategory: 'all',
   personality: 'all',
+  tribe: 'all',
   grade: 'all',
   unlockedTier: 'all',
+  special: 'all',
   sortBy: 'name_asc',
 });
 
 /** 카드 표시와 미완료 인원 집계가 같은 조건을 사용하도록 판정한다. */
 export function matchesApostleFilter(progress: ApostleProgress, filter: FilterState): boolean {
+  if (filter.special === 'favorite' && !progress.isFavorite) return false;
+  if (filter.special === 'eldain' && !progress.isEldain) return false;
+  if (filter.tribe !== undefined && filter.tribe !== 'all' && progress.tribe !== filter.tribe) return false;
   if (filter.grade !== 'all' && progress.gradeDefault !== filter.grade) return false;
   if (filter.unlockedTier !== 'all' && progress.unlockedBoardCount !== filter.unlockedTier) return false;
   if (filter.personality !== 'all' && progress.personality !== filter.personality) return false;

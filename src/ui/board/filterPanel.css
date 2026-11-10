@@ -2,31 +2,52 @@
 
 /* --- 트릭컬 공식 스타일 아코디언 필터 패널 --- */
 .tcbe-panel-container {
-  display: flex;
-  flex-direction: column;
+  display: block;
   margin: 10px 0 18px 0;
-  background: var(--tcbe-panel-bg);
-  border: 3px solid var(--tcbe-panel-border);
-  border-radius: 18px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  color: #2d3748;
-  font-size: 11.5px;
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box;
   flex: 1 1 100%;
-  overflow: hidden;
   clear: both;
+  overflow-anchor: none !important;
 }
 
-/* 닫혔을 때 바깥 테두리 깔끔하게 처리 */
-.tcbe-panel-container:has(.tcbe-accordion-header[data-state="closed"]):has(.tcbe-accordion-header[data-state="closed"]) {
+.tcbe-panel-container.tcbe-slot-animating {
+  transition: height 0.2s ease-out;
+}
+
+.tcbe-panel-box {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--tcbe-panel-bg);
   border: none;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  color: #2d3748;
+  font-size: 11.5px;
+  overflow: visible;
+  overflow-anchor: none !important;
+}
+
+.tcbe-panel-box[data-state="closed"] {
   background: transparent;
   box-shadow: none;
 }
 
-/* --- 아코디언 헤더 바 (트릭컬 공식 초록 그라디언트) --- */
+/* 상단 고정(Sticky Header) 활성화 시 내부 박스만 고정하여 깜빡임 없이 하단 카드들이 밑으로 지나가게 처리 */
+.tcbe-panel-container.tcbe-panel-pinned > .tcbe-panel-box {
+  position: fixed !important;
+  top: 6px !important;
+  left: var(--tcbe-pinned-left, 0px) !important;
+  width: var(--tcbe-pinned-width, 100%) !important;
+  max-width: var(--tcbe-pinned-width, 100%) !important;
+  z-index: 950 !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16);
+}
+
+/* --- 아코디언 헤더 바 (위의 설정·적용 스탯과 동일한 3px 밝은 테두리 + 16px 4면 라운드 유지) --- */
 .tcbe-accordion-header {
   width: 100% !important;
   display: flex;
@@ -43,22 +64,11 @@
   cursor: pointer;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s ease;
+  transition: filter 0.2s ease;
   outline: none;
   user-select: none;
   box-sizing: border-box;
   font-family: var(--tcbe-font-stack);
-}
-
-/* 열렸을 때 헤더 하단 라운드 */
-.tcbe-accordion-header[data-state="open"] {
-  border-bottom-left-radius: 0px;
-  border-bottom-right-radius: 0px;
-}
-
-/* 닫혔을 때 헤더 전체 라운드 유지 */
-.tcbe-accordion-header[data-state="closed"] {
-  border-radius: 16px;
 }
 
 .tcbe-accordion-header:hover {
@@ -95,6 +105,56 @@
   transform: translateY(-1px);
 }
 
+/* --- 우측 상단 새로고침 버튼 아래 플로팅 상단 고정 토글 버튼 --- */
+.tcbe-floating-sticky-btn {
+  position: fixed;
+  top: 68px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  z-index: 960;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background: rgba(148, 155, 148, 0.85);
+  border: 2.5px solid #6b7280;
+  color: #374151;
+  cursor: pointer;
+  user-select: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.tcbe-floating-sticky-btn:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+.tcbe-floating-sticky-btn:has(input:checked) {
+  background: #84cc58;
+  border-color: #468626;
+  color: #1a330e;
+  box-shadow: 0 2px 6px rgba(70, 134, 38, 0.35);
+}
+
+.tcbe-sticky-checkbox {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
+.tcbe-sticky-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
 .tcbe-accordion-chevron {
   position: absolute;
   right: 12px;
@@ -115,22 +175,37 @@
   transform: translateY(-50%) rotate(0deg);
 }
 
-/* --- 아코디언 본문 영역 --- */
+/* --- 아코디언 본문 영역 (원본 설정·적용 스탯과 동일한 높이 슬라이드 애니메이션) --- */
 .tcbe-accordion-content {
+  background: var(--tcbe-panel-bg);
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
+  overflow: visible;
+  transition: height 0.2s ease-out;
+}
+
+.tcbe-accordion-inner {
   display: flex;
   flex-direction: column;
   gap: var(--tcbe-gap-md);
   padding: 10px 14px;
-  background: var(--tcbe-panel-bg);
+  box-sizing: border-box;
+}
+
+.tcbe-accordion-content.tcbe-animating {
+  overflow: hidden !important;
 }
 
 .tcbe-accordion-content.tcbe-closed {
-  display: none !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
 }
 
 /* --- 특수 계산 도구(재분배/회수) 행 --- */
 .tcbe-tools-row {
   padding-bottom: 8px;
+  padding-right: var(--tcbe-tools-right-pad, 0px);
   border-bottom: 1px dashed var(--tcbe-border-light);
   margin-bottom: 2px;
 }
@@ -158,6 +233,28 @@
   color: #92400e;
   border-radius: 8px;
   margin-left: 3px;
+}
+
+.tcbe-btn-reset {
+  margin-left: auto;
+  font-weight: 700;
+  padding: 4px 10px;
+  background: var(--tcbe-bg-white);
+  border: 1.5px solid #cbd5e1;
+  color: #475569;
+  font-size: 11.5px;
+}
+
+.tcbe-btn-reset:hover {
+  background: #fff1f2;
+  border-color: #f43f5e;
+  color: #be123c;
+}
+
+.tcbe-btn-reset.tcbe-btn-reset-active {
+  background: #fff1f2;
+  border-color: #fb7185;
+  color: #be123c;
 }
 
 .tcbe-panel-row {

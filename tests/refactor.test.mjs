@@ -48,7 +48,7 @@ test('파서는 좌표 없는 꽃잎과 음수 숨김 좌표 및 숫자 연결 �
 test('파서는 보드 진행도에 필요한 유저 필드만 추출하며 래퍼와 빈 보유 목록을 지원한다', () => {
   const p = payload(); p.apostles[0].accountToken = '테스트용가짜값';
   const parsed = parseTrickcalApiPayload({ payload: p });
-  assert.deepEqual(Object.keys(parsed.apostles[0]).sort(), ['apostleId', 'boardSteps', 'skinId']);
+  assert.deepEqual(Object.keys(parsed.apostles[0]).sort(), ['apostleId', 'boardSteps', 'grade', 'isFavorite', 'skinId']);
   p.apostles = [];
   assert.equal(parseTrickcalApiPayload(p).apostles.length, 0);
 });
