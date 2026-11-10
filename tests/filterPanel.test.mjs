@@ -90,6 +90,37 @@ for (const [field, attr, value] of [
   });
 }
 
+test('통합 검색 입력은 필터 변경을 알리고 검색어별 집계 캐시와 초기화 상태를 갱신한다', () => {
+  const { controller, root, walk, changes } = setup();
+  const slot = walk(root).find(node => node.id === 'tcbe-search-slot');
+  const reset = walk(root).find(node => node.id === 'tcbe-filter-reset-btn');
+  const input = { value: '' };
+  slot.querySelector = () => input;
+  const map = calculateAllApostlesProgress({ apostles: mockUserApostles, board: mockMasterBoard,
+    heroInfo: mockHeroInfo, text: mockText });
+  map.get('10001').bokr.byStat.hp = { picked: 1, total: 2, remaining: 1 };
+  const summary = walk(root).find(node => node.id === 'tcbe-stat-summary-row');
+  const summaryTotals = () => walk(summary).filter(node => node.classList.contains('tcbe-summary-card'))
+    .map(node => node.innerHTML);
+  controller.updateStatSummaryGrid(map, controller.getState());
+  const original = summaryTotals();
+  assert.ok(original.length > 0);
+  const originalChildren = summary.children;
+  input.value = '없는사도';
+  slot.trigger('input');
+  assert.equal(changes.at(-1).searchQuery, '없는사도');
+  assert.equal(reset.classList.contains('tcbe-btn-reset-active'), true);
+  controller.updateStatSummaryGrid(map, controller.getState());
+  assert.notEqual(summary.children, originalChildren);
+  assert.equal(walk(summary).some(node => node.classList.contains('tcbe-summary-card')), false);
+  controller.resetFilters();
+  assert.equal(input.value, '');
+  assert.equal(controller.getState().searchQuery, undefined);
+  assert.equal(reset.classList.contains('tcbe-btn-reset-active'), false);
+  controller.updateStatSummaryGrid(map, controller.getState());
+  assert.deepEqual(summaryTotals(), original);
+});
+
 test('통계는 카드 수 인자 없이 전체 사도 수와 필터별 미완료 수를 표시한다', () => {
   const { controller, root, walk } = setup();
   const counter = walk(root).find(node => node.id === 'tcbe-stats-counter');

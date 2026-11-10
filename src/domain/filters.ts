@@ -1,3 +1,4 @@
+import { matchesKoreanSearch } from './koreanSearch.ts';
 import type { ApostleProgress, FilterState } from './types.ts';
 
 /** 컨트롤러마다 복사하여 사용하는 기본 필터 상태 */
@@ -15,6 +16,7 @@ export const DEFAULT_FILTER_STATE: Readonly<FilterState> = Object.freeze({
 
 /** 카드 표시와 미완료 인원 집계가 같은 조건을 사용하도록 판정한다. */
 export function matchesApostleFilter(progress: ApostleProgress, filter: FilterState): boolean {
+  if (!matchesApostleSearch(progress, filter.searchQuery)) return false;
   if (filter.special === 'favorite' && !progress.isFavorite) return false;
   if (filter.special === 'eldain' && !progress.isEldain) return false;
   if (filter.tribe !== undefined && filter.tribe !== 'all' && progress.tribe !== filter.tribe) return false;
@@ -43,4 +45,9 @@ export function matchesApostleFilter(progress: ApostleProgress, filter: FilterSt
   if (filter.status === 'complete') return complete && targetRemaining === 0;
   if (filter.status === 'incomplete') return !complete && targetRemaining > 0;
   return true;
+}
+
+/** 초성·완성형 혼합 검색을 카드 목록과 집계에 동일하게 적용한다. */
+export function matchesApostleSearch(progress: ApostleProgress, query = ''): boolean {
+  return matchesKoreanSearch(progress.name, query);
 }

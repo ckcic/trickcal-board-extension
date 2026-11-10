@@ -25,6 +25,12 @@ const progressMap = new Map(apostles.flatMap(a => [[String(a.apostleId), a], [a.
 for (const [label, options, expected] of [
   ['전체 및 미보유 사도', {}, [6, 14, 8]],
   ['성급', { grade: 3 }, [5, 8, 3]],
+  ['이름 검색', { searchQuery: '가명1' }, [5, 8, 3]],
+  ['초성 검색', { searchQuery: 'ㄱㅁ1' }, [5, 8, 3]],
+  ['초성·완성형 혼합 검색', { searchQuery: '가ㅁ1' }, [5, 8, 3]],
+  ['초성 검색과 성급 조합', { searchQuery: 'ㄱㅁ1', grade: 2 }, [0, 0, 0]],
+  ['이름 검색과 성급 조합', { searchQuery: '가명1', grade: 2 }, [0, 0, 0]],
+  ['검색 결과 없음', { searchQuery: '없는사도' }, [0, 0, 0]],
   ['성격', { personality: 1 }, [1, 4, 3]],
   ['해금 관문', { unlockedTier: 2 }, [5, 8, 3]],
   ['복합 조건 불일치', { grade: 3, personality: 1 }, [0, 0, 0]],

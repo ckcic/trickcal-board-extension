@@ -111,7 +111,7 @@ export interface UserApostle {
   level?: number;
   rank?: number;
   grade?: number;
-  isFavorite?: boolean; // 즐겨찾기(관심 사도) 여부
+  isFavorite?: boolean; // 즐겨찾기 여부
   boardSteps?: UserBoardStep[];
   [key: string]: unknown;
 }
@@ -245,7 +245,7 @@ export interface ApostleProgress {
   tribe?: TribeType;    // 종족 (0: 요정, 1: 수인, 2: 엘프, 3: 정령, 4: 유령, 5: 용족, 6: 마녀, 7: 미스틱)
   gradeDefault: number; // 태생 성급 (1, 2, 3)
   grade?: number;       // 현재 성급 (1~5, 생략 시 gradeDefault)
-  isFavorite?: boolean; // 즐겨찾기(관심 사도) 여부
+  isFavorite?: boolean; // 즐겨찾기 여부
   isEldain?: boolean;   // 엘다인 사도 여부
   icon?: string; // 사도 아이콘 해시 (HeroIcons CDN 연동용)
   isOwned?: boolean; // 유저 보유 여부 (미보유 시 false)
@@ -301,6 +301,7 @@ export type SpecialApostleFilter = 'all' | 'favorite' | 'eldain'; // 사도 특�
 export type TribeFilterTarget = 'all' | TribeType; // 종족 필터 대상
 
 export interface FilterState {
+  searchQuery?: string;              // 통합 사도 이름 검색어
   status: BokrFilterStatus;
   boardLevel: BoardFilterLevel;
   statCategory: StatFilterTarget;

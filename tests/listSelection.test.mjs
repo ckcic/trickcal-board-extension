@@ -4,6 +4,7 @@ import { calculateAllApostlesProgress } from '../src/domain/boardProgress.ts';
 import { compareApostles, selectApostleIds } from '../src/domain/listSelection.ts';
 import { applyFilterToCards } from '../src/ui/board/boardEnhancer.ts';
 import { getUniqueApostles } from '../src/domain/apostleProgress.ts';
+import { matchesApostleFilter } from '../src/domain/filters.ts';
 
 const filter = { status: 'all', boardLevel: 'all', statCategory: 'all', personality: 'all',
   grade: 'all', unlockedTier: 'all', sortBy: 'name_asc' };
@@ -17,6 +18,17 @@ const apostles = [
   { ...base, apostleId: 5, name: '마', unlockedBoardCount: 3, gradeDefault: 3, personality: 5 },
 ];
 const progressMap = new Map(apostles.flatMap(p => [[String(p.apostleId), p], [p.name, p]]));
+
+test('이름 검색은 목록·미완료 판정과 속성 필터에 함께 적용되고 빈 검색은 전체를 복원한다', () => {
+  const incomplete = { ...apostles[0], name: '가명Alpha', bokr: { ...base.bokr,
+    remainingAll: 2, isCompleted: false } };
+  const map = new Map([['1', incomplete], [incomplete.name, incomplete]]);
+  assert.deepEqual(selectApostleIds(map, { ...filter, searchQuery: 'alpha' }), [1]);
+  assert.equal(matchesApostleFilter(incomplete, { ...filter, status: 'incomplete', searchQuery: 'alpha' }), true);
+  assert.equal(matchesApostleFilter(incomplete, { ...filter, status: 'incomplete', searchQuery: '없는사도' }), false);
+  assert.deepEqual(selectApostleIds(map, { ...filter, searchQuery: 'alpha', grade: 3 }), []);
+  assert.deepEqual(selectApostleIds(map, { ...filter, searchQuery: '' }), [1]);
+});
 
 test('공통 사도 목록은 별칭을 중복 제거하고 참조 및 최초 등장 순서를 보존한다', () => {
   const unique = getUniqueApostles(progressMap);
@@ -82,4 +94,22 @@ test('동일 순위의 사도와 빈 목록을 처리하며 입력 Map의 순서
   }
   assert.deepEqual([...progressMap.entries()], entries);
   assert.deepEqual(selectApostleIds(new Map(), filter), []);
+});
+
+
+test('초성·완성형 혼합 검색은 일반 카드·가상 목록·미완료 판정에서 같은 사도를 선택한다', () => {
+  const entries = ['가명', '가명(특별)', '나무'].map((name, index) => ({ ...apostles[0],
+    apostleId: index + 1, name, bokr: { ...base.bokr, remainingAll: 2, isCompleted: false } }));
+  const map = new Map(entries.flatMap(p => [[String(p.apostleId), p], [p.name, p]]));
+  for (const searchQuery of ['ㄱㅁ', '가ㅁ', 'ㄱ명', '가명', ' ㄱㅁ ']) {
+    const options = { ...filter, status: 'incomplete', searchQuery };
+    assert.deepEqual(selectApostleIds(map, options), [1, 2]);
+    assert.equal(entries.filter(p => matchesApostleFilter(p, options)).length, 2);
+    const cards = entries.map(makeCard);
+    assert.deepEqual(applyFilterToCards(options, map, cards), { total: 3, visible: 2 });
+    assert.equal(cards[2].classList.contains('tcbe-card-hidden'), true);
+    assert.deepEqual(selectApostleIds(map, { ...options, grade: 3 }), []);
+  }
+  assert.deepEqual(selectApostleIds(map, { ...filter, searchQuery: '없는ㅅㄷ' }), []);
+  assert.equal(selectApostleIds(map, { ...filter, searchQuery: '' }).length, 3);
 });

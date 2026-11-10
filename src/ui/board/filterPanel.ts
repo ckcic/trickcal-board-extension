@@ -1,3 +1,4 @@
+import { takeOverApostleSearch } from './integratedSearch.ts';
 /**
  * @file filterPanel.ts
  * @description 트릭컬 노트의 사도별 탭 상단에 배치되는 스탯/성격/성급/보드차수별 필터 컨트롤 패널 및 스탯별 총 칸 수/수치 통계 바
@@ -38,7 +39,7 @@ const SORT_DEFS = [
   { key: 'tribe', label: '종족순', initial: 'tribe_asc', alternate: 'tribe_desc',
     title: '종족(요정/수인/엘프/정령/유령/용족/마녀/미스틱) 오름차순(▴)/내림차순(▾)으로 사도를 정렬합니다.' },
   { key: 'favorite', label: '즐겨찾기', initial: 'favorite_desc', alternate: 'favorite_asc',
-    title: '즐겨찾기(관심 사도) 우선(▾)/후순위(▴)로 사도를 정렬합니다.' },
+    title: '즐겨찾기 사도 우선(▾)/후순위(▴)로 사도를 정렬합니다.' },
 ] as const;
 
 export class FilterPanelController {
@@ -49,6 +50,7 @@ export class FilterPanelController {
   private sortGroupEl: HTMLElement | null = null;
   private resetButtonEl: HTMLButtonElement | null = null;
   private searchSlot: HTMLElement | null = null;
+  private restoreSearchInput: (() => void) | null = null;
   private originalSearchElement: HTMLElement | null = null;
   private originalSearchParent: HTMLElement | null = null;
   private originalSearchNextSibling: Node | null = null;
@@ -86,7 +88,8 @@ export class FilterPanelController {
   }
 
   public getState(): FilterState {
-    return { ...this.state };
+    const searchQuery = this.searchSlot?.querySelector?.<HTMLInputElement>('input')?.value ?? '';
+    return { ...this.state, ...(searchQuery ? { searchQuery } : {}) };
   }
 
   /**
@@ -414,6 +417,11 @@ export class FilterPanelController {
     searchSlot.className = 'tcbe-search-slot';
     row2.appendChild(searchSlot);
     this.searchSlot = searchSlot;
+    // 입력값은 속성 변경으로 감지되지 않으므로 검색 중에도 집계를 갱신한다.
+    searchSlot.addEventListener('input', () => {
+      this.updateResetButtonState();
+      this.onFilterChange(this.getState());
+    });
 
     // 2-5. 통계 카운터 표시 (Row 2 우측 끝)
     const statsSpan = document.createElement('div');
@@ -577,7 +585,7 @@ export class FilterPanelController {
   /** 기본 필터 상태와 다른 조건이 하나라도 있으면 초기화 버튼을 강조 표시한다. */
   private updateResetButtonState(): void {
     if (!this.resetButtonEl) return;
-    const isModified = (Object.keys(DEFAULT_FILTER_STATE) as Array<keyof FilterState>).some(
+    const isModified = Boolean(this.getState().searchQuery) || (Object.keys(DEFAULT_FILTER_STATE) as Array<keyof FilterState>).some(
       (key) => (this.state[key] ?? DEFAULT_FILTER_STATE[key]) !== DEFAULT_FILTER_STATE[key]
     );
     this.resetButtonEl.classList.toggle('tcbe-btn-reset-active', isModified);
@@ -656,8 +664,8 @@ export class FilterPanelController {
       this.summaryProgressMap = progressMap;
     }
 
-    // 캐시 키 생성 (해금관문_성급_성격_종족_보드차수_사도구분)
-    const cacheKey = `${filter.unlockedTier}_${filter.grade}_${filter.personality}_${filter.tribe ?? 'all'}_${filter.boardLevel}_${filter.special ?? 'all'}`;
+    // 검색어도 캐시 키에 포함하여 검색 변경·해제 시 이전 합계를 재사용하지 않는다.
+    const cacheKey = JSON.stringify([filter.unlockedTier, filter.grade, filter.personality, filter.tribe ?? 'all', filter.boardLevel, filter.special ?? 'all', filter.searchQuery ?? '']);
     const renderKey = `${cacheKey}_${filter.statCategory}`;
     if (this.renderedSummaries.get(summaryContainer) === renderKey) return;
     let statAggregates = this.statAggregatesCache.get(cacheKey);
@@ -770,7 +778,7 @@ export class FilterPanelController {
     const existingPanel = document.getElementById('tcbe-filter-panel');
 
     // 사이트 본래의 사도명 검색 입력창 검색
-    const searchInput = document.querySelector<HTMLInputElement>('input[placeholder*="사도"]');
+    const searchInput = document.querySelector<HTMLInputElement>('input[placeholder*="사도"]:not([data-tcbe-search])');
 
     // 사도별 화면이 아닌 경우(검색창이 존재하지 않고, 이전에 이동한 요소도 없는 경우) 마운트하지 않음
     if (!searchInput && !this.originalSearchElement) {
@@ -791,6 +799,8 @@ export class FilterPanelController {
         this.originalSearchParent = searchContainer.parentElement;
         this.originalSearchNextSibling = searchContainer.nextSibling;
         this.searchSlot.appendChild(searchContainer);
+        this.restoreSearchInput?.();
+        this.restoreSearchInput = takeOverApostleSearch(searchInput).restore;
       }
     }
 
@@ -976,6 +986,8 @@ export class FilterPanelController {
     }
     this.panelBox = null;
     this.stickyButtonEl = null;
+    this.restoreSearchInput?.();
+    this.restoreSearchInput = null;
     // 1. 이동했던 검색창을 원래 DOM 트리 위치로 복원
     if (this.originalSearchElement && this.originalSearchParent) {
       try {

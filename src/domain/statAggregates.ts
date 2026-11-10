@@ -1,4 +1,5 @@
 import { getUniqueApostles } from './apostleProgress.ts';
+import { matchesApostleSearch } from './filters.ts';
 import { STAT_CATEGORIES } from './boardProgress.ts';
 import type { FilterState, ProgressMap, StatCategory, StatCountSummary } from './types.ts';
 
@@ -9,6 +10,7 @@ export function aggregateBokrStats(progressMap: ProgressMap, filter: FilterState
   const result = Object.fromEntries(STAT_CATEGORIES.map(key =>
     [key, { picked: 0, total: 0, remaining: 0 }])) as StatAggregates;
   for (const progress of getUniqueApostles(progressMap)) {
+    if (!matchesApostleSearch(progress, filter.searchQuery)) continue;
     if (filter.special === 'favorite' && !progress.isFavorite) continue;
     if (filter.special === 'eldain' && !progress.isEldain) continue;
     if (filter.tribe !== undefined && filter.tribe !== 'all' && progress.tribe !== filter.tribe) continue;
