@@ -69,25 +69,33 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-backgroun
   height: 18px;
   aspect-ratio: 1 / 1;
   background-image: var(--tcbe-personality-sprite);
-  background-size: auto 100%; /* 공식 Common_UnitPersonality.webp(1664x128, 13개) 비율 유지 */
+  background-size: auto 100%; /* Common_UnitPersonality.webp(128x128 정사각) 높이 18px 비례 스케일링 */
   background-repeat: no-repeat;
   vertical-align: middle;
   flex-shrink: 0;
 }
 
-.tcbe-sprite-pers-0 { background-position: 0% 0; }            /* 순수 */
-.tcbe-sprite-pers-1 { background-position: 8.3333% 0; }       /* 냉정 */
-.tcbe-sprite-pers-2 { background-position: 16.6667% 0; }      /* 광기 */
-.tcbe-sprite-pers-3 { background-position: 25% 0; }           /* 활발 */
-.tcbe-sprite-pers-4 { background-position: 33.3333% 0; }      /* 우울 */
-.tcbe-sprite-pers-5 { background-position: 41.6667% 0; }      /* 공명 */
-.tcbe-sprite-pers-6 { background-position: 50% 0; }           /* 공명-순수 */
-.tcbe-sprite-pers-7 { background-position: 58.3333% 0; }      /* 공명-냉정 */
-.tcbe-sprite-pers-8 { background-position: 66.6667% 0; }      /* 공명-광기 */
-.tcbe-sprite-pers-9 { background-position: 75% 0; }           /* 공명-활발 */
-.tcbe-sprite-pers-10 { background-position: 83.3333% 0; }     /* 공명-우울 */
-.tcbe-sprite-pers-11 { background-position: 91.6667% 0; }     /* 용기 (광기 승격 / 10112) */
-.tcbe-sprite-pers-12 { background-position: 100% 0; }         /* 헌신 (활발 승격 / 10124) */
+/* 
+ * 픽셀 오프셋(-(index * 18)px) 방식:
+ * 향후 순수/냉정/우울 등 추가 성격 승격으로 스프라이트가 우측으로 확장(13개 -> 16개 등)되어도
+ * 기존 인덱스 0~12번의 위치가 절대 깨지지 않도록 불변 고정 오프셋을 사용합니다.
+ */
+.tcbe-sprite-pers-0 { background-position: 0px 0; }            /* 순수 */
+.tcbe-sprite-pers-1 { background-position: -18px 0; }          /* 냉정 */
+.tcbe-sprite-pers-2 { background-position: -36px 0; }          /* 광기 */
+.tcbe-sprite-pers-3 { background-position: -54px 0; }          /* 활발 */
+.tcbe-sprite-pers-4 { background-position: -72px 0; }          /* 우울 */
+.tcbe-sprite-pers-5 { background-position: -90px 0; }          /* 공명 */
+.tcbe-sprite-pers-6 { background-position: -108px 0; }         /* 공명-순수 */
+.tcbe-sprite-pers-7 { background-position: -126px 0; }         /* 공명-냉정 */
+.tcbe-sprite-pers-8 { background-position: -144px 0; }         /* 공명-광기 */
+.tcbe-sprite-pers-9 { background-position: -162px 0; }         /* 공명-활발 */
+.tcbe-sprite-pers-10 { background-position: -180px 0; }        /* 공명-우울 */
+.tcbe-sprite-pers-11 { background-position: -198px 0; }        /* 용기 (광기 승격 / 10112) */
+.tcbe-sprite-pers-12 { background-position: -216px 0; }        /* 헌신 (활발 승격 / 10124) */
+.tcbe-sprite-pers-13 { background-position: -234px 0; }        /* 향후 성격 승격 예약 1 */
+.tcbe-sprite-pers-14 { background-position: -252px 0; }        /* 향후 성격 승격 예약 2 */
+.tcbe-sprite-pers-15 { background-position: -270px 0; }        /* 향후 성격 승격 예약 3 */
 
 /* --- 크레파스(파스텔) 아이콘 스타일 --- */
 .tcbe-pastel-icon {
