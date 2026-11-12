@@ -68,7 +68,7 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-backgroun
   width: 18px;
   height: 18px;
   background-image: var(--tcbe-personality-sprite);
-  background-size: 108px 18px; /* 6개 * 18px = 108px */
+  background-size: auto 100%; /* 공식 Common_UnitPersonality.webp(1664x128, 13개) 비율 유지 (높이 18px 기준 각 프레임 18x18px) */
   background-repeat: no-repeat;
   vertical-align: middle;
   flex-shrink: 0;
@@ -80,6 +80,13 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-backgroun
 .tcbe-sprite-pers-3 { background-position: -54px 0; }        /* 활발 */
 .tcbe-sprite-pers-4 { background-position: -72px 0; }        /* 우울 */
 .tcbe-sprite-pers-5 { background-position: -90px 0; }        /* 공명 */
+.tcbe-sprite-pers-6 { background-position: -108px 0; }       /* 공명-순수 */
+.tcbe-sprite-pers-7 { background-position: -126px 0; }       /* 공명-냉정 */
+.tcbe-sprite-pers-8 { background-position: -144px 0; }       /* 공명-광기 */
+.tcbe-sprite-pers-9 { background-position: -162px 0; }       /* 공명-활발 */
+.tcbe-sprite-pers-10 { background-position: -180px 0; }      /* 공명-우울 */
+.tcbe-sprite-pers-11 { background-position: -198px 0; }      /* 고위 광기 */
+.tcbe-sprite-pers-12 { background-position: -216px 0; }      /* 고위 활발 */
 
 /* --- 크레파스(파스텔) 아이콘 스타일 --- */
 .tcbe-pastel-icon {
