@@ -1,6 +1,6 @@
 # 🎨 트릭컬 노트 보드 확장 프로그램 (Trickcal Board Extension)
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](manifest.json)
+[![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)](manifest.json)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Manifest V3](https://img.shields.io/badge/manifest-v3-orange.svg)](manifest.json)
 [![Platform](https://img.shields.io/badge/platform-Chrome%20%7C%20Edge%20%7C%20Whale-lightgrey.svg)](https://note.trickcal.com/board)

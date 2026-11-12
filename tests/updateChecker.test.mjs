@@ -157,4 +157,9 @@ test('1.1.0 마이너 업데이트 설치 전후와 다음 릴리스의 업데�
   assert.strictEqual(nextRelease.hasUpdate, true);
   assert.strictEqual(nextRelease.latestVersion, '1.1.1');
   assert.strictEqual(fetch.mock.callCount(), 2);
+
+  // 1.1.1 설치 후에는 업데이트 알림이 꺼지는지 확인한다.
+  const after111Install = await checkForUpdate('1.1.1');
+  assert.strictEqual(after111Install.hasUpdate, false);
+  assert.strictEqual(after111Install.currentVersion, '1.1.1');
 });
