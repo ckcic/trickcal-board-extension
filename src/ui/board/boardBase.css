@@ -86,8 +86,8 @@ body:not(:has(.tcbe-normal-badge-container.tcbe-pinned)) div.bg-dialog-backgroun
 .tcbe-sprite-pers-8 { background-position: 66.6667% 0; }      /* 공명-광기 */
 .tcbe-sprite-pers-9 { background-position: 75% 0; }           /* 공명-활발 */
 .tcbe-sprite-pers-10 { background-position: 83.3333% 0; }     /* 공명-우울 */
-.tcbe-sprite-pers-11 { background-position: 91.6667% 0; }     /* 고위 광기 (10112) */
-.tcbe-sprite-pers-12 { background-position: 100% 0; }         /* 고위 활발 (10124) */
+.tcbe-sprite-pers-11 { background-position: 91.6667% 0; }     /* 용기 (광기 승격 / 10112) */
+.tcbe-sprite-pers-12 { background-position: 100% 0; }         /* 헌신 (활발 승격 / 10124) */
 
 /* --- 크레파스(파스텔) 아이콘 스타일 --- */
 .tcbe-pastel-icon {

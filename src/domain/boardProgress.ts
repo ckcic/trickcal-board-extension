@@ -25,10 +25,13 @@ import type {
   UserApostle,
 } from './types.ts';
 
+export type { HighPersonalityMeta } from './types.ts';
+
 /** 기존 호출부의 import 경로와 상수 객체 참조를 유지한다. */
 export {
   BASIC_CRAYON_ITEM_ID, MID_CRAYON_ITEM_ID, BOKR_ITEM_ID, HWANG_ITEM_ID, WATERING_CAN_ITEM_ID,
   NODE_TYPE, STAT_CATEGORIES, STAT_META_LIST, PERSONALITY_META_LIST, TRIBE_META_LIST,
+  HIGH_PERSONALITY_MAP,
 } from './constants.ts';
 
 /**

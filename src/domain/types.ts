@@ -37,6 +37,14 @@ export interface PersonalityMeta {
   spriteIndex: number;
 }
 
+/** 성격 승격(High Personality) 메타 정보 */
+export interface HighPersonalityMeta {
+  id: number;
+  nameKo: string;
+  basePersonality: PersonalityType;
+  spriteIndex: number;
+}
+
 /** 스탯 표시 메타 정보 */
 export interface StatMeta {
   key: StatCategory;

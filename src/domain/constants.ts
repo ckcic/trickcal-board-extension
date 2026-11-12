@@ -1,5 +1,5 @@
 /** 보드 계산과 UI에서 공유하는 아이템·노드·스탯·성격 정의 */
-import type { PersonalityMeta, StatCategory, StatMeta, TribeMeta } from './types.ts';
+import type { HighPersonalityMeta, PersonalityMeta, StatCategory, StatMeta, TribeMeta } from './types.ts';
 
 /** 하급 크레파스 아이템 ID */
 export const BASIC_CRAYON_ITEM_ID = 610001;
@@ -62,6 +62,16 @@ export const PERSONALITY_META_LIST: PersonalityMeta[] = [
   { id: 4, nameKo: '우울', spriteIndex: 4 },
   { id: 5, nameKo: '공명', spriteIndex: 5 },
 ];
+
+/**
+ * 성격 승격(High Personality) 메타데이터 정의
+ * - 광기(2) 승격 -> 용기 (id: 10112, spriteIndex: 11)
+ * - 활발(3) 승격 -> 헌신 (id: 10124, spriteIndex: 12)
+ */
+export const HIGH_PERSONALITY_MAP: Record<number, HighPersonalityMeta> = {
+  10112: { id: 10112, nameKo: '용기', basePersonality: 2, spriteIndex: 11 },
+  10124: { id: 10124, nameKo: '헌신', basePersonality: 3, spriteIndex: 12 },
+};
 
 /** 종족(Tribe) 메타데이터 정의 (0: 요정, 1: 수인, 2: 엘프, 3: 정령, 4: 유령, 5: 용족, 6: 마녀, 7: 미스틱) */
 export const TRIBE_META_LIST: TribeMeta[] = [
